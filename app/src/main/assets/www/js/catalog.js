@@ -222,6 +222,66 @@ def('car_towrope', 'Abschleppseil', 'Auto', 'Stück', 600, 0, 'car', ['car_towro
 def('car_map', 'Straßenkarte (Papier)', 'Auto', 'Stück', 150, 0, 'car', ['car_map'], 'Navigation ohne Netz.');
 
 /* Schluesselwoerter -> Tags, damit auch selbst angelegte Gegenstaende in Regeln erkannt werden */
+// Weitere Auswahl fuer die Kategorien (werden nicht automatisch geplant, nur angeboten)
+def('akku_aa', 'Wiederaufladbare Akkus (AA/AAA)', 'Licht & Strom', 'Set', 100, .1, 'front', ['battery'], 'Lassen sich mit Powerbank oder Solarpanel wieder laden.');
+def('akku_charger', 'Akku-Ladegerät (USB)', 'Licht & Strom', 'Stück', 120, .2, 'main', ['charger'], 'Lädt AA/AAA-Akkus über USB, auch an der Powerbank.');
+def('usb_charger', 'USB-Netzteil (Steckerladegerät)', 'Licht & Strom', 'Stück', 80, .1, 'front', ['charger'], 'Zum Laden, wo es Strom gibt (Notunterkunft, Verwandte).');
+def('crank_light', 'Kurbel- oder Dynamo-Taschenlampe', 'Licht & Strom', 'Stück', 200, .3, 'top', ['light'], 'Funktioniert ganz ohne Batterien.');
+def('coin_cells', 'Knopfzellen (z. B. CR2032)', 'Licht & Strom', 'Set', 10, .01, 'front', ['battery'], 'Für Fieberthermometer, Autoschlüssel und kleine Geräte.');
+def('power_strip', 'Mehrfachsteckdose (klein)', 'Licht & Strom', 'Stück', 200, .3, 'main', [], 'In Notunterkünften gibt es meist wenige Steckdosen.');
+def('spare_phone', 'Ersatzhandy mit Ladekabel', 'Kommunikation', 'Stück', 180, .2, 'top', ['phone'], 'Falls das eigene Handy verloren geht oder kaputt ist.');
+def('pmr_radio', 'PMR-Funkgeräte (Paar)', 'Kommunikation', 'Set', 400, .6, 'top', [], 'Verständigung in der Gruppe ohne Mobilfunk, auf kurze Entfernung.');
+def('duct_tape', 'Panzertape (Gewebeband)', 'Werkzeug', 'Rolle', 150, .3, 'main', [], 'Repariert fast alles provisorisch.');
+def('zip_ties', 'Kabelbinder', 'Werkzeug', 'Packung', 40, .05, 'front', [], 'Befestigen und reparieren.');
+def('folding_saw', 'Klappsäge', 'Werkzeug', 'Stück', 250, .4, 'outer', [], 'Holz für Feuer oder Unterstand zuschneiden.');
+def('shovel', 'Klappspaten', 'Werkzeug', 'Stück', 700, 1, 'outer', [], 'Graben, Schnee räumen.');
+def('sewing_kit', 'Nähset', 'Werkzeug', 'Set', 40, .05, 'front', [], 'Kleidung und Ausrüstung flicken.');
+def('carabiner', 'Karabiner (2 Stück)', 'Werkzeug', 'Set', 60, .05, 'belt', [], 'Ausrüstung außen am Rucksack befestigen.');
+def('screwdriver', 'Kleines Schraubendreher-Set', 'Werkzeug', 'Set', 120, .1, 'main', ['tool'], 'Batteriefächer und Geräte öffnen.');
+def('ferro_rod', 'Feuerstahl (Feuerstarter)', 'Kochen & Brennstoff', 'Stück', 60, .05, 'front', ['fire_starter'], 'Zündet auch nass – Reserve zum Feuerzeug.');
+def('storm_matches', 'Sturmstreichhölzer', 'Kochen & Brennstoff', 'Packung', 50, .1, 'front', ['fire_starter'], 'Brennen auch bei Wind und Regen.');
+def('tinder', 'Anzündwürfel / Zunder', 'Kochen & Brennstoff', 'Packung', 100, .2, 'main', ['fire_starter'], 'Feuer schnell in Gang bringen.');
+def('cutlery', 'Besteck / Göffel', 'Kochen & Brennstoff', 'Stück', 30, .05, 'main', [], 'Zum Essen unterwegs.');
+def('long_underwear', 'Lange Funktionsunterwäsche', 'Kleidung', 'Set', 250, .8, 'main', ['clothes'], 'Hält warm, wenn die Heizung oder Unterkunft kalt ist.');
+def('spare_pants', 'Ersatzhose (schnell trocknend)', 'Kleidung', 'Stück', 400, 1.2, 'main', ['clothes'], 'Für nasse oder verschmutzte Kleidung.');
+def('wool_socks', 'Warme Wollsocken', 'Kleidung', 'Paar', 100, .3, 'main', ['clothes'], 'Warme, trockene Füße.');
+def('neck_gaiter', 'Schlauchschal / Halstuch', 'Kleidung', 'Stück', 50, .1, 'front', ['clothes'], 'Gegen Kälte, Staub und Sonne.');
+def('sun_hat', 'Sonnenhut oder Kappe', 'Kleidung', 'Stück', 80, .3, 'top', ['clothes'], 'Schutz vor Sonne und Regen.');
+def('painkiller', 'Schmerz- und Fiebermittel', 'Medizin', 'Packung', 30, .05, 'top', [], 'Gegen Schmerzen und Fieber.');
+def('plasters', 'Pflaster und Blasenpflaster', 'Medizin', 'Set', 40, .1, 'front', [], 'Kleine Wunden und Blasen beim Laufen.');
+def('diarrhea', 'Mittel gegen Durchfall und Elektrolyte', 'Medizin', 'Set', 40, .1, 'top', [], 'Bei verdorbenem Essen oder Wasser.');
+def('tick_tweezers', 'Zeckenzange und Pinzette', 'Medizin', 'Set', 20, .02, 'front', [], 'Zecken und Splitter entfernen.');
+def('sunscreen', 'Sonnencreme', 'Medizin', 'Stück', 120, .15, 'front', [], 'Sonnenbrand vermeiden.');
+def('insect_repellent', 'Insektenschutz', 'Medizin', 'Stück', 100, .15, 'front', [], 'Gegen Mücken und Zecken.');
+def('spare_glasses', 'Ersatzbrille / Kontaktlinsen', 'Medizin', 'Stück', 60, .15, 'top', [], 'Ohne Sehhilfe wird alles schwer.');
+def('nuts', 'Nüsse und Trockenobst', 'Lebensmittel', 'Packung', 300, .5, 'main', ['food'], 'Viel Energie bei wenig Gewicht.');
+def('electrolyte', 'Elektrolyt-Pulver / Brausetabletten', 'Wasser', 'Packung', 50, .05, 'front', [], 'Gleicht Salze aus, wenn man viel schwitzt.');
+def('towel', 'Mikrofaser-Handtuch', 'Hygiene', 'Stück', 150, .5, 'main', [], 'Leicht und trocknet schnell.');
+def('zip_bags', 'Gefrierbeutel (wasserdicht verpacken)', 'Hygiene', 'Packung', 50, .1, 'main', [], 'Dokumente, Handy und Kleinteile trocken halten.');
+def('compass', 'Kompass', 'Outdoor', 'Stück', 50, .05, 'belt', [], 'Orientierung ohne Handy.');
+def('map_paper', 'Landkarte der Region (Papier)', 'Outdoor', 'Stück', 100, .1, 'top', [], 'Wege und Treffpunkte finden, auch ohne Handy.');
+def('spare_keys', 'Ersatzschlüssel (Wohnung, Auto)', 'Dokumente & Geld', 'Set', 50, .02, 'front', [], 'Falls die Schlüssel in der Eile liegen bleiben.');
+
+/* Kategorien beim Packen – in dieser Reihenfolge */
+const PICK_CATS = [
+  { id: 'general', label: 'Allgemein', icon: 'box', cats: ['Sonstiges', 'Outdoor', 'Schutz & Sicherheit'] },
+  { id: 'meds', label: 'Medikamente & Erste Hilfe', icon: 'pill', cats: ['Medizin'] },
+  { id: 'clothes', label: 'Kleidung', icon: 'bag', cats: ['Kleidung'] },
+  { id: 'tools', label: 'Werkzeug', icon: 'gear', cats: ['Werkzeug'] },
+  { id: 'fire', label: 'Feuer & Kochen', icon: 'flame', cats: ['Kochen & Brennstoff'] },
+  { id: 'water', label: 'Wasser', icon: 'drop', cats: ['Wasser'] },
+  { id: 'food', label: 'Nahrung', icon: 'food', cats: ['Lebensmittel'] },
+  { id: 'tech', label: 'Technik, Akkus & Licht', icon: 'bulb', cats: ['Licht & Strom', 'Kommunikation'] },
+  { id: 'hygiene', label: 'Hygiene', icon: 'shield', cats: ['Hygiene'] },
+  { id: 'sleep', label: 'Schlafen', icon: 'home', cats: ['Schlafen'] },
+  { id: 'docs', label: 'Dokumente & Geld', icon: 'doc', cats: ['Dokumente & Geld'] },
+  { id: 'kids', label: 'Kind & Baby', icon: 'users', cats: ['Kind & Baby'] },
+  { id: 'pets', label: 'Haustier', icon: 'paw', cats: ['Haustier'] },
+  { id: 'car', label: 'Auto', icon: 'car', cats: ['Auto'] },
+];
+const PICK_CAT = Object.fromEntries(PICK_CATS.map(c => [c.id, c]));
+function pickCatOf(category) { return (PICK_CATS.find(c => c.cats.includes(category)) || PICK_CATS[0]).id; }
+
 const TAG_RULES = [
   [/stirnlampe|kopflampe|headlamp/i, ['light', 'needs_battery', 'headlamp']], [/taschenlampe|fenix|maglite|lampe|leuchte|laterne/i, ['light', 'needs_battery']],
   [/batterie|akku(?!.*power)|knopfzelle/i, ['battery']], [/power ?bank|powerbank|solar.*lade|zusatzakku/i, ['powerbank']], [/ladekabel|usb[- ]?kabel|kabel/i, ['cable']],

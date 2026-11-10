@@ -60,7 +60,7 @@ function planContext(H, S) {
   // Zuhause-Kiste ist optional: Vorrat wird nur geplant, wenn sie angelegt wurde
   const homeDays = H.box && H.box.enabled ? Math.max(1, +H.box.days || 3) : 0;
   const hs = cfg.housing || {};
-  return { cfg, goals, strategies, durHours, bagHours, bagDays: Math.max(1, Math.ceil(bagHours / 24)), homeDays, hs, mobile: strategies.has('mobile'), shelterStrategy: strategies.has('shelter'), kids: H.people.some(p => (+p.age) < 13), car: goals.has('car'), pets: H.pets.length > 0 || goals.has('pet'), optional: !!cfg.includeOptional };
+  return { cfg, goals, strategies, durHours, bagHours, bagDays: Math.max(1, Math.ceil(bagHours / 24)), homeDays, hs, mobile: strategies.has('mobile'), shelterStrategy: strategies.has('shelter'), kids: H.people.some(p => (+p.age) < 13), car: goals.has('car'), pets: H.pets.length > 0 || goals.has('pet'), optional: !!cfg.includeOptional, rural: hs.type === 'rural' };
 }
 
 /* ---------- Gewuenschte Gegenstaende erzeugen ---------- */
@@ -148,8 +148,8 @@ function generateDesired(H, S) {
     add('flashlight', { prio: 'rec', flex: true });
     add('batteries', { qty: 2, prio: 'must', flex: true, why: 'Reserve für Lampen und Radio.' });
     add('water_collapsible', { prio: 'rec', flex: true });
-    add('water_filter', { qty: ctx.mobile || ctx.bagHours >= 72 ? Math.max(1, Math.min(2, adults.length || 1)) : 1, prio: ctx.mobile || ctx.bagHours >= 48 ? 'must' : 'rec', flex: true });
-    add('water_treat', { prio: ctx.mobile || ctx.bagHours >= 48 ? 'must' : 'rec', flex: true });
+    add('water_filter', { qty: ctx.mobile || ctx.bagHours >= 72 ? Math.max(1, Math.min(2, adults.length || 1)) : 1, prio: ctx.mobile || ctx.rural || ctx.bagHours >= 48 ? 'must' : 'rec', flex: true });
+    add('water_treat', { prio: ctx.mobile || ctx.rural || ctx.bagHours >= 48 ? 'must' : 'rec', flex: true });
     add('doc_pouch', { prio: 'must', flex: true, qty: Math.max(1, biggest.length) });
     add('docs_copies', { prio: 'must', flex: true, why: 'Kopien von Ausweisen, Versicherungen, Impfpass, Medikationsplan. Verschlüsselt oder in wasserdichter Hülle.' });
     add('contacts_paper', { prio: 'must', flex: true, qty: Math.max(1, biggest.length) });
@@ -171,7 +171,7 @@ function generateDesired(H, S) {
       add('tarp', { qty: Math.max(1, Math.ceil(nP / 3)), prio: 'must', flex: true, why: 'Wetterschutz bei Selbstversorgung unterwegs.' });
       add('tent', { qty: Math.max(1, Math.ceil(nP / 3)), prio: 'rec', flex: true, why: 'Unterkunft unterwegs – nur sinnvoll, wenn die Strategie „Selbstversorgung“ gewählt ist.' });
     }
-    if (ctx.optional) add('solar_charger', { prio: 'opt', flex: true });
+    if (ctx.optional || ctx.rural) add('solar_charger', { prio: ctx.rural ? 'rec' : 'opt', flex: true, why: ctx.rural ? 'Auf dem Land kann der Strom länger ausfallen.' : '' });
   }
 
   /* --- Hausvorrat --- */

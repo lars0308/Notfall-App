@@ -10,34 +10,109 @@ function groupInfo(H, it) {
 }
 const REV = { tab: 'check', prio: 'all' };
 const PRIO_ORDER = { must: 0, rec: 1, opt: 2 };
-/* Packliste als Abhakliste: zeigt alles, was gebraucht wird; Haken = „habe ich“ */
+/* Packen nach Kategorien: Vorschläge abhaken, weitere Sachen antippen, Suche mit Lupe */
+const PICK = { cat: null, bag: null, q: '', focus: false };
+const packItems = H => H.items.filter(i => !i.archived && i.container !== 'home');
+function pickVisible(H) {
+  const mine = packItems(H); const kids = H.people.some(p => +p.age < 13); const car = (H.cfg || {}).purpose === 'car' || H.bags.some(b => b.role === 'car');
+  return PICK_CATS.filter(c => mine.some(i => pickCatOf(i.category) === c.id) || (c.id === 'kids' ? kids : c.id === 'pets' ? H.pets.length > 0 : c.id === 'car' ? car : true));
+}
+function pickBag(H) { const b = byId(H.bags, PICK.bag) || H.bags[0] || null; PICK.bag = b ? b.id : null; return b; }
+function pickable(t, cat) { return !t.nopack && t.z !== 'home' && (t.z !== 'car' || cat === 'car') && !/^stock_/.test(t.k) && t.k !== 'meds'; }
+function pickTemplates(H, catId, q) {
+  const have = new Set(H.items.filter(i => !i.archived && i.container !== 'home').map(i => String(i.key || '').split(':')[0]));
+  const nq = q ? norm(q) : '';
+  return Object.values(T).filter(t => !have.has(t.k) && (catId ? PICK_CAT[catId].cats.includes(t.c) && pickable(t, catId) : pickable(t, pickCatOf(t.c))) && (!nq || norm(t.n + ' ' + t.c).includes(nq))).sort((x, y) => x.n.localeCompare(y.n, 'de'));
+}
+const sortPrio = (a, b) => (a.source === 'pick') - (b.source === 'pick') || PRIO_ORDER[a.prio] - PRIO_ORDER[b.prio] || a.name.localeCompare(b.name, 'de');
+function addRow(t) {
+  return h`<div class="li"><span class="grow"><span class="t">${t.n}</span>${t.w ? h`<br><span class="s">${t.w}</span>` : ''}</span><button class="btn icon primary" data-act="pick-add" data-key="${t.k}" aria-label="${t.n} hinzufügen">${icon('plus')}</button></div>`;
+}
+function bagChooser(H) {
+  if (H.bags.length < 2) return '';
+  const cur = pickBag(H);
+  return h`<div class="row" style="gap:8px;align-items:center"><span class="muted small">Neues kommt in:</span><div class="chips">${H.bags.map(b => h`<button class="chip" aria-pressed="${b.id === cur.id ? 'true' : 'false'}" data-act="pick-bag" data-id="${b.id}">${b.name}</button>`)}</div></div>`;
+}
+const searchBtn = () => h`<a class="btn icon sm" href="#/review/search" aria-label="Suchen">${icon('search')}</a>`;
+
 route('/review', H => {
-  const live = H.items.filter(i => !i.archived);
+  const live = packItems(H);
+  if (!live.length && !H.bags.length) return { title: 'Packliste', html: h`${empty('Noch keine Packliste.')}<div class="actionbar"><a class="btn primary lg" href="#/wizard">${icon('list')} Notfallplan erstellen</a></div>` };
   const have = live.filter(i => i.status === 'owned').length, miss = live.filter(i => i.status === 'missing').length, open = live.length - have - miss;
-  const groups = new Map();
-  for (const it of live) { const [k, label] = groupInfo(H, it); if (!groups.has(k)) groups.set(k, { label, items: [] }); groups.get(k).items.push(it); }
-  for (const g of groups.values()) g.items.sort((a, b) => PRIO_ORDER[a.prio] - PRIO_ORDER[b.prio] || a.name.localeCompare(b.name, 'de'));
-  if (!live.length) return { title: 'Packliste', html: h`${empty('Noch keine Packliste.')}<div class="actionbar"><a class="btn primary lg" href="#/wizard">${icon('list')} Packliste erstellen</a></div>` };
   return {
-    title: 'Packliste',
-    actions: h`<a class="btn sm" href="#/wizard">${icon('list')}<span>Assistent</span></a>`,
+    title: 'Packliste', actions: searchBtn(),
     html: h`<div class="card"><h2>${open + miss ? 'Das brauchst du' : 'Alles da'}</h2>
-      <p class="muted" style="margin:4px 0 12px">${open + miss ? 'Hake ab, was du schon hast.' : 'Alles abgehakt.'}</p>
-      ${bar(Math.round(have / live.length * 100), 'ok')}
-      <div class="row spread" style="margin-top:8px"><span class="bold">${have} von ${live.length} vorhanden</span>${miss ? h`<a class="badge must" href="#/shop" style="text-decoration:none">${miss} ${miss === 1 ? "fehlt" : "fehlen"}</a>` : ''}</div>
+      <p class="muted" style="margin:4px 0 12px">${open + miss ? 'Wähle eine Kategorie und hake ab, was du schon hast.' : 'Alles abgehakt.'}</p>
+      ${live.length ? bar(Math.round(have / live.length * 100), 'ok') : ''}
+      <div class="row spread" style="margin-top:8px"><span class="bold">${have} von ${live.length} vorhanden</span>${miss ? h`<a class="badge must" href="#/shop" style="text-decoration:none">${miss} ${miss === 1 ? 'fehlt' : 'fehlen'}</a>` : ''}</div>
       ${open ? h`<button class="btn block" style="margin-top:12px" data-act="ask-start">${icon('chev')} Einzeln abfragen (${open} offen)</button>` : ''}</div>
-    ${[...groups.entries()].map(([k, g]) => { const left = g.items.filter(i => i.status !== 'owned').length; return h`<div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h3>${g.label} <span class="badge">${g.items.length - left}/${g.items.length}</span></h3>${left ? h`<button class="btn sm" data-act="rv-group-have" data-group="${k}">${icon('check')} Alle</button>` : ''}</div><div class="list">${g.items.map(it => tickRow(it))}</div></div>`; })}
+    <div class="catgrid">${pickVisible(H).map(c => { const its = live.filter(i => pickCatOf(i.category) === c.id); const n = its.filter(i => i.status === 'owned').length; const mustOpen = its.some(i => i.status !== 'owned' && i.prio === 'must');
+      return h`<a class="cat ${its.length && n === its.length ? 'done' : ''}" href="#/review/c/${c.id}"><span class="ti">${icon(c.icon)}</span><span class="cl">${c.label}</span><span class="cs">${its.length ? `${n} von ${its.length}` : 'antippen zum Auswählen'}</span>${mustOpen ? h`<span class="dot" aria-label="Wichtiges offen"></span>` : ''}</a>`; })}</div>
     <div class="actionbar">${open + miss ? h`<button class="btn primary lg" data-act="rv-done">${icon('check')} Fertig</button>` : h`<a class="btn primary lg" href="#/bags">${icon('bag')} Taschen packen</a>`}</div>`,
   };
 });
-function tickRow(it) {
+
+route('/review/c/:cat', (cat, H) => {
+  const C = PICK_CAT[cat]; if (!C) return { title: 'Packliste', back: '#/review', html: empty('Kategorie nicht gefunden.') };
+  PICK.cat = cat;
+  const mine = packItems(H).filter(i => pickCatOf(i.category) === cat).sort(sortPrio);
+  const more = pickTemplates(H, cat, '');
+  const vis = pickVisible(H); const k = vis.findIndex(c => c.id === cat); const nxt = vis[k + 1];
+  return {
+    title: C.label, back: '#/review', actions: searchBtn(),
+    html: h`${bagChooser(H)}
+    ${mine.length ? h`<div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h3>Hast du das?</h3><span class="badge">${mine.filter(i => i.status === 'owned').length}/${mine.length}</span></div><div class="list">${mine.map(it => tickRow(it, H))}</div></div>` : ''}
+    ${more.length ? h`<div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h3>${mine.length ? 'Noch mehr' : 'Zum Hinzufügen antippen'}</h3></div><div class="list">${more.map(addRow)}</div></div>` : ''}
+    <button class="btn block" data-act="pick-custom-open">${icon('plus')} Eigenen Gegenstand hinzufügen</button>
+    <div class="actionbar"><a class="btn lg" href="#/review">Übersicht</a>${nxt ? h`<a class="btn primary lg" href="#/review/c/${nxt.id}">${nxt.label} ${icon('chev')}</a>` : h`<button class="btn primary lg" data-act="rv-done">${icon('check')} Fertig</button>`}</div>`,
+  };
+});
+
+function pickResults(H) {
+  const q = PICK.q.trim(); if (!q) return h`<p class="muted">Tippe z. B. „Batterien“, „Feuer“ oder „Pflaster“.</p>`;
+  const nq = norm(q);
+  const mine = packItems(H).filter(i => norm(i.name + ' ' + i.category).includes(nq)).sort(sortPrio).slice(0, 30);
+  const more = pickTemplates(H, null, q).slice(0, 30);
+  return h`${mine.length ? h`<div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h3>Auf deiner Liste</h3></div><div class="list">${mine.map(it => tickRow(it, H))}</div></div>` : ''}
+    ${more.length ? h`<div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h3>Hinzufügen</h3></div><div class="list">${more.map(addRow)}</div></div>` : ''}
+    <button class="btn block" data-act="pick-custom" data-name="${q}">${icon('plus')} „${q}“ hinzufügen</button>`;
+}
+route('/review/search', H => ({
+  title: 'Suchen', back: PICK.cat ? '#/review/c/' + PICK.cat : '#/review',
+  html: h`<div class="field"><label for="pickq">Gegenstand suchen</label><input id="pickq" type="search" value="${PICK.q}" data-input="pick-q" placeholder="z. B. Batterien" autocomplete="off" enterkeyhint="search"></div>
+    ${bagChooser(H)}<div id="pickres" class="stack">${pickResults(H)}</div>`,
+  after: () => { const el = $('#pickq'); if (el && !PICK.q) el.focus(); },
+}));
+INPUT['pick-q'] = el => { PICK.q = el.value; const box = $('#pickres'); if (box) { box.innerHTML = pickResults(HH()).s; hydratePhotos(box); } };
+ACT['pick-bag'] = d => { PICK.bag = d.id; rerender(true); };
+function pickPut(H, it) {
+  const bag = pickBag(H);
+  if (bag) { it.bagId = bag.id; it.container = bag.role === 'car' ? 'car' : 'bag'; it.personId = bag.owner || null; }
+  H.items.push(it); if (bag) autoPack(H, bag, { onlyUnassigned: true });
+  persist(); toast(`${it.name} hinzugefügt${bag && H.bags.length > 1 ? ' · ' + bag.name : ''}`);
+}
+ACT['pick-add'] = d => { const H = HH(); if (!T[d.key]) return; pickPut(H, makeItem({ key: d.key, qty: 1 }, { status: 'owned', source: 'pick', prio: 'opt' })); rerender(true); };
+ACT['pick-custom'] = d => {
+  const H = HH(); const name = String(d.name || '').trim().slice(0, 80); if (!name) return;
+  const cat = PICK.cat ? PICK_CAT[PICK.cat].cats[0] : 'Sonstiges';
+  pickPut(H, makeItem({ key: '', name, category: cat, tags: inferTags(name) }, { status: 'owned', source: 'pick', prio: 'opt', key: '' })); PICK.q = ''; rerender(true);
+};
+ACT['pick-custom-open'] = () => {
+  formDlg({ title: 'Eigener Gegenstand', ok: 'Hinzufügen', body: h`${F.text('name', 'Name', '', { req: true, max: 80, ph: 'z. B. Ersatzakku Kamera' })}`,
+    onSubmit: fd => { ACT['pick-custom']({ name: fd.get('name') }); } });
+};
+ACT['pick-photo'] = async d => { const H = HH(); const it = byId(H.items, d.id); if (!it) return; const pid = await addPhotoTo(null); if (!pid) return; it.photos = it.photos || []; it.photos.push(pid); persist(); rerender(true); };
+function tickRow(it, H) {
   const own = it.status === 'owned'; const mark = own ? 'done' : it.prio === 'must' ? 'must' : it.prio === 'rec' ? 'rec' : '';
-  return h`<div class="li tick ${mark}"><label class="tickl grow"><input type="checkbox" data-change="rv-tick" data-id="${it.id}" ${own ? raw('checked') : ''} aria-label="${it.name} vorhanden"><span class="grow"><span class="t">${it.name}</span><br><span class="s">${itemQtyLabel(it)} · ${levelBadge(it.prio)}${it.status === 'missing' ? h` <span class="badge must">fehlt</span>` : ''}</span></span></label>
+  const bag = H && H.bags.length > 1 && it.bagId ? byId(H.bags, it.bagId) : null;
+  const sub = [itemQtyLabel(it), bag && bag.name].filter(Boolean).join(' · ');
+  return h`<div class="li tick ${mark}"><label class="tickl grow"><input type="checkbox" data-change="rv-tick" data-id="${it.id}" ${own ? raw('checked') : ''} aria-label="${it.name} vorhanden"><span class="grow"><span class="t">${it.name}</span><br><span class="s">${sub}${it.source !== 'pick' ? h` · ${levelBadge(it.prio)}` : ''}${it.status === 'missing' ? h` <span class="badge must">fehlt</span>` : ''}</span></span></label>
+    ${it.photos && it.photos[0] ? h`<span class="thumb"><img data-ph="${it.photos[0]}" data-act="ph-view" data-id="${it.photos[0]}" alt="Foto"></span>` : own ? h`<button class="btn icon ghost sm" data-act="pick-photo" data-id="${it.id}" aria-label="Foto von ${it.name}">${icon('camera')}</button>` : ''}
     <a class="btn icon ghost sm" href="#/item/${it.id}" aria-label="Details zu ${it.name}">${icon('chev')}</a></div>`;
 }
 INPUT['rv-tick'] = el => { const H = HH(); const it = byId(H.items, el.dataset.id); if (!it) return; if (el.checked) setItemStatus(H, it, 'owned'); else { setItemStatus(H, it, 'planned'); H.shop = H.shop.filter(s => s.itemId !== it.id || s.bought); } persist(); rerender(true); };
 ACT['rv-done'] = async () => {
-  const H = HH(); const open = H.items.filter(i => !i.archived && i.status === 'planned');
+  const H = HH(); const open = packItems(H).filter(i => i.status === 'planned');
   if (open.length) {
     const ok = await confirmDlg(`${open.length} nicht abgehakt`, 'Diese Sachen als „fehlt“ auf die Einkaufsliste setzen?', { ok: 'Auf die Einkaufsliste' });
     if (!ok) return; open.forEach(i => setItemStatus(H, i, 'missing')); persist();
@@ -48,7 +123,7 @@ ACT['rv-done'] = async () => {
 /* Einzeln abfragen: eine Frage pro Gegenstand, wichtigste zuerst */
 const ASK = { skip: new Set(), yes: 0, no: 0 };
 route('/review/ask', H => {
-  const open = H.items.filter(i => !i.archived && i.status === 'planned' && !ASK.skip.has(i.id)).sort((a, b) => PRIO_ORDER[a.prio] - PRIO_ORDER[b.prio] || groupInfo(H, a)[1].localeCompare(groupInfo(H, b)[1], 'de') || a.name.localeCompare(b.name, 'de'));
+  const open = packItems(H).filter(i => i.status === 'planned' && !ASK.skip.has(i.id)).sort((a, b) => PRIO_ORDER[a.prio] - PRIO_ORDER[b.prio] || groupInfo(H, a)[1].localeCompare(groupInfo(H, b)[1], 'de') || a.name.localeCompare(b.name, 'de'));
   if (!open.length) {
     const miss = H.items.filter(i => !i.archived && i.status === 'missing').length;
     return { title: 'Abfragen', back: '#/review', html: h`<div class="card"><h2>Fertig</h2><p style="margin-top:8px">${ASK.yes} vorhanden · ${ASK.no} ${ASK.no === 1 ? "fehlt" : "fehlen"}${ASK.skip.size ? ` · ${ASK.skip.size} übersprungen` : ''}</p></div>

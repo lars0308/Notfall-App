@@ -11,7 +11,7 @@ function nextCheck(H) {
 }
 route('/home', H => {
   const S = DB.settings; const nc = nextCheck(H);
-  const unchecked = H.items.filter(i => !i.archived && i.status === 'planned').length;
+  const unchecked = H.items.filter(i => !i.archived && i.container !== 'home' && i.status === 'planned').length;
   const shopN = H.shop.filter(s => !s.bought).length;
   return {
     title: 'Notfall!',
@@ -19,7 +19,7 @@ route('/home', H => {
     ${H.bags.map(b => { const st = bagStats(H, S, b); return h`<a class="tile" href="#/bags/${b.id}">${b.photos[0] ? thumb(b.photos[0]) : h`<span class="ti">${icon(b.role === 'car' ? 'car' : 'bag')}</span>`}<span class="grow"><span class="tt">${b.name}</span><br><span class="ts">${bagLine(st)}</span><span style="display:block;margin-top:6px">${bar(st.packedPct, 'ok')}</span></span>${icon('chev', 'chev')}</a>`; })}
     ${unchecked ? tile('#/review', 'check', 'orange', 'Packliste prüfen', unchecked + ' offen', h`<span class="count">${unchecked}</span>`) : ''}
     <button class="tile blue" data-act="bag-new"><span class="ti">${icon('plus')}</span><span class="grow"><span class="tt">Neue Tasche anlegen</span></span></button>
-    ${tile('#/wizard', 'list', 'orange', H.setup.draft ? 'Packassistent fortsetzen' : 'Packliste erstellen', '')}
+    ${tile('#/wizard', 'list', 'orange', H.setup.draft ? 'Notfallplan fortsetzen' : H.setup.done ? 'Notfallplan anpassen' : 'Notfallplan erstellen', H.setup.done ? '' : 'Name, Personen, Wohnort, Rucksack')}
     ${tile('#/pass', 'shield', 'red', 'Notfallpass & Kontakte', H.people.length ? H.people.map(p => p.name).join(', ') : '')}
     ${nc.r ? h`<div class="tile green"><span class="ti">${icon('bell')}</span><a class="grow" href="#/remind" style="color:inherit;text-decoration:none"><span class="tt">${nc.r.title}</span><br><span class="ts">Nächste Kontrolle · ${fmtDate(nc.r.next)}${nc.exp ? ' · ' + nc.exp + ' Ablaufdaten' : ''}</span></a>${daysUntil(nc.r.next) <= 0 ? h`<button class="btn sm ok" data-act="rem-done" data-id="${nc.r.id}">${icon('check')} Erledigt</button>` : ''}</div>` : tile('#/remind', 'bell', 'green', 'Nächste Kontrolle', 'Keine geplant')}
     ${shopN ? tile('#/shop', 'cart', '', 'Einkaufsliste', shopN + ' zu besorgen', h`<span class="count">${shopN}</span>`) : ''}`,

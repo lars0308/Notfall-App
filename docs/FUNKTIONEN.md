@@ -1,11 +1,14 @@
-# Umgesetzte Funktionen (Version 2.3.0)
+# Umgesetzte Funktionen (Version 2.4.0)
 
 Legende: ✅ umgesetzt und im Browser getestet · 📱 braucht Android-Code, nicht auf Gerät geprüft · 🟡 mit Einschränkung · ⬜ offen. Was gestrichen oder verschoben wurde, steht in der [Feature-Matrix](FEATURE-MATRIX.md).
 
-## Packliste zum Abhaken ✅
-- Nach dem Assistenten: „Das brauchst du – hake ab, was du schon hast.“ Alle Sachen nach Tasche/Person gruppiert, je ein großer Haken; „Alle“ hakt eine Gruppe ab; Haken entfernen macht es wieder offen.
-- „Einzeln abfragen“: eine Frage pro Gegenstand („Hast du das?“ – Habe ich / Fehlt / Später), Wichtigstes zuerst.
-- „Fertig“: nicht Abgehaktes kommt nach Rückfrage auf die Einkaufsliste.
+## Notfallplan erstellen und nach Kategorien packen ✅
+- Start: „Notfallplan erstellen“ → Name → Personen (Name, Alter) → Wo wohnst du (Wohnung/Haus/Land, Ort freiwillig; „Land“ macht Wasserfilter notwendig und schlägt ein Solar-Ladegerät vor) → Wofür (Notfallrucksack, Reise, Auto, eigener Zweck) → Dauer, Unterkunft, Tiere, Medikamente → Rucksack auswählen (Typ antippen; oder „Vorschlag machen“).
+- Danach „Das brauchst du“: Kategorien in dieser Reihenfolge – Allgemein, Medikamente & Erste Hilfe, Kleidung, Werkzeug, Feuer & Kochen, Wasser, Nahrung, Technik/Akkus/Licht, Hygiene, Schlafen, Dokumente & Geld (Kind, Haustier, Auto nur wenn passend). Jede Kachel zeigt „x von y“, roter Punkt = Wichtiges offen.
+- In der Kategorie: Vorschläge abhaken („Hast du das?“), darunter weitere Sachen zum Antippen (+) – sie kommen sofort als vorhanden in den gewählten Rucksack, das Fach wird automatisch gewählt. Bei mehreren Taschen: Auswahl „Neues kommt in“. Abgehakte Sachen: Kamera-Knopf für ein Foto 📱. „Weiter“ führt zur nächsten Kategorie.
+- Lupe oben: suchen (z. B. „Batterien“), direkt abhaken oder hinzufügen, auch eigene Sachen („… hinzufügen“).
+- „Einzeln abfragen“: eine Frage pro Gegenstand (Habe ich / Fehlt / Später). „Fertig“: nicht Abgehaktes nach Rückfrage auf die Einkaufsliste.
+- Katalog um 38 Sachen erweitert (u. a. Akkus, Akku- und USB-Ladegerät, Kurbellampe, Funkgeräte, Panzertape, Klappsäge, Feuerstahl, Sturmstreichhölzer, Funktionsunterwäsche, Schmerzmittel, Pflaster, Zeckenzange, Kompass, Landkarte).
 
 ## 1 Meine Taschen ✅
 - Beliebig viele Rucksäcke, Taschen, Koffer; 9 Typen; Name, Foto 📱, Volumen, Gewicht, Besitzer, fester Lagerort, Verwendung, Packstatus.

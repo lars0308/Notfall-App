@@ -20,15 +20,15 @@ function wzInitial(H) {
     where: (c.strategies || []).includes('mobile') ? ((c.strategies || []).includes('shelter') ? 'both' : 'mobile') : (H.cfg ? 'shelter' : ''),
     people: H.people.length ? clone(H.people) : [personShape({ id: uid(), name: '', age: 35 })],
     pets: Object.fromEntries(H.pets.map(p => [p.species, true])), needsYes: null, equipment: {},
+    name: H.name && H.name !== 'Mein Haushalt' ? H.name : '', home: (c.housing || {}).type || '', place: (c.housing || {}).place || '',
   };
 }
-function wzDraft(H) { if (!H.setup.draft || H.setup.draft.purpose === undefined) { H.setup.draft = wzInitial(H); H.setup.step = 0; persist(); } return H.setup.draft; }
+function wzDraft(H) { if (!H.setup.draft || H.setup.draft.purpose === undefined || H.setup.draft.home === undefined) { H.setup.draft = wzInitial(H); H.setup.step = 0; persist(); } return H.setup.draft; }
 function wzSteps(d) {
-  const s = ['purpose'];
-  if (d.purpose !== 'car') s.push('hours', 'where');
-  s.push('people');
-  if (d.purpose !== 'car') { s.push('pets', 'needs'); if (d.needsYes) s.push('needsDetail'); }
-  s.push('equip', 'bags');
+  const s = ['name', 'people', 'home', 'purpose'];
+  if (d.purpose !== 'car') s.push('hours', 'where', 'pets', 'needs');
+  if (d.purpose !== 'car' && d.needsYes) s.push('needsDetail');
+  s.push('bags');
   return s;
 }
 function setPath(obj, path, val) { const ks = path.split('.'); let o = obj; for (let i = 0; i < ks.length - 1; i++) { if (o[ks[i]] === undefined || o[ks[i]] === null) o[ks[i]] = {}; o = o[ks[i]]; } o[ks[ks.length - 1]] = val; }
@@ -39,7 +39,14 @@ route('/wizard', H => {
   const d = wzDraft(H); const steps = wzSteps(d); const i = clamp(H.setup.step || 0, 0, steps.length - 1); const key = steps[i];
   const last = i === steps.length - 1;
   let q, body, next = true;
-  if (key === 'purpose') {
+  if (key === 'name') {
+    q = 'Wie heißt dein Notfallplan?';
+    body = h`<div class="field"><label for="wzn">Name</label><input id="wzn" type="text" value="${d.name}" data-input="wz-text" data-path="name" maxlength="40" placeholder="z. B. Familie Müller"></div>`;
+  } else if (key === 'home') {
+    q = 'Wo wohnst du?'; next = false;
+    body = h`<div class="field"><label for="wzo">Ort (freiwillig)</label><input id="wzo" type="text" value="${d.place}" data-input="wz-text" data-path="place" maxlength="60" placeholder="z. B. Köln-Ehrenfeld"></div>
+      <div class="answers">${[['flat', 'Wohnung in der Stadt', '', 'home'], ['house', 'Haus in der Stadt', '', 'home'], ['rural', 'Auf dem Land', 'Strom und Wege können länger ausfallen', 'map']].map(([v, l, sub, ic]) => ans('wz-pick', { f: 'home', v }, l, sub, d.home === v, ic))}</div>`;
+  } else if (key === 'purpose') {
     q = 'Wofür packst du?'; next = d.purpose === 'custom';
     body = h`<div class="answers">${WZ_PURPOSE.map(([k, l, s, ic]) => ans('wz-pick', { f: 'purpose', v: k }, l, s, d.purpose === k, ic))}</div>
       ${d.purpose === 'custom' ? h`<div class="field"><label for="wzc">Eigener Zweck</label><input id="wzc" type="text" value="${d.custom}" data-input="wz-text" data-path="custom" maxlength="60"></div>` : ''}`;
@@ -71,16 +78,18 @@ route('/wizard', H => {
     q = 'Was hast du schon?';
     body = h`<div class="stack-s">${WZ_EQUIP.map(([k, label]) => h`<div class="person-card"><div class="row nowrap"><span class="grow bold">${label}</span><div class="stepper"><button type="button" data-act="wz-eq" data-key="${k}" data-d="-1" aria-label="${label} weniger">−</button><span>${d.equipment[k] || 0}</span><button type="button" data-act="wz-eq" data-key="${k}" data-d="1" aria-label="${label} mehr">+</button></div></div></div>`)}</div>`;
   } else {
-    q = 'Welche Taschen hast du?';
-    body = h`<div class="stack-s">${H.bags.map(b => h`<div class="tile"><span class="ti">${icon('bag')}</span><span class="grow"><span class="tt">${b.name}</span><br><span class="ts">${(BAG_TYPE[b.type] || {}).label || ''} · ${fmt0(b.liters)} l</span></span></div>`)}</div>
-      <button class="btn lg block" data-act="bag-new" data-stay="1">${icon('plus')} Tasche hinzufügen</button>
-      ${H.bags.length ? '' : h`<p class="muted small">Ohne Tasche schlägt die App passende Rucksäcke vor.</p>`}`;
+    q = H.bags.length ? 'Deine Rucksäcke und Taschen' : 'Welchen Rucksack packst du?';
+    const types = BAG_TYPES.filter(t => t.id !== 'custom');
+    const typeCards = h`<div class="answers">${types.map(t => ans('wz-bag', { type: t.id }, t.label, fmt0(t.liters) + ' l', false, t.model === 'case' || t.model === 'duffel' ? 'box' : 'bag'))}</div>`;
+    body = H.bags.length ? h`<div class="stack-s">${H.bags.map(b => h`<div class="tile"><span class="ti">${icon('bag')}</span><span class="grow"><span class="tt">${b.name}</span><br><span class="ts">${(BAG_TYPE[b.type] || {}).label || ''} · ${fmt0(b.liters)} l</span></span><button class="btn icon sm" data-act="bag-edit" data-id="${b.id}" aria-label="${b.name} bearbeiten">${icon('edit')}</button></div>`)}</div>
+      <details><summary class="btn block" style="list-style:none">${icon('plus')} Weitere Tasche</summary><div style="margin-top:12px">${typeCards}</div></details>` : d.purpose === 'car' ? h`<p class="muted">Für das Auto wird eine Auto-Notfalltasche angelegt. Du kannst zusätzlich einen Rucksack wählen.</p>${typeCards}` : h`${typeCards}<button class="btn block ghost" data-act="wz-finish">Noch keinen – Vorschlag machen</button>`;
+    next = H.bags.length > 0 || d.purpose === 'car';
   }
   return {
-    full: true, title: 'Packassistent',
+    full: true, title: 'Notfallplan',
     html: h`<div class="topbar">${i > 0 ? h`<button class="btn icon ghost" data-act="wz-prev" aria-label="Zurück">${icon('back')}</button>` : ''}<div class="grow">${bar(Math.round((i + 1) / steps.length * 100))}</div><span class="small muted mono">${i + 1}/${steps.length}</span><button class="btn icon ghost" data-act="wz-later" aria-label="Schließen">${icon('close')}</button></div>
       <main class="page"><div class="page-inner"><h1 class="q">${q}</h1>${body}
-        ${next ? h`<div class="actionbar"><button class="btn primary lg" data-act="${last ? 'wz-finish' : 'wz-next'}">${last ? h`${icon('check')} Packliste erstellen` : h`Weiter ${icon('chev')}`}</button></div>` : ''}
+        ${next ? h`<div class="actionbar"><button class="btn primary lg" data-act="${last ? 'wz-finish' : 'wz-next'}">${last ? h`Weiter: Sachen auswählen ${icon('chev')}` : h`Weiter ${icon('chev')}`}</button></div>` : ''}
       </div></main>`,
   };
 });
@@ -95,6 +104,12 @@ ACT['wz-pick'] = d => {
   persist();
   if (f === 'purpose' && d.v === 'custom') { rerender(); return; }
   wzGo(1);
+};
+ACT['wz-bag'] = d => {
+  const H = HH(); const t = BAG_TYPE[d.type]; if (!t) return;
+  const same = H.bags.filter(b => b.type === t.id).length;
+  const b = newBag({ type: t.id, liters: t.liters, ownKg: t.ownKg, name: t.label + (same ? ' ' + (same + 1) : '') });
+  H.bags.push(b); persist(); rerender(true); toast(t.label + ' hinzugefügt');
 };
 ACT['wz-nopet'] = () => { wzDraft(HH()).pets = {}; persist(); rerender(true); };
 ACT['wz-pet'] = d => { const w = wzDraft(HH()); w.pets[d.v] = !w.pets[d.v]; persist(); rerender(true); };
@@ -116,7 +131,7 @@ ACT['wz-finish'] = () => {
   finishWizard(H, d);
   H.setup.step = 0; H.setup.draft = null; persist(); flushDB();
   REV.tab = 'check'; REV.prio = 'all';
-  go('#/review'); toast(`${H.items.length - before} Sachen auf der Liste – hake ab, was du hast`);
+  PICK.cat = null; go('#/review'); toast(`${H.items.length - before} Sachen vorgeschlagen – hake ab, was du hast`);
 };
 function finishWizard(H, d) {
   const S = DB.settings;
@@ -145,6 +160,8 @@ function finishWizard(H, d) {
     H.items.push(makeItem({ key, qty: add, container: 'home' }, { status: 'owned', source: 'wizard', place: '', prio: 'rec' }));
     H.cfg.equipDone[key] = qty;
   }
+  if ((d.name || '').trim()) H.name = d.name.trim();
+  H.cfg.housing = Object.assign({}, H.cfg.housing || {}, { type: d.home || '', place: (d.place || '').trim() });
   const report = applyPlan(H, S);
   H.setup.done = true; H.setup.skipped = false;
   return report;

@@ -4,7 +4,7 @@ Deutschsprachige, offline arbeitende Android-App: Taschen anlegen, per Fragen ei
 
 > Kein amtliches Warnsystem. Bei Gefahr: 112 und Anweisungen der Behörden. Gewichte und Mengen sind Schätzwerte.
 
-**Test-APK:** [`dist/Notfall-2.3.0-debug.apk`](dist/Notfall-2.3.0-debug.apk) (Android 10+, Debug-signiert)
+**Test-APK:** [`dist/Notfall-2.4.0-debug.apk`](dist/Notfall-2.4.0-debug.apk) (Android 10+, Debug-signiert)
 
 | Dokument | Inhalt |
 |---|---|
