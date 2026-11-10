@@ -15,7 +15,7 @@ route('/map', H => {
       <div class="mapctl"><button class="btn icon" data-act="map-zoom" data-d="1" aria-label="Vergrößern">${icon('plus')}</button><button class="btn icon" data-act="map-zoom" data-d="-1" aria-label="Verkleinern">${icon('minus')}</button><button class="btn icon" data-act="map-fit" aria-label="Alles zeigen">${icon('grid')}</button></div>
       <div class="mapattr" id="mapattr"></div></div>
     ${!packs.length && !DB.settings.mapOnline ? h`<p class="muted small">Noch keine Karte gespeichert. Treffpunkte funktionieren auch ohne Karte.</p>` : ''}
-    <h2>Treffpunkte</h2>
+    <div class="row spread"><h2>Treffpunkte</h2>${canPlaceSearch() ? h`<button class="btn sm" data-act="map-search">${icon('search')} In der Nähe suchen</button>` : ''}</div>
     ${pts.length ? pts.map(p => { const c = placeCoord(p); const kind = H.meeting.includes(p) ? 'meeting' : 'shelter'; return h`<div class="tile"><span class="ti">${icon(kind === 'meeting' ? 'map' : 'building')}</span><button class="grow" style="background:none;border:0;text-align:left;color:inherit;cursor:pointer;padding:0;font:inherit" data-act="map-goto" data-id="${p.id}"><span class="tt">${p.name}</span><br><span class="ts">${[p.address, c ? 'Position gesetzt' : 'ohne Position', p.far ? 'weiter entfernt' : ''].filter(Boolean).join(' · ')}</span></button><button class="btn icon sm" data-act="place-edit" data-kind="${kind}" data-id="${p.id}" aria-label="${p.name} bearbeiten">${icon('edit')}</button></div>`; }) : empty('Noch kein Treffpunkt.')}
     <h2>Gespeicherte Karten</h2>
     ${packs.length ? packs.map(p => h`<div class="tile"><span class="ti">${icon('map')}</span><span class="grow"><span class="tt">${p.name}</span><br><span class="ts">Zoom ${p.minz}–${p.maxz} · ${fmt0(p.tiles)} Kacheln${p.bytes ? ' · ' + fmtMB(p.bytes) : ''}${p.attribution ? ' · ' + p.attribution : ''}</span></span><button class="btn icon sm" data-act="map-show" data-id="${p.id}" aria-label="Anzeigen">${icon('eye')}</button><button class="btn icon sm danger" data-act="map-del" data-id="${p.id}" aria-label="Löschen">${icon('trash')}</button></div>`) : empty('Keine Karte gespeichert.')}
@@ -43,6 +43,14 @@ route('/map', H => {
 });
 route('/places', H => { history.replaceState(null, '', '#/map'); return ROUTES.find(r => r.re.test('/map')).fn(H); });
 
+ACT['map-search'] = () => {
+  const H = HH(); const c = homeCoord(H) || (MAPUI.lat !== null && MAPUI.z >= 11 ? { lat: MAPUI.lat, lon: MAPUI.lon } : null);
+  if (!c) { toast('Erst den Standort im Haushalt bestimmen oder die Karte auf deine Gegend stellen.'); return; }
+  openPlaceSearch({ center: c, onPick: p => {
+    const H2 = HH(); H2.meeting.push({ id: uid(), name: p.name, lat: p.lat, lon: p.lon, far: (p.dist || 0) > 2000 });
+    MAPUI.lat = p.lat; MAPUI.lon = p.lon; MAPUI.z = Math.max(MAPUI.z || 0, 15); persist(); rerender(true); toast(p.name + ' als Treffpunkt gespeichert');
+  } });
+};
 ACT['map-zoom'] = d => UI.mapView && UI.mapView.zoomBy(+d.d);
 ACT['map-fit'] = () => { const mv = UI.mapView; if (!mv) return; const pts = HH().meeting.concat(HH().shelters).filter(placeCoord); const bs = mapPacks().map(p => p.bbox).concat(pts.map(p => ({ w: p.lon - .01, e: p.lon + .01, s: p.lat - .01, n: p.lat + .01 }))); if (!bs.length) return; mv.fit({ w: Math.min(...bs.map(b => b.w)), e: Math.max(...bs.map(b => b.e)), s: Math.min(...bs.map(b => b.s)), n: Math.max(...bs.map(b => b.n)) }); };
 ACT['map-show'] = d => { const p = mapPacks().find(x => x.id === d.id); if (p && UI.mapView) { UI.mapView.fit(p.bbox, 0); scroller().scrollTop = 0; } };

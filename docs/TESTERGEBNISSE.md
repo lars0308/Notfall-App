@@ -1,4 +1,4 @@
-# Testergebnisse (Version 2.8.0)
+# Testergebnisse (Version 2.9.0)
 
 Stand: 2026-11-10 08:21 UTC. Echte Ausgaben aus der Build-Umgebung (Node 22, Chromium/Playwright, Android SDK 35, Gradle 8.14.3). Wiederholbar mit `tests/run-all.sh`. Gesamt: **37 Unit-Prüfungen, 115 End-to-End-Prüfungen, 19 Schnittstellen-Prüfungen – 0 fehlgeschlagen.**
 
@@ -14,6 +14,7 @@ Stand: 2026-11-10 08:21 UTC. Echte Ausgaben aus der Build-Umgebung (Node 22, Chr
 | Bildschirm-Zuschnitt 360 px | 54 Prüfungen (`tests/fit.js`): jeder Schritt beim Anlegen, 27 Seiten, 5 Dialoge – nichts ragt über den Rand, Dialog-Knöpfe sichtbar | alle bestanden |
 | Anlegen: Kontakte, Treffpunkte, Notfallpass, Adresse aus Standort (2.8) | 10 Prüfungen (`tests/onboard.js`) | alle bestanden |
 | Packliste: Menge, Gewicht, Verschieben (2.7) | 4 Prüfungen in `tests/bagedit.js` | alle bestanden |
+| Ortssuche, Adresse aus Standort, Telefonbuch, große Familien (2.9) | 11 Prüfungen (`tests/places.js`) gegen Attrappe mit vorgegebenen OpenStreetMap-Antworten | alle bestanden |
 | Zufallstest inkl. neuer Seiten | 3 Läufe × ca. 335 Aktionen | keine JS-Fehler |
 | Java-Teil (Keystore, Biometrie, Benachrichtigungen, **Probealarm, Kartendownload, MBTiles-Import**, Kamera, Drucken) | **nur kompiliert**, APK signiert, Berechtigungen mit `aapt2` geprüft | **nicht auf einem Gerät ausgeführt** |
 

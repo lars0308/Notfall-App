@@ -368,3 +368,5 @@ ol.steps li span{color:var(--muted);font-size:.9375rem}
 .card.tight{padding:calc(var(--u)*1.5)}
 .slider{width:100%;height:2.75rem;accent-color:var(--primary);margin-top:6px}
 .bignum{font-size:2rem;font-weight:800;line-height:1}
+.qty{display:inline-flex;align-items:center;gap:10px}
+.qty .bignum{min-width:2.5rem;text-align:center}

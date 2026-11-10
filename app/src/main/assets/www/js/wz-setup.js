@@ -3,6 +3,7 @@
 const BLOOD_TYPES = ['', '0+', '0−', 'A+', 'A−', 'B+', 'B−', 'AB+', 'AB−'];
 const FITNESS = [['low', 'Wenig aktiv'], ['mid', 'Normal'], ['high', 'Sportlich']];
 const WZ_SHARE = [['photo', 'Foto'], ['allergies', 'Allergien'], ['conditions', 'Vorerkrankungen'], ['meds', 'Medikamente'], ['blood', 'Blutgruppe'], ['aids', 'Hilfsmittel']];
+const WZ_MAX_PEOPLE = 30;
 const AGE_GROUPS = [['baby', 'Baby', '0–2', 1], ['child', 'Kind', '3–12', 8], ['teen', 'Jugendlich', '13–17', 15], ['adult', 'Erwachsen', '18–64', 35], ['senior', 'Senior', '65+', 70]];
 const ageGroupOf = a => a === '' || a === null || a === undefined ? 'adult' : +a < 3 ? 'baby' : +a < 13 ? 'child' : +a < 18 ? 'teen' : +a < 65 ? 'adult' : 'senior';
 const MARITAL = [['', '– keine Angabe –'], ['single', 'ledig'], ['married', 'verheiratet'], ['partner', 'eingetragene Partnerschaft'], ['divorced', 'geschieden'], ['widowed', 'verwitwet']];
@@ -38,8 +39,9 @@ WZ_STEP.household = {
 WZ_STEP.people = {
   view: (H, d) => ({
     q: 'Wie viele Personen?',
-    body: h`<div class="card"><div class="row spread"><label for="wzcount" class="bold">Personen im Haushalt</label><span class="bignum" id="wzcountv">${d.people.length}</span></div>
-        <input id="wzcount" class="slider" type="range" min="1" max="10" step="1" value="${d.people.length}" data-input="wz-count-live" data-change="wz-count" aria-label="Anzahl Personen"></div>
+    body: h`<div class="card"><div class="row spread"><label for="wzcount" class="bold">Personen im Haushalt</label>
+          <span class="qty"><button class="btn icon sm" data-act="wz-count-step" data-d="-1" aria-label="Eine Person weniger">${icon('minus')}</button><span class="bignum" id="wzcountv">${d.people.length}</span><button class="btn icon sm" data-act="wz-count-step" data-d="1" aria-label="Eine Person mehr">${icon('plus')}</button></span></div>
+        <input id="wzcount" class="slider" type="range" min="1" max="${WZ_MAX_PEOPLE}" step="1" value="${d.people.length}" data-input="wz-count-live" data-change="wz-count" aria-label="Anzahl Personen"></div>
       <div class="stack-s">${d.people.map((p, k) => { const g = p.birth && ageFromBirth(p.birth) !== null ? ageGroupOf(ageFromBirth(p.birth)) : (p.group || ageGroupOf(p.age)); return h`<div class="person-card"><div class="row nowrap">${wzAvatar(p, k)}<strong class="grow">${wzPersonLabel(p, k)}</strong></div>
         <div class="chips" style="margin-top:8px">${AGE_GROUPS.map(([id, l, r]) => chip('wz-group', { i: k, v: id }, h`${l} <small class="muted">${r}</small>`, g === id))}</div></div>`; })}</div>
       <p class="muted small">Danach kommt jede Person einzeln dran – mit Geburtsdatum, Gesundheit und mehr.</p>`,
@@ -118,9 +120,10 @@ WZ_STEP.meet = {
       <div class="stack-s">${d.meet.map((m, k) => h`<div class="person-card"><div class="row spread"><strong>${m.far ? 'Außerhalb des Viertels' : 'In der Nähe'}</strong>${d.meet.length > 2 ? h`<button class="btn icon sm danger" data-act="wz-del-meet" data-i="${k}" aria-label="Treffpunkt entfernen">${icon('trash')}</button>` : ''}</div>
         ${wzField('Treffpunkt', `meet.${k}.name`, m.name, { ph: m.far ? 'z. B. Kirche am Markt, Bahnhof' : 'z. B. Spielplatz Lindenstraße', max: 80 })}
         <div class="row spread" style="margin-top:8px"><span class="muted small">${coordLine(m) || 'Ohne Position'}</span>
-          <span class="btns">${typeof m.lat === 'number' ? h`<button class="btn sm ghost" data-act="wz-gps-del" data-target="meet.${k}">Entfernen</button>` : ''}<button class="btn sm" data-act="wz-gps" data-target="meet.${k}">${icon('map')} Ich bin hier</button></span></div></div>`)}</div>
+          <span class="btns">${typeof m.lat === 'number' ? h`<button class="btn sm ghost" data-act="wz-gps-del" data-target="meet.${k}">Entfernen</button>` : ''}<button class="btn sm" data-act="wz-gps" data-target="meet.${k}">${icon('map')} Ich bin hier</button></span></div>
+        ${canPlaceSearch() ? h`<button class="btn block" style="margin-top:8px" data-act="wz-meet-search" data-i="${k}">${icon('search')} In der Nähe suchen</button>` : ''}</div>`)}</div>
       <button class="btn block" data-act="wz-add-meet">${icon('plus')} Weiterer Treffpunkt</button>
-      <p class="muted small">„Ich bin hier“ speichert deine aktuelle Position – praktisch, wenn du am Treffpunkt stehst. Auf der Karte kannst du sie später ändern.</p>`,
+      <p class="muted small">„Ich bin hier“ speichert deine aktuelle Position.${canPlaceSearch() ? ' „In der Nähe suchen“ findet z. B. den nächsten Sportplatz.' : ''} Auf der Karte kannst du alles später ändern.</p>`,
   }),
 };
 
@@ -157,12 +160,14 @@ WZ_STEP.pdone = {
 ACT['wz-pset'] = d => { const p = wzDraft(HH()).people[+d.i]; p[d.f] = p[d.f] === d.v ? '' : d.v; persist(); rerender(true); };
 ACT['wz-photo'] = async d => { const pid = await addPhotoTo(null); if (!pid) return; wzDraft(HH()).people[+d.i].photo = pid; persist(); rerender(true); };
 INPUT['wz-count-live'] = el => { const v = $('#wzcountv'); if (v) v.textContent = el.value; };
-INPUT['wz-count'] = el => {
-  const H = HH(); const w = wzDraft(H); const n = clamp(+el.value || 1, 1, 10);
+INPUT['wz-count'] = el => wzSetCount(+el.value);
+ACT['wz-count-step'] = d => wzSetCount(wzDraft(HH()).people.length + (+d.d));
+function wzSetCount(v) {
+  const H = HH(); const w = wzDraft(H); const n = clamp(v || 1, 1, WZ_MAX_PEOPLE);
   while (w.people.length < n) { const p = personShape({ id: uid(), name: '', age: 35 }); p.group = 'adult'; w.people.push(p); w.carry[p.id] = wzCarryDefault(H, p); }
   while (w.people.length > n) { const p = w.people.pop(); delete w.carry[p.id]; }
   persist(); rerender(true);
-};
+}
 ACT['wz-group'] = d => { const w = wzDraft(HH()); const p = w.people[+d.i]; const g = AGE_GROUPS.find(x => x[0] === d.v); if (!p || !g) return; p.group = g[0]; if (!p.birth) p.age = g[3]; persist(); rerender(true); };
 ACT['wz-pick-contact'] = async d => {
   const r = await nativeAsync('pickContact'); if (!r.ok) { if (r.error !== 'abgebrochen') toast(r.error); return; }
@@ -175,6 +180,11 @@ ACT['wz-del-person'] = d => { const w = wzDraft(HH()); if (w.people.length > 1) 
 ACT['wz-add-contact'] = () => { const w = wzDraft(HH()); w.contacts.push({ id: uid(), type: 'ice', name: '', relation: '', phone: '', priority: w.contacts.length + 1 }); persist(); rerender(true); };
 ACT['wz-del-contact'] = d => { wzDraft(HH()).contacts.splice(+d.i, 1); persist(); rerender(true); };
 ACT['wz-add-meet'] = () => { wzDraft(HH()).meet.push({ id: uid(), name: '', far: true }); persist(); rerender(true); };
+ACT['wz-meet-search'] = d => {
+  const w = wzDraft(HH()); const m = w.meet[+d.i]; if (!m) return;
+  const center = typeof w.lat === 'number' ? { lat: w.lat, lon: w.lon } : typeof m.lat === 'number' ? { lat: m.lat, lon: m.lon } : homeCoord(HH());
+  openPlaceSearch({ center, title: m.far ? 'Treffpunkt außerhalb suchen' : 'Treffpunkt in der Nähe suchen', onPick: p => { m.name = p.name; m.lat = p.lat; m.lon = p.lon; persist(); rerender(true); toast(p.name + ' übernommen'); } });
+};
 ACT['wz-del-meet'] = d => { wzDraft(HH()).meet.splice(+d.i, 1); persist(); rerender(true); };
 ACT['setup-done'] = d => {
   const H = HH(); const w = wzDraft(H); const wasDone = H.setup.done;
