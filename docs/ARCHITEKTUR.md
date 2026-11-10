@@ -57,3 +57,7 @@ Wichtig: Der **Plan** erzeugt Gegenstände mit Status `planned` („zu prüfen�
 - **Notfall-Schnellübersicht:** eine Seite für manuellen Aufruf und Probealarm, mit Lage-Auswahl (eigene Checkliste, klar getrennt von amtlichen Anweisungen) und Taschen-Hinweisen.
 - **Notfallpass:** neue Felder `pickup`, `doctor`, `confirmedBy`, `custom[]`, `hide{}`, `card{size,lang,twoSided,mods[]}`; Medikamente mit Zweck, Einnahme, Aufbewahrung, Notfallmedikament.
 - **Gegenstände:** `expiryType` (`mhd` / `use`).
+
+## Änderungen in 2.7
+- Assistent aufgeteilt: `js/wizard.js` (Grundgerüst, Blättern, Entwurf), `js/wz-setup.js` (Haushalt anlegen), `js/wz-bags.js` (Rucksäcke & Taschen). Jeder Schritt meldet sich in `WZ_STEP` mit `view` und optional `check` an.
+- Signatur: optionaler fester Schlüssel unter `app/signing/` (nicht im Repository).

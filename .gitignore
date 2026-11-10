@@ -5,3 +5,6 @@ local.properties
 .idea/
 node_modules/
 tests/out/
+
+# Signaturschlüssel nicht ins Repository
+app/signing/

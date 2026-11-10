@@ -23,6 +23,14 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
   await p.fill('[data-path="people.1.name"]', 'Mia'); await p.fill('[data-path="people.1.age"]', '4'); await p.fill('[data-path="people.1.needs.allergies"]', 'Erdnüsse'); await click('[data-act=wz-next]');
   // 3) Tiere
   ok('Dann Tiere', /Tiere/.test(await p.locator('.q').innerText())); await click('[data-act=wz-add-pet][data-v=Hund]'); await p.fill('[data-path="petList.0.name"]', 'Bello'); await click('[data-act=wz-next]');
+  ok('Dann Notfallkontakte', /anrufen/.test(await p.locator('.q').innerText()));
+  await p.fill('[data-path="contacts.0.name"]', 'Tante Ute'); await click('[data-act=wz-next]'); await p.waitForTimeout(100);
+  ok('Kontakt ohne Telefonnummer: Hinweis statt Weiter', /Telefonnummer fehlt/.test(await p.locator('#toasts').innerText()) && /anrufen/.test(await p.locator('.q').innerText()));
+  await p.fill('[data-path="contacts.0.name"]', ''); await click('[data-act=wz-next]');
+  ok('Dann Treffpunkte (nah und außerhalb)', /Wo trefft ihr euch/.test(await p.locator('.q').innerText()) && (await p.locator('[data-path^="meet."]').count()) === 2);
+  await p.fill('[data-path="meet.0.name"]', 'Spielplatz Lindenstraße'); await click('[data-act=wz-next]');
+  ok('Dann Notfallpass: nur eingetragene Angaben zum Anhaken, nichts vorausgewählt', /Notfallpass/.test(await p.locator('.q').innerText()) && (await p.locator('[data-path="people.1.share.allergies"]').count()) === 1 && (await p.locator('[data-path="people.0.share.allergies"]').count()) === 0 && (await p.locator('[data-change=wz-check]:checked').count()) === 0);
+  await click('[data-act=wz-next]');
   ok('Anlegen abgeschlossen: Übersicht mit Personen und Tier', /Haushalt angelegt/.test(await p.locator('.q').innerText()) && /Anna/.test(await body()) && /Bello/.test(await body()));
   await click('[data-act=setup-done][data-then=bags]'); await p.waitForFunction(() => /Wofür/.test(document.querySelector('.q').textContent));
   ok('Danach direkt: Rucksäcke & Taschen', await hash() === '#/wizard' && await p.evaluate(() => HH().profileDone && HH().people.length === 2 && HH().pets[0].name === 'Bello'));

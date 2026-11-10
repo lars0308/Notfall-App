@@ -1,0 +1,31 @@
+// „Haushalt anlegen“: Notfallkontakte, Treffpunkte (mit Standort) und Notfallpass-Freigabe werden übernommen.
+const { chromium } = require('playwright');
+const { start } = require('./serve');
+(async () => {
+  const srv = await start(8123); const b = await chromium.launch();
+  const ctx = await b.newContext({ viewport: { width: 360, height: 740 }, isMobile: true, hasTouch: true, geolocation: { latitude: 52.5205, longitude: 13.4095, accuracy: 20 }, permissions: ['geolocation'] }); const p = await ctx.newPage();
+  const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+  let fails = 0; const ok = (n, c, d = '') => { console.log((c ? 'OK   ' : 'FAIL ') + n + (c ? '' : ' ' + d)); if (!c) fails++; };
+  const q = () => p.locator('.q').innerText(); const next = () => p.click('.actionbar [data-act=wz-next]');
+  await p.goto('http://localhost:8123/'); await p.waitForSelector('.q'); await next();
+  await p.fill('[data-path=name]', 'Familie Test'); await p.click('[data-act=wz-gps]'); await p.waitForFunction(() => HH().setup.draft.lat !== null); await next(); await next();
+  await p.fill('[data-path="people.0.name"]', 'Lars'); await p.fill('[data-path="people.0.needs.allergies"]', 'Penicillin'); await p.selectOption('#wf-blood', '0+'); await next();
+  await next();
+  ok('Schritt Notfallkontakte', /anrufen/.test(await q()));
+  await p.fill('[data-path="contacts.0.name"]', 'Tante Ute'); await p.fill('[data-path="contacts.0.relation"]', 'Tante'); await p.fill('[data-path="contacts.0.phone"]', '0170 5555555');
+  await p.click('[data-act=wz-add-contact]'); await p.fill('[data-path="contacts.1.name"]', 'Nachbar Ben'); await p.fill('[data-path="contacts.1.phone"]', '0221 123'); await next();
+  ok('Schritt Treffpunkte', /Wo trefft/.test(await q()));
+  await p.fill('[data-path="meet.0.name"]', 'Spielplatz Lindenstraße'); await p.click('[data-act=wz-gps][data-target="meet.0"]'); await p.waitForFunction(() => typeof HH().setup.draft.meet[0].lat === 'number');
+  await p.fill('[data-path="meet.1.name"]', 'Kirche am Markt'); await next();
+  ok('Schritt Notfallpass: nur Allergien und Blutgruppe angeboten', /Notfallpass/.test(await q()) && await p.locator('[data-change=wz-check]').count() === 2);
+  await p.check('[data-path="people.0.share.allergies"]'); await next();
+  ok('Übersicht nennt Kontakte und Treffpunkte', /Tante Ute/.test(await p.locator('body').innerText()) && /Kirche am Markt/.test(await p.locator('body').innerText()));
+  await p.click('[data-act=setup-done][data-then=home]'); await p.waitForFunction(() => location.hash === '#/home');
+  const r = await p.evaluate(() => { const H = HH(); const l = H.people[0]; return { ice: H.contacts.filter(c => c.type === 'ice').map(c => c.name + '|' + c.phone), pc: l.passContacts.map(id => byId(H.contacts, id).name), meet: H.meeting.map(m => [m.name, !!m.far, typeof m.lat === 'number']), share: [l.share.allergies, l.share.blood], home: typeof H.home.lat === 'number', qr: (q => typeof q === 'string' ? q : q.text)(passQrText(H, l)) }; });
+  ok('Notfallkontakte gespeichert und im Pass', r.ice.join() === 'Tante Ute|0170 5555555,Nachbar Ben|0221 123' && r.pc.join() === 'Tante Ute,Nachbar Ben', JSON.stringify(r));
+  ok('Treffpunkte gespeichert (nah mit Position, außerhalb)', JSON.stringify(r.meet) === JSON.stringify([['Spielplatz Lindenstraße', false, true], ['Kirche am Markt', true, false]]), JSON.stringify(r.meet));
+  ok('Freigabe: nur Angehaktes im QR-Code', r.share[0] === true && !r.share[1] && /Penicillin/.test(r.qr) && !/0\+/.test(r.qr), r.qr);
+  ok('Startseite danach: weiter mit Rucksäcken', /Rucksäcke & Taschen anlegen/.test(await p.locator('body').innerText()));
+  ok('Keine JS-Fehler', !errs.length, errs.join(' | '));
+  await b.close(); srv.close(); process.exitCode = fails ? 1 : 0;
+})();

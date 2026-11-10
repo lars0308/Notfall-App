@@ -356,3 +356,13 @@ ol.steps{margin:0;padding:0;list-style:none;counter-reset:s;display:flex;flex-di
 ol.steps li{counter-increment:s;display:grid;grid-template-columns:2.25rem 1fr;column-gap:12px;align-items:center}
 ol.steps li::before{content:counter(s);grid-row:span 2;width:2.25rem;height:2.25rem;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--primary);color:#fff;font-weight:800}
 ol.steps li span{color:var(--muted);font-size:.9375rem}
+/* Packliste: Menge, Gewicht, Verschieben */
+.li.tick{flex-wrap:wrap}
+.tickx{flex-basis:100%;display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;padding:0 0 6px calc(1.75rem + var(--u)*1.5)}
+.tickx .qty{display:inline-flex;align-items:center;gap:6px}
+.tickx .qty .btn.icon{width:2.25rem;min-height:2.25rem}
+.tickx .qv{min-width:3.5rem;text-align:center;font-weight:700;font-size:.9375rem}
+.tickx .mv{margin-left:auto}
+.load{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.load .tmust{color:var(--must)}.load .trec{color:var(--rec)}
+.card.tight{padding:calc(var(--u)*1.5)}

@@ -1,9 +1,9 @@
-# Umgesetzte Funktionen (Version 2.6.0)
+# Umgesetzte Funktionen (Version 2.7.0)
 
 Legende: ✅ umgesetzt und im Browser getestet · 📱 braucht Android-Code, nicht auf Gerät geprüft · 🟡 mit Einschränkung · ⬜ offen. Was gestrichen oder verschoben wurde, steht in der [Feature-Matrix](FEATURE-MATRIX.md).
 
 ## Erster Start: Haushalt anlegen, dann Rucksäcke ✅
-Beim ersten Öffnen: **Willkommen → Haushalt → Personen → jede Person einzeln → Tiere → Übersicht „Haushalt angelegt“**. Danach direkt **Rucksäcke & Taschen: Zweck → Dauer → Unterkunft → Wer trägt was → Packliste**. Beides lässt sich unterbrechen und später fortsetzen; unter „Mehr“ jederzeit „Haushalt, Personen & Tiere“ bearbeiten (Packlisten passen sich an) und „Rucksäcke & Taschen neu planen“.
+Beim ersten Öffnen: **Willkommen → Haushalt → Personen → jede Person einzeln → Tiere → Notfallkontakte → Treffpunkte (nah / außerhalb, „Ich bin hier“ speichert die Position) → Notfallpass (nur eingetragene Angaben zum Anhaken, nichts vorausgewählt) → Übersicht „Haushalt angelegt“**. Danach direkt **Rucksäcke & Taschen: Zweck → Dauer → Unterkunft → Wer trägt was → Packliste**. Beides lässt sich unterbrechen und später fortsetzen; unter „Mehr“ jederzeit „Haushalt, Personen & Tiere“ bearbeiten (Packlisten passen sich an) und „Rucksäcke & Taschen neu planen“.
 - Haushalt: Name, Adresse/Ort, Standort per GPS 📱 (freiwillig, nur auf Knopfdruck, wird nicht gesendet), Wohnsituation (Wohnung/Haus/Land; „Land“ macht Wasserfilter Pflicht und schlägt Solar-Ladegerät vor).
 - Personen: erst Liste (Erwachsene/Kinder), dann je Person ein Schritt mit Foto 📱, Name, Alter oder Geburtsdatum, Geschlecht, Gewicht, Größe, Fitness, Blutgruppe, Allergien, Vorerkrankungen, Medikamenten, Hilfsmitteln, Einschränkung beim Gehen/Tragen. Live berechnet: Kalorien (Mifflin-St Jeor × Aktivität, sonst Richtwert nach Alter), Wasser, Traglast (15–25 % des Körpergewichts, max. 20 kg). Die Packliste nutzt dieselben Werte.
 - Tiere: je Tier Art, Name, Anzahl (Hund mit Gewicht für die Wassermenge).
@@ -11,7 +11,7 @@ Beim ersten Öffnen: **Willkommen → Haushalt → Personen → jede Person einz
 
 ## Packen Rucksack für Rucksack ✅
 - Packliste: bei mehreren Taschen zuerst „Welchen Rucksack packst du?“, dann dessen Kategorien (Allgemein, Medikamente & Erste Hilfe, Kleidung, Werkzeug, Feuer & Kochen, Wasser, Nahrung, Technik/Akkus/Licht, Hygiene, Schlafen, Dokumente & Geld; Kind/Haustier/Auto nur wenn passend). „Weiter“ führt durch alle Kategorien und dann zum nächsten Rucksack.
-- In der Kategorie: Vorschläge abhaken, weitere Sachen mit + direkt in diesen Rucksack, Foto je Gegenstand 📱, eigener Gegenstand.
+- In der Kategorie: Gewicht und Füllstand des Rucksacks oben (Balken, „zu schwer“), Vorschläge abhaken, Menge mit − / + ändern (Gewicht je Zeile), in andere Tasche verschieben, weitere Sachen mit + direkt in diesen Rucksack, Foto je Gegenstand 📱, eigener Gegenstand.
 - Lupe: suchen und direkt hinzufügen (in den gewählten Rucksack). „Einzeln abfragen“ je Rucksack. „Fertig“: nicht Abgehaktes nach Rückfrage auf die Einkaufsliste.
 
 ## Startseite ✅

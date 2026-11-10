@@ -1,7 +1,7 @@
 # Installationsanleitung
 
 ## A) Test-APK direkt am Handy installieren
-1. `dist/Notfall-2.6.0-debug.apk` aufs Handy laden: über die Dateikarte im Claude-Chat oder im Browser bei GitHub (Branch wählen → Datei öffnen → „Download raw file“).
+1. `dist/Notfall-2.7.0-debug.apk` aufs Handy laden: über die Dateikarte im Claude-Chat oder im Browser bei GitHub (Branch wählen → Datei öffnen → „Download raw file“).
 2. Datei in der Download-Benachrichtigung oder in der App „Dateien“ antippen.
 3. Android fragt, ob diese App installieren darf → „Einstellungen“ → „Dieser Quelle vertrauen“ → zurück → „Installieren“.
 4. Meldet Play Protect eine unbekannte App: „Trotzdem installieren“.
@@ -39,3 +39,6 @@ node tests/native-sim.js  # Android-Schnittstelle (Attrappe)
 2. Packliste: „Habe ich“ oder „Fehlt“.
 3. Tasche öffnen → „Packen starten“.
 4. Notfallpass: Kontakte wählen, Angaben freigeben, Karte drucken.
+
+## Signatur
+Damit jede neue Version als Update über die alte passt (Daten bleiben), muss immer derselbe Schlüssel benutzt werden. Liegt `app/signing/notfall-debug.keystore` vor, signiert der Build damit; sonst nimmt Gradle den Debug-Schlüssel des Rechners (`~/.android/debug.keystore`). Der Schlüssel gehört nicht ins Repository. Bisherige Versionen: Zertifikat SHA-256 `99:02:9E:20:…:47:B8`. Geht der Schlüssel verloren, lässt sich die nächste Version nur nach Deinstallation installieren – vorher in der App ein Backup erstellen.

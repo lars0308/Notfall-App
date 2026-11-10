@@ -1,0 +1,179 @@
+'use strict';
+/* ===== Notfall! – „Haushalt anlegen“: Willkommen, Haushalt, Personen, Tiere, Notfallkontakte, Treffpunkte, Notfallpass ===== */
+const BLOOD_TYPES = ['', '0+', '0−', 'A+', 'A−', 'B+', 'B−', 'AB+', 'AB−'];
+const FITNESS = [['low', 'Wenig aktiv'], ['mid', 'Normal'], ['high', 'Sportlich']];
+const WZ_SHARE = [['photo', 'Foto'], ['allergies', 'Allergien'], ['conditions', 'Vorerkrankungen'], ['meds', 'Medikamente'], ['blood', 'Blutgruppe'], ['aids', 'Hilfsmittel']];
+const ageInvalid = p => p.age === '' || p.age === null || p.age === undefined || isNaN(+p.age) || +p.age < 0 || +p.age > 110;
+const coordLine = o => typeof o.lat === 'number' ? `${o.lat.toFixed(5)}, ${o.lon.toFixed(5)}` : '';
+
+WZ_STEP.welcome = {
+  view: () => ({
+    q: 'Willkommen bei Notfall!',
+    body: h`<div class="card"><ol class="steps"><li><b>Haushalt anlegen</b><span>Adresse, Personen, Tiere, Notfallkontakte</span></li><li><b>Treffpunkte und Notfallpass</b><span>Wo ihr euch trefft, was Helfer sehen dürfen</span></li><li><b>Rucksäcke und Taschen</b><span>Wer trägt was – danach packen</span></li></ol></div>
+      <p class="muted small">Alles bleibt auf diesem Gerät. Du kannst jederzeit unterbrechen und später weitermachen.</p>
+      <button class="btn ghost block" data-act="load-sample">Erst mit Beispieldaten ansehen</button>`,
+    foot: h`<button class="btn primary lg" data-act="wz-next">Los geht's ${icon('chev')}</button>`,
+  }),
+};
+
+WZ_STEP.household = {
+  view: (H, d) => ({
+    q: 'Dein Haushalt',
+    body: h`${wzField('Name', 'name', d.name, { ph: 'z. B. Familie Müller', max: 40 })}
+      ${wzField('Adresse oder Ort', 'place', d.place, { ph: 'z. B. Lindenstraße 4, Köln', max: 80 })}
+      <div class="card"><div class="row spread"><div><h3>Standort</h3><p class="muted small">${d.lat !== null ? `${coordLine(d)}${d.acc ? ' · ± ' + fmt0(d.acc) + ' m' : ''}` : 'Für Karte und Entfernung zu Treffpunkten. Freiwillig.'}</p></div>
+        ${d.lat !== null ? h`<button class="btn sm ghost" data-act="wz-gps-del">Entfernen</button>` : ''}</div>
+        <button class="btn block" style="margin-top:10px" data-act="wz-gps">${icon('map')} ${d.lat !== null ? 'Neu bestimmen' : 'Standort bestimmen'}</button></div>
+      <div class="label">Wohnsituation</div>
+      <div class="chips">${[['flat', 'Wohnung in der Stadt'], ['house', 'Haus in der Stadt'], ['rural', 'Auf dem Land']].map(([v, l]) => chip('wz-set', { f: 'home', v }, l, d.home === v))}</div>
+      ${d.home === 'rural' ? h`<p class="muted small">Auf dem Land: Wasserfilter wird Pflicht, Solar-Ladegerät wird vorgeschlagen.</p>` : ''}`,
+  }),
+};
+
+WZ_STEP.people = {
+  view: (H, d) => ({
+    q: 'Wer gehört dazu?',
+    body: h`<div class="stack-s">${d.people.map((p, k) => h`<div class="tile">${wzAvatar(p, k)}<span class="grow"><span class="tt">${wzPersonLabel(p, k)}</span><br><span class="ts">${p.age !== '' && p.age !== null ? p.age + ' Jahre' : 'Alter fehlt'}</span></span>
+        ${d.people.length > 1 ? h`<button class="btn icon sm danger" data-act="wz-del-person" data-i="${k}" aria-label="${wzPersonLabel(p, k)} entfernen">${icon('trash')}</button>` : ''}</div>`)}</div>
+      <div class="btns"><button class="btn" data-act="wz-add-person" data-kind="adult">${icon('plus')} Erwachsene/r</button><button class="btn" data-act="wz-add-person" data-kind="child">${icon('plus')} Kind</button></div>
+      <p class="muted small">Danach kommt jede Person einzeln dran.</p>`,
+  }),
+  check: (H, d) => { for (const p of d.people) if (ageInvalid(p)) p.age = 35; return ''; },
+};
+
+WZ_STEP.person = {
+  view: (H, d, k) => {
+    const p = d.people[k]; const P = `people.${k}`;
+    return {
+      q: wzPersonLabel(p, k),
+      body: h`<div class="row nowrap" style="gap:16px"><button class="avatar xl" data-act="wz-photo" data-i="${k}" aria-label="Foto" style="cursor:pointer">${p.photo ? h`<img data-ph="${p.photo}" alt="">` : icon('camera')}</button>
+          <div class="grow">${wzField('Name', P + '.name', p.name, { ph: +p.age < 18 ? 'Kind' : 'Vorname', max: 40 })}</div></div>
+        <div class="form-grid">${wzField('Alter', P + '.age', p.age, { num: true, type: 'number', max: 3 })}${wzField('Geburtsdatum', P + '.birth', p.birth, { type: 'date' })}</div>
+        <div class="label">Geschlecht</div><div class="chips">${[['f', 'weiblich'], ['m', 'männlich'], ['d', 'divers']].map(([v, l]) => chip('wz-pset', { i: k, f: 'sex', v }, l, p.sex === v))}</div>
+        <div class="form-grid">${wzField('Gewicht (kg)', P + '.weightKg', p.weightKg, { num: true, type: 'number', max: 3 })}${wzField('Größe (cm)', P + '.heightCm', p.heightCm, { num: true, type: 'number', max: 3 })}</div>
+        <div class="label">Fitness</div><div class="chips">${FITNESS.map(([v, l]) => chip('wz-pset', { i: k, f: 'fitness', v }, l, p.fitness === v))}</div>
+        <div class="notice info" id="wzcalc"><div><p class="nt">Bedarf</p><p>${wzCalcLine(p)}</p></div></div>
+        <div class="field"><label for="wf-blood">Blutgruppe</label><select id="wf-blood" data-change="wz-sel" data-path="${P}.needs.blood">${BLOOD_TYPES.map(b => h`<option value="${b}" ${(p.needs.blood || '') === b ? raw('selected') : ''}>${b || 'unbekannt'}</option>`)}</select></div>
+        ${wzField('Allergien', P + '.needs.allergies', p.needs.allergies, { ph: 'z. B. Erdnüsse (Atemnot)' })}
+        ${wzField('Vorerkrankungen', P + '.needs.conditions', p.needs.conditions, { ph: 'z. B. Asthma, Diabetes' })}
+        ${wzField('Medikamente', P + '._meds', p._meds ?? (p.needs.meds || []).map(m => m.name).join(', '), { ph: 'mit Komma trennen', max: 300 })}
+        ${wzField('Hilfsmittel', P + '.needs.aids', p.needs.aids, { ph: 'z. B. Brille, Hörgerät' })}
+        ${wzField('Eingeschränkt beim Gehen/Tragen', P + '.needs.mobility', p.needs.mobility, { ph: 'leer lassen, wenn nicht' })}
+        <p class="muted small">Bleibt auf diesem Gerät. Was im Notfallpass sichtbar ist, legst du gleich fest.</p>`,
+    };
+  },
+  check: (H, d, k) => ageInvalid(d.people[k]) ? 'Alter fehlt (0–110).' : '',
+};
+WZ_ON_INPUT.push(el => {
+  const m = /^people\.(\d+)\.(age|weightKg|heightCm|needs\.mobility|birth)$/.exec(el.dataset.path || ''); const box = $('#wzcalc p:last-child'); if (!m || !box) return;
+  const p = wzDraft(HH()).people[+m[1]];
+  if (m[2] === 'birth' && p.birth) { const a = Math.floor((Date.now() - new Date(p.birth)) / 31557600000); if (a >= 0 && a <= 110) { p.age = a; const ai = $(`[data-path="people.${m[1]}.age"]`); if (ai) ai.value = a; persist(); } }
+  box.textContent = wzCalcLine(p);
+});
+
+WZ_STEP.pets = {
+  view: (H, d) => ({
+    q: 'Tiere',
+    body: h`${d.petList.length ? h`<div class="stack-s">${d.petList.map((t, k) => h`<div class="person-card"><div class="row spread"><strong>${t.species}</strong><button class="btn icon sm danger" data-act="wz-del-pet" data-i="${k}" aria-label="${t.species} entfernen">${icon('trash')}</button></div>
+        <div class="form-grid">${wzField('Name', `petList.${k}.name`, t.name, { max: 40 })}${wzField('Anzahl', `petList.${k}.count`, t.count, { num: true, type: 'number', max: 2 })}${t.species === 'Hund' ? wzField('Gewicht (kg)', `petList.${k}.weightKg`, t.weightKg, { num: true, type: 'number', max: 3 }) : ''}</div></div>`)}</div>` : h`<p class="muted">Keine Tiere. Einfach weiter.</p>`}
+      <div class="btns">${WZ_PETS.map(s => h`<button class="btn" data-act="wz-add-pet" data-v="${s}">${icon('plus')} ${s}</button>`)}</div>`,
+  }),
+};
+
+WZ_STEP.contacts = {
+  view: (H, d) => ({
+    q: 'Wen sollen Helfer anrufen?',
+    body: h`<p class="muted">Notfallkontakte stehen im Notfallpass und auf der Karte. Am besten jemand, der nicht bei euch wohnt.</p>
+      <div class="stack-s">${d.contacts.map((c, k) => h`<div class="person-card"><div class="row spread"><strong>${k + 1}. Kontakt</strong>${d.contacts.length > 1 ? h`<button class="btn icon sm danger" data-act="wz-del-contact" data-i="${k}" aria-label="Kontakt entfernen">${icon('trash')}</button>` : ''}</div>
+        <div class="form-grid">${wzField('Name', `contacts.${k}.name`, c.name, { ph: 'z. B. Oma Erna', max: 60 })}${wzField('Beziehung', `contacts.${k}.relation`, c.relation, { ph: 'z. B. Oma, Nachbar', max: 40 })}</div>
+        ${wzField('Telefon', `contacts.${k}.phone`, c.phone, { type: 'tel', ph: 'z. B. 0170 1234567', max: 30 })}</div>`)}</div>
+      ${d.contacts.length < 5 ? h`<button class="btn block" data-act="wz-add-contact">${icon('plus')} Weiteren Kontakt</button>` : ''}`,
+  }),
+  check: (H, d) => d.contacts.some(c => (c.name || '').trim() && !(c.phone || '').trim()) ? 'Telefonnummer fehlt.' : '',
+};
+
+WZ_STEP.meet = {
+  view: (H, d) => ({
+    q: 'Wo trefft ihr euch?',
+    body: h`<p class="muted">Falls ihr getrennt werdet oder das Handy nicht geht.</p>
+      <div class="stack-s">${d.meet.map((m, k) => h`<div class="person-card"><div class="row spread"><strong>${m.far ? 'Außerhalb des Viertels' : 'In der Nähe'}</strong>${d.meet.length > 2 ? h`<button class="btn icon sm danger" data-act="wz-del-meet" data-i="${k}" aria-label="Treffpunkt entfernen">${icon('trash')}</button>` : ''}</div>
+        ${wzField('Treffpunkt', `meet.${k}.name`, m.name, { ph: m.far ? 'z. B. Kirche am Markt, Bahnhof' : 'z. B. Spielplatz Lindenstraße', max: 80 })}
+        <div class="row spread" style="margin-top:8px"><span class="muted small">${coordLine(m) || 'Ohne Position'}</span>
+          <span class="btns">${typeof m.lat === 'number' ? h`<button class="btn sm ghost" data-act="wz-gps-del" data-target="meet.${k}">Entfernen</button>` : ''}<button class="btn sm" data-act="wz-gps" data-target="meet.${k}">${icon('map')} Ich bin hier</button></span></div></div>`)}</div>
+      <button class="btn block" data-act="wz-add-meet">${icon('plus')} Weiterer Treffpunkt</button>
+      <p class="muted small">„Ich bin hier“ speichert deine aktuelle Position – praktisch, wenn du am Treffpunkt stehst. Auf der Karte kannst du sie später ändern.</p>`,
+  }),
+};
+
+WZ_STEP.share = {
+  view: (H, d) => ({
+    q: 'Was steht im Notfallpass?',
+    body: h`<p class="muted">Immer sichtbar: Name und Notfallkontakte. Alles andere nur, wenn du es anhakst – auch auf Karte und QR-Code.</p>
+      <div class="stack-s">${d.people.map((p, k) => {
+        const has = { photo: !!p.photo, allergies: !!(p.needs.allergies || '').trim(), conditions: !!(p.needs.conditions || '').trim(), meds: !!((p._meds ?? (p.needs.meds || []).map(m => m.name).join(',')) || '').trim(), blood: !!p.needs.blood, aids: !!(p.needs.aids || '').trim() };
+        const keys = WZ_SHARE.filter(([key]) => has[key]);
+        return h`<div class="person-card"><div class="row nowrap">${wzAvatar(p, k)}<strong class="grow">${wzPersonLabel(p, k)}</strong></div>
+          ${keys.length ? h`<div class="choice-grid" style="margin-top:10px">${keys.map(([key, l]) => h`<label class="check"><input type="checkbox" data-change="wz-check" data-path="people.${k}.share.${key}" ${p.share && p.share[key] ? raw('checked') : ''}><span class="t">${l}</span></label>`)}</div>`
+            : h`<p class="muted small" style="margin-top:8px">Nichts Privates eingetragen.</p>`}</div>`; })}</div>`,
+  }),
+};
+
+WZ_STEP.pdone = {
+  view: (H, d) => {
+    const ice = d.contacts.filter(c => (c.name || '').trim() && (c.phone || '').trim()); const meet = d.meet.filter(m => (m.name || '').trim());
+    return {
+      q: H.setup.done ? 'Haushalt speichern' : 'Haushalt angelegt',
+      body: h`<div class="card"><h3>${(d.name || '').trim() || 'Mein Haushalt'}</h3>${d.place ? h`<p class="muted">${d.place}</p>` : ''}
+        <ul class="plain">${d.people.map((p, k) => h`<li class="row nowrap">${wzAvatar(p, k, 'sm')}<span class="grow"><b>${wzPersonLabel(p, k)}</b>${p.age !== '' ? ', ' + p.age : ''}<br><span class="muted small">${wzCalcLine(p).split(' · ')[0]}</span></span></li>`)}
+        ${d.petList.map(t => h`<li>${icon('paw')} ${t.name || t.species}${+t.count > 1 ? ' ×' + t.count : ''}</li>`)}</ul></div>
+        <div class="card"><ul class="plain" style="margin-top:0"><li>${icon('phone')} ${ice.length ? ice.map(c => c.name).join(', ') : h`<span class="tmust">Kein Notfallkontakt</span>`}</li><li>${icon('map')} ${meet.length ? meet.map(m => m.name).join(' · ') : h`<span class="muted">Kein Treffpunkt</span>`}</li></ul></div>
+        <p class="muted small">${H.setup.done ? 'Die Packlisten werden an die neuen Angaben angepasst.' : 'Als Nächstes: Rucksäcke und Taschen.'}</p>`,
+      foot: H.setup.done ? h`<button class="btn primary lg" data-act="setup-done" data-then="home">${icon('check')} Speichern</button>`
+        : h`<button class="btn lg" data-act="setup-done" data-then="home">Später</button><button class="btn primary lg" data-act="setup-done" data-then="bags">Weiter ${icon('chev')}</button>`,
+    };
+  },
+};
+
+/* ---- Aktionen ---- */
+ACT['wz-pset'] = d => { const p = wzDraft(HH()).people[+d.i]; p[d.f] = p[d.f] === d.v ? '' : d.v; persist(); rerender(true); };
+ACT['wz-photo'] = async d => { const pid = await addPhotoTo(null); if (!pid) return; wzDraft(HH()).people[+d.i].photo = pid; persist(); rerender(true); };
+ACT['wz-add-pet'] = d => { wzDraft(HH()).petList.push({ id: uid(), species: d.v, name: '', count: 1, age: '', weightKg: '', needs: '' }); persist(); rerender(true); };
+ACT['wz-del-pet'] = d => { wzDraft(HH()).petList.splice(+d.i, 1); persist(); rerender(true); };
+ACT['wz-add-person'] = d => { const w = wzDraft(HH()); const p = personShape({ id: uid(), name: '', age: d.kind === 'child' ? 6 : 35 }); w.people.push(p); w.carry[p.id] = wzCarryDefault(HH(), p); persist(); rerender(true); };
+ACT['wz-del-person'] = d => { const w = wzDraft(HH()); if (w.people.length > 1) { const [p] = w.people.splice(+d.i, 1); delete w.carry[p.id]; } persist(); rerender(true); };
+ACT['wz-add-contact'] = () => { const w = wzDraft(HH()); w.contacts.push({ id: uid(), type: 'ice', name: '', relation: '', phone: '', priority: w.contacts.length + 1 }); persist(); rerender(true); };
+ACT['wz-del-contact'] = d => { wzDraft(HH()).contacts.splice(+d.i, 1); persist(); rerender(true); };
+ACT['wz-add-meet'] = () => { wzDraft(HH()).meet.push({ id: uid(), name: '', far: true }); persist(); rerender(true); };
+ACT['wz-del-meet'] = d => { wzDraft(HH()).meet.splice(+d.i, 1); persist(); rerender(true); };
+ACT['setup-done'] = d => {
+  const H = HH(); const w = wzDraft(H); const wasDone = H.setup.done;
+  finishProfile(H, w); H.profileDone = true; H.setup.pstep = 0;
+  if (wasDone && H.cfg) applyPlan(H, DB.settings);
+  H.setup.draft = null; H.setup.step = 0; persist(); flushDB();
+  if (d.then === 'bags') go('#/wizard'); else { if (!wasDone) H.setup.skipped = true; persist(); go('#/home'); toast('Haushalt gespeichert'); }
+};
+
+/* Angaben aus „Haushalt anlegen“ übernehmen (auch beim späteren Bearbeiten) */
+function finishProfile(H, d) {
+  H.people = d.people.map((p, i) => {
+    const kid = +p.age < 18; const n = d.people.slice(0, i).filter(x => (+x.age < 18) === kid).length + 1;
+    const q = personShape(Object.assign({}, p, { id: p.id || uid(), name: (p.name || '').trim() || (kid ? 'Kind ' + n : 'Erwachsene/r ' + n), age: +p.age }));
+    if (typeof p._meds === 'string') { const names = splitList(p._meds); q.needs.meds = names.map(nm => (q.needs.meds || []).find(m => m.name === nm) || { id: uid(), name: nm, dose: '', expiry: '' }); }
+    delete q._meds; q.needs.meds = (q.needs.meds || []).filter(m => m.name && m.name.trim());
+    return q;
+  });
+  const ids = new Set(H.people.map(p => p.id));
+  H.items.forEach(i => { if (i.personId && !ids.has(i.personId)) i.personId = null; });
+  H.bags.forEach(b => { if (b.owner && !ids.has(b.owner)) b.owner = null; });
+  if (Array.isArray(d.petList)) H.pets = d.petList.map(t => Object.assign({ id: uid(), name: '', count: 1, age: '', weightKg: '', needs: '' }, t, { count: Math.max(1, +t.count || 1) }));
+  if (Array.isArray(d.contacts)) {
+    const ice = d.contacts.filter(c => (c.name || '').trim() && (c.phone || '').trim()).map((c, k) => Object.assign({ address: '', email: '' }, byId(H.contacts, c.id) || {}, c, { type: 'ice', name: c.name.trim(), phone: c.phone.trim(), priority: k + 1 }));
+    H.contacts = H.contacts.filter(c => c.type !== 'ice').concat(ice);
+    const iceIds = ice.map(c => c.id);
+    for (const p of H.people) { p.passContacts = (p.passContacts || []).filter(id => byId(H.contacts, id)); if (!p.passContacts.length) p.passContacts = iceIds.slice(0, 3); }
+  }
+  if (Array.isArray(d.meet)) H.meeting = d.meet.filter(m => (m.name || '').trim()).map(m => Object.assign({}, m, { name: m.name.trim() }));
+  if ((d.name || '').trim()) H.name = d.name.trim();
+  H.home = { type: d.home || '', place: (d.place || '').trim(), lat: d.lat ?? null, lon: d.lon ?? null, acc: d.acc || null };
+  if (H.cfg) H.cfg.housing = Object.assign({}, H.cfg.housing || {}, H.home);
+}

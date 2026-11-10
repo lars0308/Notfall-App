@@ -64,7 +64,7 @@ route('/review/b/:bid', (bid, H) => {
   const bags = packBags(H); const k = bags.findIndex(b => b.id === bid); const nxt = bags[k + 1];
   return {
     title: bag.name, back: bags.length > 1 ? '#/review' : null, actions: searchBtn(bid),
-    html: h`${progressCard(its.length && its.every(i => i.status === 'owned') ? 'Alles da' : 'Das brauchst du', its, h`<p class="muted small" style="margin-top:6px">${bagMetaShort(H, bag)}</p>${open ? h`<button class="btn block" style="margin-top:12px" data-act="ask-start" data-bag="${bid}">${icon('chev')} Einzeln abfragen (${open} offen)</button>` : ''}`)}
+    html: h`${progressCard(its.length && its.every(i => i.status === 'owned') ? 'Alles da' : 'Das brauchst du', its, h`<p class="muted small" style="margin-top:6px">${bagMetaShort(H, bag)}</p>${bagLoad(H, bag)}${open ? h`<button class="btn block" style="margin-top:12px" data-act="ask-start" data-bag="${bid}">${icon('chev')} Einzeln abfragen (${open} offen)</button>` : ''}`)}
     <div class="catgrid">${pickVisible(H, bag).map(c => { const ci = its.filter(i => pickCatOf(i.category) === c.id); const n = ci.filter(i => i.status === 'owned').length; const mustOpen = ci.some(i => i.status !== 'owned' && i.prio === 'must');
       return h`<a class="cat ${ci.length && n === ci.length ? 'done' : ''}" href="${bagHref(bid, c.id)}"><span class="ti">${icon(c.icon)}</span><span class="cl">${c.label}</span><span class="cs">${ci.length ? `${n} von ${ci.length}` : 'antippen zum Auswählen'}</span>${mustOpen ? h`<span class="dot" aria-label="Wichtiges offen"></span>` : ''}</a>`; })}</div>
     <div class="actionbar">${nxt ? h`<a class="btn primary lg" href="${bagHref(nxt.id)}">Nächster: ${nxt.name} ${icon('chev')}</a>` : h`<button class="btn primary lg" data-act="rv-done">${icon('check')} Fertig</button>`}</div>`,
@@ -82,7 +82,7 @@ route('/review/b/:bid/c/:cat', (bid, cat, H) => {
   const bags = packBags(H); const nb = bags[bags.findIndex(b => b.id === bid) + 1];
   return {
     title: C.label, back: bagHref(bid), actions: searchBtn(bid),
-    html: h`<p class="muted small">${icon('bag')} ${bag.name}</p>
+    html: h`<div class="card tight"><p class="small bold">${bag.name}</p>${bagLoad(H, bag)}</div>
     ${mine.length ? h`<div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h3>Hast du das?</h3><span class="badge">${mine.filter(i => i.status === 'owned').length}/${mine.length}</span></div><div class="list">${mine.map(it => tickRow(it, H))}</div></div>` : ''}
     ${more.length ? h`<div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h3>${mine.length ? 'Noch mehr' : 'Zum Hinzufügen antippen'}</h3></div><div class="list">${more.map(addRow)}</div></div>` : ''}
     <button class="btn block" data-act="pick-custom-open">${icon('plus')} Eigenen Gegenstand hinzufügen</button>
@@ -131,11 +131,37 @@ ACT['pick-custom-open'] = () => {
     onSubmit: fd => { ACT['pick-custom']({ name: fd.get('name') }); } });
 };
 ACT['pick-photo'] = async d => { const H = HH(); const it = byId(H.items, d.id); if (!it) return; const pid = await addPhotoTo(null); if (!pid) return; it.photos = it.photos || []; it.photos.push(pid); persist(); rerender(true); };
+const QTY_STEP = { Euro: 10, g: 50, kg: .5, Liter: .5 };
 function tickRow(it, H) {
   const own = it.status === 'owned'; const mark = own ? 'done' : it.prio === 'must' ? 'must' : it.prio === 'rec' ? 'rec' : '';
-  return h`<div class="li tick ${mark}"><label class="tickl grow"><input type="checkbox" data-change="rv-tick" data-id="${it.id}" ${own ? raw('checked') : ''} aria-label="${it.name} vorhanden"><span class="grow"><span class="t">${it.name}</span><br><span class="s">${itemQtyLabel(it)}${it.source !== 'pick' ? h` · ${levelBadge(it.prio)}` : ''}${it.status === 'missing' ? h` <span class="badge must">fehlt</span>` : ''}</span></span></label>
+  const canMove = H && H.bags.length > 1;
+  return h`<div class="li tick ${mark}"><label class="tickl grow"><input type="checkbox" data-change="rv-tick" data-id="${it.id}" ${own ? raw('checked') : ''} aria-label="${it.name} vorhanden"><span class="grow"><span class="t">${it.name}</span>${it.source !== 'pick' || it.status === 'missing' ? h`<br><span class="s">${it.source !== 'pick' ? levelBadge(it.prio) : ''}${it.status === 'missing' ? h` <span class="badge must">fehlt</span>` : ''}</span>` : ''}</span></label>
     ${it.photos && it.photos[0] ? h`<span class="thumb"><img data-ph="${it.photos[0]}" data-act="ph-view" data-id="${it.photos[0]}" alt="Foto"></span>` : own ? h`<button class="btn icon ghost sm" data-act="pick-photo" data-id="${it.id}" aria-label="Foto von ${it.name}">${icon('camera')}</button>` : ''}
-    <a class="btn icon ghost sm" href="#/item/${it.id}" aria-label="Details zu ${it.name}">${icon('chev')}</a></div>`;
+    <a class="btn icon ghost sm" href="#/item/${it.id}" aria-label="Details zu ${it.name}">${icon('chev')}</a>
+    <div class="tickx"><span class="qty"><button class="btn icon sm" data-act="qty" data-id="${it.id}" data-d="-1" aria-label="weniger">${icon('minus')}</button><span class="qv">${itemQtyLabel(it)}</span><button class="btn icon sm" data-act="qty" data-id="${it.id}" data-d="1" aria-label="mehr">${icon('plus')}</button></span>
+      ${it.weightG ? h`<span class="muted small">${fmtKg(it.weightG * it.qty)}</span>` : ''}${canMove ? h`<button class="btn icon sm mv" data-act="mv-bag" data-id="${it.id}" aria-label="${it.name} in andere Tasche" title="In andere Tasche">${icon('move')}</button>` : ''}</div></div>`;
+}
+ACT['qty'] = d => {
+  const H = HH(); const it = byId(H.items, d.id); if (!it) return; const st = QTY_STEP[it.unit] || 1;
+  it.qty = Math.max(st, Math.round(((+it.qty || 0) + st * (+d.d)) * 100) / 100); persist(); rerender(true);
+};
+ACT['mv-bag'] = d => {
+  const H = HH(); const it = byId(H.items, d.id); if (!it) return; const S = DB.settings;
+  const others = H.bags.filter(b => b.id !== it.bagId);
+  const m = openModal({ title: `„${it.name}“ verschieben`, body: h`<div class="stack-s">${others.map(b => { const st = bagStats(H, S, b); return h`<button class="tile" data-act="mv-to" data-id="${it.id}" data-bag="${b.id}"><span class="ti">${icon(b.role === 'car' ? 'car' : 'bag')}</span><span class="grow"><span class="tt">${b.name}</span><br><span class="ts ${st.overweight ? 'tmust' : ''}">${fmt(st.totalG / 1000)}${st.capKg ? ' von ' + fmt(st.capKg) : ''} kg</span></span></button>`; })}</div>` });
+  m.el.addEventListener('click', e => { if (e.target.closest('[data-act=mv-to]')) closeModal(m); });
+};
+ACT['mv-to'] = d => {
+  const H = HH(); const it = byId(H.items, d.id); const b = byId(H.bags, d.bag); if (!it || !b) return;
+  it.bagId = b.id; it.compId = null; it.packed = false; it.container = b.role === 'car' ? 'car' : 'bag'; it.personId = b.owner || null;
+  autoPack(H, b, { onlyUnassigned: true }); persist(); rerender(true); toast(`${it.name} → ${b.name}`);
+};
+/* Gewicht und Volumen des Rucksacks, damit man beim Auswählen sieht, wie schwer er wird */
+function bagLoad(H, bag) {
+  if (!bag || bag.id === NOBAG) return '';
+  const st = bagStats(H, DB.settings, bag); const cap = st.capKg ? st.capKg * 1000 : 0;
+  const pct = cap ? Math.round(st.totalG / cap * 100) : 0; const cls = st.overweight ? (st.overFactor > 1.25 ? 'must' : 'rec') : 'ok';
+  return h`<div class="load"><div class="row spread"><span class="small bold ${st.overweight ? 't' + cls : ''}">${icon('bag')} ${fmt(st.totalG / 1000)}${cap ? ' von ' + fmt(st.capKg) : ''} kg${st.overweight ? ' – zu schwer' : ''}</span><span class="small muted ${st.overfull ? 'tmust' : ''}">${fmt0(st.fillPct)} % voll</span></div>${cap ? bar(pct, cls) : ''}</div>`;
 }
 INPUT['rv-tick'] = el => { const H = HH(); const it = byId(H.items, el.dataset.id); if (!it) return; if (el.checked) setItemStatus(H, it, 'owned'); else { setItemStatus(H, it, 'planned'); H.shop = H.shop.filter(s => s.itemId !== it.id || s.bought); } persist(); rerender(true); };
 ACT['rv-done'] = async () => {
