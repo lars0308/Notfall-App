@@ -1,9 +1,9 @@
-# Umgesetzte Funktionen (Version 2.5.0)
+# Umgesetzte Funktionen (Version 2.6.0)
 
 Legende: ✅ umgesetzt und im Browser getestet · 📱 braucht Android-Code, nicht auf Gerät geprüft · 🟡 mit Einschränkung · ⬜ offen. Was gestrichen oder verschoben wurde, steht in der [Feature-Matrix](FEATURE-MATRIX.md).
 
-## Notfallplan erstellen ✅
-Reihenfolge: **Haushalt → Personen → jede Person einzeln → Tiere → Zweck/Dauer/Unterkunft → Rucksäcke**.
+## Erster Start: Haushalt anlegen, dann Rucksäcke ✅
+Beim ersten Öffnen: **Willkommen → Haushalt → Personen → jede Person einzeln → Tiere → Übersicht „Haushalt angelegt“**. Danach direkt **Rucksäcke & Taschen: Zweck → Dauer → Unterkunft → Wer trägt was → Packliste**. Beides lässt sich unterbrechen und später fortsetzen; unter „Mehr“ jederzeit „Haushalt, Personen & Tiere“ bearbeiten (Packlisten passen sich an) und „Rucksäcke & Taschen neu planen“.
 - Haushalt: Name, Adresse/Ort, Standort per GPS 📱 (freiwillig, nur auf Knopfdruck, wird nicht gesendet), Wohnsituation (Wohnung/Haus/Land; „Land“ macht Wasserfilter Pflicht und schlägt Solar-Ladegerät vor).
 - Personen: erst Liste (Erwachsene/Kinder), dann je Person ein Schritt mit Foto 📱, Name, Alter oder Geburtsdatum, Geschlecht, Gewicht, Größe, Fitness, Blutgruppe, Allergien, Vorerkrankungen, Medikamenten, Hilfsmitteln, Einschränkung beim Gehen/Tragen. Live berechnet: Kalorien (Mifflin-St Jeor × Aktivität, sonst Richtwert nach Alter), Wasser, Traglast (15–25 % des Körpergewichts, max. 20 kg). Die Packliste nutzt dieselben Werte.
 - Tiere: je Tier Art, Name, Anzahl (Hund mit Gewicht für die Wassermenge).

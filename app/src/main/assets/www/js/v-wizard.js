@@ -17,7 +17,7 @@ const BLOOD_TYPES = ['', '0+', '0−', 'A+', 'A−', 'B+', 'B−', 'AB+', 'AB−
 const FITNESS = [['low', 'Wenig aktiv'], ['mid', 'Normal'], ['high', 'Sportlich']];
 const WZ_BAG_TYPES = ['day', 'hiking', 'tactical', 'trekking', 'kids', 'school'];
 function wzInitial(H) {
-  const c = H.cfg || {}; const hs = c.housing || {};
+  const c = H.cfg || {}; const hs = Object.assign({}, c.housing || {}, H.home || {});
   const people = H.people.length ? clone(H.people) : [personShape({ id: uid(), name: '', age: 35 })];
   return {
     purpose: c.purpose || '', custom: c.customScenario || '', hours: c.durationHours && c.durationHours <= 72 ? c.durationHours : (H.cfg ? 72 : 0),
@@ -35,14 +35,12 @@ function wzCarryDefault(H, p) {
 }
 function wzCarryOf(H, d, p) { return d.carryPicked && d.carryPicked[p.id] && d.carry[p.id] ? d.carry[p.id] : wzCarryDefault(H, p); }
 function wzDraft(H) { if (!H.setup.draft || H.setup.draft.purpose === undefined || H.setup.draft.petList === undefined) { H.setup.draft = wzInitial(H); H.setup.step = 0; persist(); } return H.setup.draft; }
-function wzSteps(d) {
-  const s = ['household', 'people'];
-  d.people.forEach((p, k) => s.push('p' + k));
-  s.push('pets', 'purpose');
-  if (d.purpose !== 'car') s.push('hours', 'where');
-  s.push('bags');
-  return s;
-}
+/* Zwei Abläufe: „Anlegen“ (Haushalt, Personen, Tiere) beim ersten Start, danach „Rucksäcke & Taschen“ */
+const wzFlow = () => UI.route === '/setup' ? 'setup' : 'bags';
+function profSteps(H, d) { const s = H.profileDone || H.setup.done ? [] : ['welcome']; s.push('household', 'people'); d.people.forEach((p, k) => s.push('p' + k)); s.push('pets', 'pdone'); return s; }
+function bagSteps(d) { const s = ['purpose']; if (d.purpose !== 'car') s.push('hours', 'where'); s.push('bags'); return s; }
+function wzSteps(d, H = HH()) { return wzFlow() === 'setup' ? profSteps(H, d) : bagSteps(d); }
+const stepKey = () => wzFlow() === 'setup' ? 'pstep' : 'step';
 function setPath(obj, path, val) { const ks = path.split('.'); let o = obj; for (let i = 0; i < ks.length - 1; i++) { if (o[ks[i]] === undefined || o[ks[i]] === null) o[ks[i]] = {}; o = o[ks[i]]; } o[ks[ks.length - 1]] = val; }
 function wzPersonLabel(p, k) { return (p.name || '').trim() || (+p.age < 18 ? 'Kind' : 'Person ' + (k + 1)); }
 /* Bedarf je Person – gleiche Rechnung wie die Packliste */
@@ -55,11 +53,25 @@ const ans = (act, data, label, sub, on, ic) => h`<button type="button" class="an
 const chip = (act, data, label, on) => h`<button type="button" class="chip" aria-pressed="${on ? 'true' : 'false'}" data-act="${act}" ${raw(Object.entries(data).map(([k, v]) => `data-${k}="${esc(v)}"`).join(' '))}>${label}</button>`;
 const wzField = (label, path, val, o = {}) => h`<div class="field ${o.cls || ''}"><label for="wf-${path}">${label}</label><input id="wf-${path}" type="${o.type || 'text'}" value="${val ?? ''}" data-input="${o.num ? 'wz-num' : 'wz-text'}" data-path="${path}" ${o.num ? raw('inputmode="decimal"') : ''} ${o.ph ? raw(`placeholder="${esc(o.ph)}"`) : ''} maxlength="${o.max || 80}"></div>`;
 
-route('/wizard', H => {
-  const d = wzDraft(H); const steps = wzSteps(d); const i = clamp(H.setup.step || 0, 0, steps.length - 1); const key = steps[i];
-  const last = i === steps.length - 1;
-  let q, body, next = true;
-  if (key === 'household') {
+function wzView(H) {
+  const d = wzDraft(H); const steps = wzSteps(d, H); const i = clamp(H.setup[stepKey()] || 0, 0, steps.length - 1); const key = steps[i];
+  const last = i === steps.length - 1; const flow = wzFlow();
+  let q, body, next = true, foot = null;
+  if (key === 'welcome') {
+    q = 'Willkommen bei Notfall!';
+    body = h`<div class="card"><ol class="steps"><li><b>Haushalt anlegen</b><span>Name, Adresse, Wohnsituation</span></li><li><b>Personen und Tiere</b><span>Wer gehört dazu, was braucht jeder?</span></li><li><b>Rucksäcke und Taschen</b><span>Wer trägt was – danach packen</span></li></ol></div>
+      <p class="muted small">Alles bleibt auf diesem Gerät. Du kannst jederzeit unterbrechen und später weitermachen.</p>
+      <button class="btn ghost block" data-act="load-sample">Erst mit Beispieldaten ansehen</button>`;
+    foot = h`<button class="btn primary lg" data-act="wz-next">Los geht's ${icon('chev')}</button>`;
+  } else if (key === 'pdone') {
+    q = H.setup.done ? 'Haushalt speichern' : 'Haushalt angelegt';
+    body = h`<div class="card"><h3>${(d.name || '').trim() || 'Mein Haushalt'}</h3>${d.place ? h`<p class="muted">${d.place}</p>` : ''}
+      <ul class="plain">${d.people.map((p, k) => h`<li class="row nowrap"><span class="avatar sm">${p.photo ? h`<img data-ph="${p.photo}" alt="">` : (wzPersonLabel(p, k)[0] || '?').toUpperCase()}</span><span class="grow"><b>${wzPersonLabel(p, k)}</b>${p.age !== '' ? ', ' + p.age : ''}<br><span class="muted small">${wzCalcLine(p).split(' · ')[0]}</span></span></li>`)}
+      ${d.petList.map(t => h`<li>${icon('paw')} ${t.name || t.species}${+t.count > 1 ? ' ×' + t.count : ''}</li>`)}</ul></div>
+      ${H.setup.done ? h`<p class="muted small">Die Packlisten werden an die neuen Angaben angepasst.</p>` : h`<p class="muted small">Als Nächstes: Rucksäcke und Taschen.</p>`}`;
+    foot = H.setup.done ? h`<button class="btn primary lg" data-act="setup-done" data-then="home">${icon('check')} Speichern</button>`
+      : h`<button class="btn lg" data-act="setup-done" data-then="home">Später</button><button class="btn primary lg" data-act="setup-done" data-then="bags">Weiter ${icon('chev')}</button>`;
+  } else if (key === 'household') {
     q = 'Dein Haushalt';
     body = h`${wzField('Name', 'name', d.name, { ph: 'z. B. Familie Müller', max: 40 })}
       ${wzField('Adresse oder Ort', 'place', d.place, { ph: 'z. B. Lindenstraße 4, Köln', max: 80 })}
@@ -117,14 +129,18 @@ route('/wizard', H => {
       <label class="check"><input type="checkbox" data-change="wz-shared" ${d.shared ? raw('checked') : ''}><span><span class="t">Gemeinsame Familientasche</span><br><span class="s">Reisetasche für Dinge, die alle brauchen</span></span></label>
       ${d.purpose === 'car' ? h`<p class="muted small">Für das Auto wird zusätzlich eine Auto-Notfalltasche angelegt.</p>` : ''}`;
   }
+  const title = flow === 'setup' ? 'Haushalt anlegen' : 'Rucksäcke & Taschen';
+  if (!foot && next) foot = h`<button class="btn primary lg" data-act="${last ? 'wz-finish' : 'wz-next'}">${last ? h`Packliste erstellen ${icon('chev')}` : h`Weiter ${icon('chev')}`}</button>`;
   return {
-    full: true, title: 'Notfallplan',
-    html: h`<div class="topbar">${i > 0 ? h`<button class="btn icon ghost" data-act="wz-prev" aria-label="Zurück">${icon('back')}</button>` : ''}<div class="grow">${bar(Math.round((i + 1) / steps.length * 100))}</div><span class="small muted mono">${i + 1}/${steps.length}</span><button class="btn icon ghost" data-act="wz-later" aria-label="Schließen">${icon('close')}</button></div>
+    full: true, title,
+    html: h`<div class="topbar">${i > 0 ? h`<button class="btn icon ghost" data-act="wz-prev" aria-label="Zurück">${icon('back')}</button>` : flow === 'bags' && H.profileDone ? h`<a class="btn icon ghost" href="#/setup" aria-label="Zurück zum Haushalt">${icon('back')}</a>` : ''}<div class="grow"><div class="small muted bold">${title}</div>${bar(Math.round((i + 1) / steps.length * 100))}</div><span class="small muted mono">${i + 1}/${steps.length}</span><button class="btn icon ghost" data-act="wz-later" aria-label="Schließen">${icon('close')}</button></div>
       <main class="page"><div class="page-inner"><h1 class="q">${q}</h1>${body}
-        ${next ? h`<div class="actionbar"><button class="btn primary lg" data-act="${last ? 'wz-finish' : 'wz-next'}">${last ? h`Weiter: Rucksäcke packen ${icon('chev')}` : h`Weiter ${icon('chev')}`}</button></div>` : ''}
+        ${foot ? h`<div class="actionbar">${foot}</div>` : ''}
       </div></main>`,
   };
-});
+}
+route('/setup', H => wzView(H));
+route('/wizard', H => { if (!H.profileDone && !H.people.length) { history.replaceState(null, '', '#/setup'); UI.route = '/setup'; } return wzView(H); });
 
 /* ---- Aktionen ---- */
 INPUT['wz-text'] = el => { setPath(wzDraft(HH()), el.dataset.path, el.value); persist(); wzCalcRefresh(el); };
@@ -136,7 +152,7 @@ function wzCalcRefresh(el) {
   if (m[2] === 'birth' && p.birth) { const a = Math.floor((Date.now() - new Date(p.birth)) / 31557600000); if (a >= 0 && a <= 110) { p.age = a; const ai = $(`[data-path="people.${m[1]}.age"]`); if (ai) ai.value = a; persist(); } }
   box.textContent = wzCalcLine(p);
 }
-function wzGo(delta) { const H = HH(); const n = wzSteps(wzDraft(H)).length; H.setup.step = clamp((H.setup.step || 0) + delta, 0, n - 1); persist(); rerender(); }
+function wzGo(delta) { const H = HH(); const k = stepKey(); const n = wzSteps(wzDraft(H), H).length; H.setup[k] = clamp((H.setup[k] || 0) + delta, 0, n - 1); persist(); rerender(); }
 ACT['wz-pick'] = d => {
   const w = wzDraft(HH()); const f = d.f;
   w[f] = f === 'hours' ? +d.v : d.v;
@@ -162,7 +178,7 @@ ACT['wz-add-person'] = d => { const w = wzDraft(HH()); const p = personShape({ i
 ACT['wz-del-person'] = d => { const w = wzDraft(HH()); if (w.people.length > 1) { const [p] = w.people.splice(+d.i, 1); delete w.carry[p.id]; } persist(); rerender(true); };
 ACT['wz-prev'] = () => wzGo(-1);
 ACT['wz-next'] = () => {
-  const H = HH(); const d = wzDraft(H); const key = wzSteps(d)[H.setup.step || 0];
+  const H = HH(); const d = wzDraft(H); const key = wzSteps(d, H)[H.setup[stepKey()] || 0];
   if (key === 'purpose' && !d.purpose) { toast('Bitte eine Antwort wählen.'); return; }
   if (/^p\d+$/.test(key)) { const p = d.people[+key.slice(1)]; if (p.age === '' || p.age === null || isNaN(+p.age) || +p.age < 0 || +p.age > 110) { toast('Alter fehlt (0–110).'); return; } }
   if (key === 'people') for (const p of d.people) if (p.age === '' || p.age === null || isNaN(+p.age)) { p.age = 35; }
@@ -171,6 +187,13 @@ ACT['wz-next'] = () => {
 };
 ACT['wz-later'] = () => { HH().setup.skipped = true; persist(); flushDB(); go('#/home'); };
 ACT['wz-restart'] = () => { const H = HH(); H.setup.draft = wzInitial(H); H.setup.step = 0; persist(); go('#/wizard'); };
+ACT['setup-done'] = d => {
+  const H = HH(); const w = wzDraft(H); const wasDone = H.setup.done;
+  finishProfile(H, w); H.profileDone = true; H.setup.pstep = 0;
+  if (wasDone && H.cfg) applyPlan(H, DB.settings);
+  H.setup.draft = null; H.setup.step = 0; persist(); flushDB();
+  if (d.then === 'bags') go('#/wizard'); else { if (!wasDone) H.setup.skipped = true; persist(); go('#/home'); toast('Haushalt gespeichert'); }
+};
 ACT['wz-finish'] = () => {
   const H = HH(); const d = wzDraft(H);
   const before = H.items.length;
@@ -179,9 +202,7 @@ ACT['wz-finish'] = () => {
   REV.tab = 'check'; REV.prio = 'all';
   PICK.cat = null; go('#/review'); toast(`${H.items.length - before} Sachen vorgeschlagen – hake ab, was du hast`);
 };
-function finishWizard(H, d) {
-  const S = DB.settings;
-  const prevDone = (H.cfg && H.cfg.equipDone) || {};
+function finishProfile(H, d) {
   H.people = d.people.map((p, i) => {
     const kid = +p.age < 18; const n = d.people.slice(0, i).filter(x => (+x.age < 18) === kid).length + 1;
     const q = personShape(Object.assign({}, p, { id: p.id || uid(), name: (p.name || '').trim() || (kid ? 'Kind ' + n : 'Erwachsene/r ' + n), age: +p.age }));
@@ -194,6 +215,14 @@ function finishWizard(H, d) {
   H.bags.forEach(b => { if (b.owner && !ids.has(b.owner)) b.owner = null; });
   // Tiere
   if (Array.isArray(d.petList)) H.pets = d.petList.map(t => Object.assign({ id: uid(), name: '', count: 1, age: '', weightKg: '', needs: '' }, t, { count: Math.max(1, +t.count || 1) }));
+  if ((d.name || '').trim()) H.name = d.name.trim();
+  H.home = { type: d.home || '', place: (d.place || '').trim(), lat: d.lat ?? null, lon: d.lon ?? null, acc: d.acc || null };
+  if (H.cfg) H.cfg.housing = Object.assign({}, H.cfg.housing || {}, H.home);
+}
+function finishWizard(H, d) {
+  const S = DB.settings;
+  const prevDone = (H.cfg && H.cfg.equipDone) || {};
+  finishProfile(H, d); H.profileDone = true;
   const hours = d.purpose === 'car' ? ((H.cfg && H.cfg.durationHours) || 72) : (+d.hours || 72);
   const prev = ((H.cfg && H.cfg.goals) || []).filter(g => g === 'car' || (d.purpose === 'car' && /^bag|^evac$/.test(g)));
   const goals = Array.from(new Set(prev.concat(d.purpose === 'car' ? ['car'] : ['bag' + hours])));
@@ -204,8 +233,7 @@ function finishWizard(H, d) {
     H.items.push(makeItem({ key, qty: add, container: 'home' }, { status: 'owned', source: 'wizard', place: '', prio: 'rec' }));
     H.cfg.equipDone[key] = qty;
   }
-  if ((d.name || '').trim()) H.name = d.name.trim();
-  H.cfg.housing = Object.assign({}, H.cfg.housing || {}, { type: d.home || '', place: (d.place || '').trim(), lat: d.lat ?? null, lon: d.lon ?? null, acc: d.acc || null });
+  H.cfg.housing = Object.assign({}, H.cfg.housing || {}, H.home || {});
   wzApplyBags(H, d);
   const report = applyPlan(H, S);
   H.setup.done = true; H.setup.skipped = false;

@@ -8,7 +8,7 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
   const hash = () => p.evaluate(() => location.hash); const body = () => p.locator('body').innerText();
   const noMarkup = async name => { const t = await body(); ok(name + ': kein Fehler/Markup im Text', !/Anzeige fehlgeschlagen|undefined|NaN|\[object|<\/?(div|span|button|a|svg)[ >]|class="/.test(t), (t.match(/Anzeige fehlgeschlagen.*|undefined|NaN|\[object[^\]]*\]|class="/) || [''])[0]); };
   await p.goto('http://localhost:8123/'); await p.waitForSelector('.q');
-  ok('Erster Start: Packassistent mit einer Frage', (await hash()) === '#/wizard' && (await p.locator('.q').count()) === 1); await shot('01-frage');
+  ok('Erster Start: „Haushalt anlegen“ mit Willkommen', (await hash()) === '#/setup' && /Willkommen/.test(await p.locator('.q').innerText())); await shot('01-frage'); await click('[data-act=wz-next]');
   // 1) Haushalt
   ok('Zuerst: Haushalt mit Adresse, Standort und Wohnsituation', /Haushalt/.test(await p.locator('.q').innerText()) && (await p.locator('[data-act=wz-gps]').count()) === 1);
   await p.fill('[data-path=name]', 'Familie Test'); await p.fill('[data-path=place]', 'Köln'); await click('[data-act=wz-set][data-v=flat]'); await click('[data-act=wz-next]');
@@ -23,6 +23,9 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
   await p.fill('[data-path="people.1.name"]', 'Mia'); await p.fill('[data-path="people.1.age"]', '4'); await p.fill('[data-path="people.1.needs.allergies"]', 'Erdnüsse'); await click('[data-act=wz-next]');
   // 3) Tiere
   ok('Dann Tiere', /Tiere/.test(await p.locator('.q').innerText())); await click('[data-act=wz-add-pet][data-v=Hund]'); await p.fill('[data-path="petList.0.name"]', 'Bello'); await click('[data-act=wz-next]');
+  ok('Anlegen abgeschlossen: Übersicht mit Personen und Tier', /Haushalt angelegt/.test(await p.locator('.q').innerText()) && /Anna/.test(await body()) && /Bello/.test(await body()));
+  await click('[data-act=setup-done][data-then=bags]'); await p.waitForFunction(() => /Wofür/.test(document.querySelector('.q').textContent));
+  ok('Danach direkt: Rucksäcke & Taschen', await hash() === '#/wizard' && await p.evaluate(() => HH().profileDone && HH().people.length === 2 && HH().pets[0].name === 'Bello'));
   await click('[data-act=wz-pick][data-v=evac]'); ok('Antwortkarte springt direkt zur nächsten Frage', /wie lange/i.test(await p.locator('.q').innerText()));
   await click('[data-act=wz-pick][data-v="72"]'); await click('[data-act=wz-pick][data-v=shelter]');
   // 4) Rucksäcke je Person

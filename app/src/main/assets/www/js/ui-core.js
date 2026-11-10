@@ -56,7 +56,7 @@ function render(keepScroll) {
   if (UI.locked) { renderLock(root); return; }
   const H = HH();
   let cur = location.hash || '#/home';
-  if (!H.setup.done && !H.setup.skipped && !H.bags.length && !/^#\/(wizard|settings|sos|households|ice)/.test(cur)) { history.replaceState(null, '', '#/wizard'); cur = '#/wizard'; }
+  if (!H.setup.done && !H.setup.skipped && !H.bags.length && !/^#\/(wizard|setup|settings|sos|households|ice)/.test(cur)) { const to = H.profileDone ? '#/wizard' : '#/setup'; history.replaceState(null, '', to); cur = to; }
   if (UI.sosLimited && !/^#\/sos/.test(cur)) { UI.sosLimited = false; UI.locked = !!DB.users.length; if (UI.locked) { renderLock(root); return; } }
   const rt = parseRoute() || { fn: () => ({ title: 'Nicht gefunden', html: h`<div class="empty">Diese Seite gibt es nicht. <a href="#/home">Zur Startseite</a></div>` }), params: [], path: cur };
   UI.route = rt.path; UI.params = rt.params; UI.q = new URLSearchParams((location.hash.split('?')[1]) || '');

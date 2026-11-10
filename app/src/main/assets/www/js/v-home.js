@@ -19,9 +19,11 @@ const stat = (val, label, cls = '') => h`<div class="stat ${cls}"><span class="s
 route('/home', H => {
   const S = DB.settings;
   if (!H.setup.done && !H.items.length) return {
-    title: 'Notfall!',
-    html: h`<div class="card"><h2>Willkommen</h2><p class="muted" style="margin-top:6px">Erst Haushalt, Personen, Tiere und Rucksäcke – danach packst du Rucksack für Rucksack.</p>
-      <a class="btn primary lg block" style="margin-top:16px" href="#/wizard">${icon('list')} ${H.setup.draft ? 'Notfallplan fortsetzen' : 'Notfallplan erstellen'}</a></div>`,
+    title: H.name && H.name !== 'Mein Haushalt' ? H.name : 'Notfall!',
+    html: H.profileDone ? h`<div class="card"><h2>Haushalt angelegt</h2><p class="muted" style="margin-top:6px">${H.people.map(p => p.name).join(', ')}${H.pets.length ? ' · ' + H.pets.map(t => t.name || t.species).join(', ') : ''}</p>
+      <a class="btn primary lg block" style="margin-top:16px" href="#/wizard">${icon('bag')} Rucksäcke & Taschen anlegen</a></div>`
+      : h`<div class="card"><h2>Willkommen</h2><p class="muted" style="margin-top:6px">Leg zuerst deinen Haushalt an: Personen und Tiere. Danach die Rucksäcke.</p>
+      <a class="btn primary lg block" style="margin-top:16px" href="#/setup">${icon('users')} ${H.setup.pstep ? 'Haushalt weiter anlegen' : 'Haushalt anlegen'}</a></div>`,
   };
   const live = H.items.filter(i => !i.archived && i.container !== 'home');
   const have = live.filter(i => i.status === 'owned'); const packed = have.filter(i => i.packed && i.bagId);
@@ -35,7 +37,7 @@ route('/home', H => {
   const heavy = H.bags.map(b => ({ b, st: bagStats(H, S, b) })).filter(x => x.st.overweight || x.st.overfull);
   const calc = H.people.map(p => personCalc(p, S)); const kcal = calc.reduce((a, c) => a + c.kcal, 0); const water = calc.reduce((a, c) => a + c.waterL, 0) + H.pets.reduce((a, t) => a + petCalc(t).waterL, 0);
   const hours = planContext(H, S).bagHours || Math.min(72, (H.cfg && H.cfg.durationHours) || 72);
-  const hs = (H.cfg && H.cfg.housing) || {}; const home = typeof hs.lat === 'number' ? { lat: hs.lat, lon: hs.lon } : null;
+  const hs = Object.assign({}, (H.cfg && H.cfg.housing) || {}, H.home || {}); const home = typeof hs.lat === 'number' ? { lat: hs.lat, lon: hs.lon } : null;
   const meet = H.meeting.slice(0, 3);
   const country = COUNTRIES[(H.cfg && H.cfg.country) || 'DE'] || COUNTRIES.DE;
   const ice = H.contacts.filter(c => c.type === 'ice').length;
@@ -62,7 +64,9 @@ route('/more', H => {
   const shopN = H.shop.filter(s => !s.bought).length;
   return {
     title: 'Mehr',
-    html: h`${tile('#/shop', 'cart', '', 'Einkaufsliste', shopN ? shopN + ' zu besorgen' : '')}
+    html: h`${tile('#/setup', 'users', '', 'Haushalt, Personen & Tiere', [H.people.length + ' ' + (H.people.length === 1 ? 'Person' : 'Personen'), H.pets.length ? H.pets.length + ' Tiere' : ''].filter(Boolean).join(' · '))}
+    ${tile('#/wizard', 'bag', '', 'Rucksäcke & Taschen neu planen', '')}
+    ${tile('#/shop', 'cart', '', 'Einkaufsliste', shopN ? shopN + ' zu besorgen' : '')}
     ${tile('#/recs', 'alert', '', 'Was fehlt?', '')}
     ${tile('#/remind', 'bell', '', 'Erinnerungen', '')}
     ${tile('#/map', 'map', '', 'Karte & Treffpunkte', [H.meeting.length ? H.meeting.length + ' Treffpunkte' : '', (DB.maps || []).length ? DB.maps.length + ' Karten' : ''].filter(Boolean).join(' · '))}

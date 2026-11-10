@@ -81,7 +81,9 @@ function ensureShape(d) {
     if (H.box === undefined) { const sd = ((H.cfg && H.cfg.goals) || []).map(g => (GOAL[g] || {}).days || 0); H.box = { enabled: (H.items || []).some(i => i.container === 'home' && !i.archived), days: Math.max(3, ...sd) }; }
     const base = newHousehold();
     for (const k of Object.keys(base)) if (H[k] === undefined) H[k] = base[k];
-    H.setup = Object.assign({ done: false, skipped: false, step: 0, draft: null }, H.setup || {});
+    H.setup = Object.assign({ done: false, skipped: false, step: 0, pstep: 0, draft: null }, H.setup || {});
+    if (H.profileDone === undefined) H.profileDone = !!(H.setup.done || (H.people && H.people.length));
+    if (!H.home) H.home = Object.assign({ type: '', place: '', lat: null, lon: null, acc: null }, (H.cfg && H.cfg.housing) ? { type: H.cfg.housing.type || '', place: H.cfg.housing.place || '', lat: H.cfg.housing.lat ?? null, lon: H.cfg.housing.lon ?? null } : {});
     H.plan = Object.assign({ strategyNote: '', summary: null, lastBuilt: null }, H.plan || {});
     for (const it of H.items) { it.photos = it.photos || []; it.tags = it.tags || []; it.status = it.status || 'owned'; }
     for (const b of H.bags) { b.photos = b.photos || []; b.comps = b.comps || []; }
