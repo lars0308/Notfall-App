@@ -60,3 +60,8 @@ Diese Punkte konnten in der Entwicklungsumgebung **nicht** geprüft werden. Bitt
 - [ ] Person: Foto aufnehmen, erscheint im Assistenten und im Notfallpass.
 - [ ] Startseite: Notrufnummer antippen öffnet die Telefon-App.
 - [ ] Kein Dialog ist rechts oder unten abgeschnitten (z. B. „Tasche löschen?“).
+
+## Neu in 2.8
+- [ ] Haushalt: nach „Standort bestimmen“ Rückfrage „Adresse aus dem Standort?“ → Adresse erscheint im Feld; auf dem Dorf ist „Auf dem Land“ gewählt.
+- [ ] Notfallkontakte: „Aus Telefonbuch wählen“ öffnet die Kontaktauswahl; Name und Nummer werden übernommen; App bleibt entsperrt.
+- [ ] Schieberegler „Wie viele Personen“ lässt sich mit dem Daumen gut bedienen.

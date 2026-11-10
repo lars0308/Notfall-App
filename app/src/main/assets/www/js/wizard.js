@@ -31,7 +31,7 @@ function wzDraft(H) {
 }
 
 const wzFlow = () => UI.route === '/setup' ? 'setup' : 'bags';
-function profSteps(H, d) { const s = H.profileDone || H.setup.done ? [] : ['welcome']; s.push('household', 'people'); d.people.forEach((p, k) => s.push('p' + k)); s.push('pets', 'contacts', 'meet', 'share', 'pdone'); return s; }
+function profSteps(H, d) { const s = H.profileDone || H.setup.done ? [] : ['welcome']; s.push('household', 'people'); d.people.forEach((p, k) => s.push('p' + k)); s.push('pover', 'pets', 'contacts', 'meet', 'share', 'pdone'); return s; }
 function bagSteps(d) { const s = ['purpose']; if (d.purpose !== 'car') s.push('hours', 'where'); s.push('bags'); return s; }
 function wzSteps(d, H = HH()) { return wzFlow() === 'setup' ? profSteps(H, d) : bagSteps(d); }
 const stepKey = () => wzFlow() === 'setup' ? 'pstep' : 'step';
@@ -76,7 +76,11 @@ INPUT['wz-text'] = el => { setPath(wzDraft(HH()), el.dataset.path, el.value); pe
 INPUT['wz-num'] = el => { setPath(wzDraft(HH()), el.dataset.path, el.value === '' ? '' : +el.value); persist(); WZ_ON_INPUT.forEach(f => f(el)); };
 INPUT['wz-sel'] = el => { setPath(wzDraft(HH()), el.dataset.path, el.value); persist(); };
 INPUT['wz-check'] = el => { setPath(wzDraft(HH()), el.dataset.path, el.checked); persist(); };
-function wzGo(delta) { const H = HH(); const k = stepKey(); const n = wzSteps(wzDraft(H), H).length; H.setup[k] = clamp((H.setup[k] || 0) + delta, 0, n - 1); persist(); rerender(); }
+/* Jeder neue Schritt beginnt oben auf der Seite */
+function wzGo(delta) { const H = HH(); const k = stepKey(); const n = wzSteps(wzDraft(H), H).length; H.setup[k] = clamp((H.setup[k] || 0) + delta, 0, n - 1); persist(); render(); }
+function wzGoto(key) { const H = HH(); const i = wzSteps(wzDraft(H), H).indexOf(key); if (i < 0) return; H.setup[stepKey()] = i; persist(); render(); }
+/* Aus der Personen-Übersicht bearbeiten: „Weiter“ führt zurück zur Übersicht */
+ACT['wz-goto'] = d => { HH().setup.ret = d.ret || ''; wzGoto(d.key); };
 ACT['wz-pick'] = d => {
   const w = wzDraft(HH()); const f = d.f;
   w[f] = f === 'hours' ? +d.v : d.v;
@@ -91,6 +95,7 @@ ACT['wz-next'] = () => {
   const [def, k] = stepDef(key);
   const err = def && def.check ? def.check(H, d, k) : '';
   if (err) { toast(err); return; }
+  if (H.setup.ret && def && def.ret !== false && key !== H.setup.ret) { const r = H.setup.ret; H.setup.ret = ''; wzGoto(r); return; }
   wzGo(1);
 };
 ACT['wz-later'] = () => { HH().setup.skipped = true; persist(); flushDB(); go('#/home'); };
@@ -104,8 +109,28 @@ ACT['wz-gps'] = d => {
     const w = wzDraft(HH()); const t = d.target ? getPath(w, d.target) : w; if (!t) return;
     t.lat = +pos.coords.latitude.toFixed(6); t.lon = +pos.coords.longitude.toFixed(6); if (!d.target) t.acc = Math.round(pos.coords.accuracy || 0);
     persist(); rerender(true); toast('Standort gespeichert');
+    if (!d.target) wzReverse(t);
   }, err => toast(err && err.code === 1 ? 'Standort nicht erlaubt.' : 'Standort nicht gefunden. Draußen oder am Fenster erneut versuchen.'), { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 });
 };
+/* Adresse und Wohnlage aus dem Standort: nur nach Rückfrage, fragt einmal OpenStreetMap (Nominatim) */
+const RURAL_TYPES = ['village', 'hamlet', 'isolated_dwelling', 'farm', 'allotments'];
+async function wzReverse(t) {
+  if (!(NATIVE && NATIVE.httpGet) || typeof t.lat !== 'number') return;
+  const ok = await confirmDlg('Adresse aus dem Standort?', 'Dafür wird deine Position einmal an OpenStreetMap (nominatim.openstreetmap.org) gesendet. Ohne Internet geht es nicht.', { ok: 'Adresse holen', cancel: 'Nein' });
+  if (!ok) return;
+  const r = await nativeAsync('httpGet', `https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18&accept-language=de&lat=${t.lat}&lon=${t.lon}`);
+  let j = null; try { j = r.ok ? JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(r.b64), ch => ch.charCodeAt(0)))) : null; } catch { j = null; }
+  if (!j || !j.address) { toast('Adresse nicht gefunden – bitte von Hand eintragen.'); return; }
+  const info = addressFromOsm(j); const w = wzDraft(HH());
+  if (info.place) w.place = info.place; if (info.home) w.home = info.home; w.settlement = info.settlement;
+  persist(); rerender(true); toast(info.home === 'rural' ? 'Adresse übernommen · ländlich' : 'Adresse übernommen');
+}
+function addressFromOsm(j) {
+  const a = j.address || {}; const town = a.city || a.town || a.village || a.hamlet || a.municipality || '';
+  const street = [a.road, a.house_number].filter(Boolean).join(' '); const place = [street, [a.postcode, town].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  const rural = !a.city && !a.town && (RURAL_TYPES.some(k => a[k]) || RURAL_TYPES.includes(j.addresstype));
+  return { place, home: rural ? 'rural' : '', settlement: a.city ? 'Stadt' : a.town ? 'Kleinstadt' : rural ? 'Land' : '' };
+}
 ACT['wz-gps-del'] = d => { const w = wzDraft(HH()); const t = d.target ? getPath(w, d.target) : w; if (!t) return; t.lat = null; t.lon = null; if (!d.target) t.acc = null; persist(); rerender(true); };
 
 function loadSampleHousehold() {

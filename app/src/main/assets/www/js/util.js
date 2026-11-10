@@ -149,7 +149,7 @@ window.__nativeResult = (id, json) => { const f = _cbs[id]; delete _cbs[id]; if 
 function nativeAsync(method, ...args) {
   return new Promise(resolve => {
     if (!NATIVE || !NATIVE[method]) return resolve({ ok: false, error: 'Nur in der Android-App verfügbar' });
-    const id = _cbId++; const ext = method === 'takePhoto'; if (ext) EXT.until = Date.now() + 600000;
+    const id = _cbId++; const ext = method === 'takePhoto' || method === 'pickContact'; if (ext) EXT.until = Date.now() + 600000;
     _cbs[id] = r => { if (ext) EXT.until = 0; resolve(r); };
     try { NATIVE[method](id, ...args); } catch (e) { delete _cbs[id]; if (ext) EXT.until = 0; resolve({ ok: false, error: String(e) }); }
   });

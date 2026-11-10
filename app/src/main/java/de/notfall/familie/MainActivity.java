@@ -46,7 +46,8 @@ import java.util.HashMap;
 public class MainActivity extends Activity {
   static final String HOST = "app.notfall.invalid";
   private static final String BASE = "https://" + HOST + "/";
-  private static final int REQ_PICK = 4242, REQ_PHOTO = 4243, REQ_MAP = 4244;
+  private static final int REQ_PICK = 4242, REQ_PHOTO = 4243, REQ_MAP = 4244, REQ_CONTACT = 4245;
+  private int contactCb = -1;
   private static final int PERM_CAMERA = 11, PERM_WEBCAM = 12, PERM_NOTIF = 13, PERM_GEO = 14;
   private android.webkit.GeolocationPermissions.Callback geoCb; private String geoOrigin;
 
@@ -330,8 +331,38 @@ public class MainActivity extends Activity {
     }
   }
 
+  void startContactPick(int cb) {
+    contactCb = cb;
+    try {
+      startActivityForResult(new Intent(Intent.ACTION_PICK, android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_URI), REQ_CONTACT);
+    } catch (Exception e) {
+      contactCb = -1;
+      resolve(cb, "{\"ok\":false,\"error\":\"Kein Telefonbuch verfügbar\"}");
+    }
+  }
+
+  private void finishContactPick(int cb, Uri uri) {
+    String[] proj = { android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER };
+    try (android.database.Cursor c = getContentResolver().query(uri, proj, null, null, null)) {
+      if (c == null || !c.moveToFirst()) { resolve(cb, "{\"ok\":false,\"error\":\"Kontakt nicht lesbar\"}"); return; }
+      JSONObject o = new JSONObject();
+      o.put("ok", true);
+      o.put("name", c.getString(0) == null ? "" : c.getString(0));
+      o.put("phone", c.getString(1) == null ? "" : c.getString(1));
+      resolve(cb, o.toString());
+    } catch (Exception e) {
+      resolve(cb, "{\"ok\":false,\"error\":\"Kontakt nicht lesbar\"}");
+    }
+  }
+
   @Override protected void onActivityResult(int req, int res, Intent data) {
     super.onActivityResult(req, res, data);
+    if (req == REQ_CONTACT) {
+      int cb = contactCb; contactCb = -1;
+      if (res != RESULT_OK || data == null || data.getData() == null) { resolve(cb, "{\"ok\":false,\"error\":\"abgebrochen\"}"); return; }
+      finishContactPick(cb, data.getData());
+      return;
+    }
     if (req == REQ_PICK && fileCallback != null) {
       fileCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(res, data));
       fileCallback = null;

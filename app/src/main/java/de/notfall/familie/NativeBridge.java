@@ -115,6 +115,11 @@ public class NativeBridge {
     act.runOnUiThread(() -> act.startCameraCapture(cb));
   }
 
+  // ---------- Telefonbuch: Android-Auswahl, die App bekommt nur den gewählten Kontakt (keine Berechtigung nötig) ----------
+  @JavascriptInterface public void pickContact(final int cb) {
+    act.runOnUiThread(() -> act.startContactPick(cb));
+  }
+
   // ---------- Benachrichtigungen ----------
   @JavascriptInterface public int scheduleReminders(String json) {
     try {

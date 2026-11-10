@@ -3,6 +3,10 @@
 const BLOOD_TYPES = ['', '0+', '0−', 'A+', 'A−', 'B+', 'B−', 'AB+', 'AB−'];
 const FITNESS = [['low', 'Wenig aktiv'], ['mid', 'Normal'], ['high', 'Sportlich']];
 const WZ_SHARE = [['photo', 'Foto'], ['allergies', 'Allergien'], ['conditions', 'Vorerkrankungen'], ['meds', 'Medikamente'], ['blood', 'Blutgruppe'], ['aids', 'Hilfsmittel']];
+const AGE_GROUPS = [['baby', 'Baby', '0–2', 1], ['child', 'Kind', '3–12', 8], ['teen', 'Jugendlich', '13–17', 15], ['adult', 'Erwachsen', '18–64', 35], ['senior', 'Senior', '65+', 70]];
+const ageGroupOf = a => a === '' || a === null || a === undefined ? 'adult' : +a < 3 ? 'baby' : +a < 13 ? 'child' : +a < 18 ? 'teen' : +a < 65 ? 'adult' : 'senior';
+const MARITAL = [['', '– keine Angabe –'], ['single', 'ledig'], ['married', 'verheiratet'], ['partner', 'eingetragene Partnerschaft'], ['divorced', 'geschieden'], ['widowed', 'verwitwet']];
+function ageFromBirth(b) { const d = new Date(b); if (isNaN(d)) return null; const n = new Date(); let a = n.getFullYear() - d.getFullYear(); if (n.getMonth() < d.getMonth() || (n.getMonth() === d.getMonth() && n.getDate() < d.getDate())) a--; return a >= 0 && a <= 110 ? a : null; }
 const ageInvalid = p => p.age === '' || p.age === null || p.age === undefined || isNaN(+p.age) || +p.age < 0 || +p.age > 110;
 const coordLine = o => typeof o.lat === 'number' ? `${o.lat.toFixed(5)}, ${o.lon.toFixed(5)}` : '';
 
@@ -23,24 +27,24 @@ WZ_STEP.household = {
       ${wzField('Adresse oder Ort', 'place', d.place, { ph: 'z. B. Lindenstraße 4, Köln', max: 80 })}
       <div class="card"><div class="row spread"><div><h3>Standort</h3><p class="muted small">${d.lat !== null ? `${coordLine(d)}${d.acc ? ' · ± ' + fmt0(d.acc) + ' m' : ''}` : 'Für Karte und Entfernung zu Treffpunkten. Freiwillig.'}</p></div>
         ${d.lat !== null ? h`<button class="btn sm ghost" data-act="wz-gps-del">Entfernen</button>` : ''}</div>
-        <button class="btn block" style="margin-top:10px" data-act="wz-gps">${icon('map')} ${d.lat !== null ? 'Neu bestimmen' : 'Standort bestimmen'}</button></div>
+        <button class="btn block" style="margin-top:10px" data-act="wz-gps">${icon('map')} ${d.lat !== null ? 'Neu bestimmen' : 'Standort bestimmen'}</button>${IS_NATIVE ? h`<p class="muted small" style="margin-top:6px">Danach kann die App Adresse und Wohnlage übernehmen.</p>` : ''}</div>
       <div class="label">Wohnsituation</div>
       <div class="chips">${[['flat', 'Wohnung in der Stadt'], ['house', 'Haus in der Stadt'], ['rural', 'Auf dem Land']].map(([v, l]) => chip('wz-set', { f: 'home', v }, l, d.home === v))}</div>
+      ${d.settlement && d.home !== 'rural' ? h`<p class="muted small">Aus dem Standort: ${d.settlement}. Wohnung oder Haus?</p>` : ''}
       ${d.home === 'rural' ? h`<p class="muted small">Auf dem Land: Wasserfilter wird Pflicht, Solar-Ladegerät wird vorgeschlagen.</p>` : ''}`,
   }),
 };
 
 WZ_STEP.people = {
   view: (H, d) => ({
-    q: 'Wer gehört dazu?',
-    body: h`<div class="stack-s">${d.people.map((p, k) => h`<div class="tile">${wzAvatar(p, k)}<span class="grow"><span class="tt">${wzPersonLabel(p, k)}</span><br><span class="ts">${p.age !== '' && p.age !== null ? p.age + ' Jahre' : 'Alter fehlt'}</span></span>
-        ${d.people.length > 1 ? h`<button class="btn icon sm danger" data-act="wz-del-person" data-i="${k}" aria-label="${wzPersonLabel(p, k)} entfernen">${icon('trash')}</button>` : ''}</div>`)}</div>
-      <div class="btns"><button class="btn" data-act="wz-add-person" data-kind="adult">${icon('plus')} Erwachsene/r</button><button class="btn" data-act="wz-add-person" data-kind="child">${icon('plus')} Kind</button></div>
-      <p class="muted small">Danach kommt jede Person einzeln dran.</p>`,
+    q: 'Wie viele Personen?',
+    body: h`<div class="card"><div class="row spread"><label for="wzcount" class="bold">Personen im Haushalt</label><span class="bignum" id="wzcountv">${d.people.length}</span></div>
+        <input id="wzcount" class="slider" type="range" min="1" max="10" step="1" value="${d.people.length}" data-input="wz-count-live" data-change="wz-count" aria-label="Anzahl Personen"></div>
+      <div class="stack-s">${d.people.map((p, k) => { const g = p.birth && ageFromBirth(p.birth) !== null ? ageGroupOf(ageFromBirth(p.birth)) : (p.group || ageGroupOf(p.age)); return h`<div class="person-card"><div class="row nowrap">${wzAvatar(p, k)}<strong class="grow">${wzPersonLabel(p, k)}</strong></div>
+        <div class="chips" style="margin-top:8px">${AGE_GROUPS.map(([id, l, r]) => chip('wz-group', { i: k, v: id }, h`${l} <small class="muted">${r}</small>`, g === id))}</div></div>`; })}</div>
+      <p class="muted small">Danach kommt jede Person einzeln dran – mit Geburtsdatum, Gesundheit und mehr.</p>`,
   }),
-  check: (H, d) => { for (const p of d.people) if (ageInvalid(p)) p.age = 35; return ''; },
 };
-
 WZ_STEP.person = {
   view: (H, d, k) => {
     const p = d.people[k]; const P = `people.${k}`;
@@ -48,7 +52,9 @@ WZ_STEP.person = {
       q: wzPersonLabel(p, k),
       body: h`<div class="row nowrap" style="gap:16px"><button class="avatar xl" data-act="wz-photo" data-i="${k}" aria-label="Foto" style="cursor:pointer">${p.photo ? h`<img data-ph="${p.photo}" alt="">` : icon('camera')}</button>
           <div class="grow">${wzField('Name', P + '.name', p.name, { ph: +p.age < 18 ? 'Kind' : 'Vorname', max: 40 })}</div></div>
-        <div class="form-grid">${wzField('Alter', P + '.age', p.age, { num: true, type: 'number', max: 3 })}${wzField('Geburtsdatum', P + '.birth', p.birth, { type: 'date' })}</div>
+        ${wzField('Geburtsdatum', P + '.birth', p.birth, { type: 'date' })}
+        ${p.birth && ageFromBirth(p.birth) !== null ? h`<p class="muted small" id="wzage">Alter: <b>${ageFromBirth(p.birth)} Jahre</b></p>` : wzField('Alter (ungefähr, wenn kein Datum)', P + '.age', p.age, { num: true, type: 'number', max: 3 })}
+        ${+p.age >= 16 ? h`<div class="field"><label for="wf-mar">Personenstand</label><select id="wf-mar" data-change="wz-sel" data-path="${P}.marital">${MARITAL.map(([v, l]) => h`<option value="${v}" ${(p.marital || '') === v ? raw('selected') : ''}>${l}</option>`)}</select></div>` : ''}
         <div class="label">Geschlecht</div><div class="chips">${[['f', 'weiblich'], ['m', 'männlich'], ['d', 'divers']].map(([v, l]) => chip('wz-pset', { i: k, f: 'sex', v }, l, p.sex === v))}</div>
         <div class="form-grid">${wzField('Gewicht (kg)', P + '.weightKg', p.weightKg, { num: true, type: 'number', max: 3 })}${wzField('Größe (cm)', P + '.heightCm', p.heightCm, { num: true, type: 'number', max: 3 })}</div>
         <div class="label">Fitness</div><div class="chips">${FITNESS.map(([v, l]) => chip('wz-pset', { i: k, f: 'fitness', v }, l, p.fitness === v))}</div>
@@ -65,11 +71,23 @@ WZ_STEP.person = {
   check: (H, d, k) => ageInvalid(d.people[k]) ? 'Alter fehlt (0–110).' : '',
 };
 WZ_ON_INPUT.push(el => {
-  const m = /^people\.(\d+)\.(age|weightKg|heightCm|needs\.mobility|birth)$/.exec(el.dataset.path || ''); const box = $('#wzcalc p:last-child'); if (!m || !box) return;
+  const m = /^people\.(\d+)\.(age|weightKg|heightCm|needs\.mobility|birth)$/.exec(el.dataset.path || ''); if (!m) return;
   const p = wzDraft(HH()).people[+m[1]];
-  if (m[2] === 'birth' && p.birth) { const a = Math.floor((Date.now() - new Date(p.birth)) / 31557600000); if (a >= 0 && a <= 110) { p.age = a; const ai = $(`[data-path="people.${m[1]}.age"]`); if (ai) ai.value = a; persist(); } }
-  box.textContent = wzCalcLine(p);
+  if (m[2] === 'birth') { const a = p.birth ? ageFromBirth(p.birth) : null; const had = !!$('#wzage'); if (a !== null) { p.age = a; p.group = ageGroupOf(a); } persist(); if ((a !== null) !== had) { rerender(true); return; } const t = $('#wzage b'); if (t && a !== null) t.textContent = a + ' Jahre'; }
+  const box = $('#wzcalc p:last-child'); if (box) box.textContent = wzCalcLine(p);
 });
+
+WZ_STEP.pover = {
+  view: (H, d) => ({
+    q: 'Alle Personen',
+    body: h`<div class="stack-s">${d.people.map((p, k) => { const notes = [p.needs.allergies && 'Allergien', p.needs.conditions && 'Vorerkrankungen', ((p._meds ?? (p.needs.meds || []).map(m => m.name).join(',')) || '').trim() && 'Medikamente', p.needs.blood && 'Blutgruppe ' + p.needs.blood].filter(Boolean);
+      return h`<div class="person-card"><div class="row nowrap">${wzAvatar(p, k)}<span class="grow"><strong>${wzPersonLabel(p, k)}</strong><br><span class="muted small">${p.age !== '' ? p.age + ' Jahre' : ''}${(MARITAL.find(m => m[0] === p.marital && m[0]) || [])[1] ? ' · ' + MARITAL.find(m => m[0] === p.marital)[1] : ''}</span></span>
+        <button class="btn sm" data-act="wz-goto" data-key="p${k}" data-ret="pover">${icon('edit')} Bearbeiten</button></div>
+        <p class="small" style="margin-top:8px">${wzCalcLine(p)}</p>${notes.length ? h`<p class="muted small">${notes.join(' · ')}</p>` : ''}</div>`; })}</div>
+      <button class="btn block" data-act="wz-goto" data-key="people">${icon('users')} Personen hinzufügen oder entfernen</button>`,
+  }),
+  ret: false,
+};
 
 WZ_STEP.pets = {
   view: (H, d) => ({
@@ -86,7 +104,8 @@ WZ_STEP.contacts = {
     body: h`<p class="muted">Notfallkontakte stehen im Notfallpass und auf der Karte. Am besten jemand, der nicht bei euch wohnt.</p>
       <div class="stack-s">${d.contacts.map((c, k) => h`<div class="person-card"><div class="row spread"><strong>${k + 1}. Kontakt</strong>${d.contacts.length > 1 ? h`<button class="btn icon sm danger" data-act="wz-del-contact" data-i="${k}" aria-label="Kontakt entfernen">${icon('trash')}</button>` : ''}</div>
         <div class="form-grid">${wzField('Name', `contacts.${k}.name`, c.name, { ph: 'z. B. Oma Erna', max: 60 })}${wzField('Beziehung', `contacts.${k}.relation`, c.relation, { ph: 'z. B. Oma, Nachbar', max: 40 })}</div>
-        ${wzField('Telefon', `contacts.${k}.phone`, c.phone, { type: 'tel', ph: 'z. B. 0170 1234567', max: 30 })}</div>`)}</div>
+        ${wzField('Telefon', `contacts.${k}.phone`, c.phone, { type: 'tel', ph: 'z. B. 0170 1234567', max: 30 })}
+        ${NATIVE && NATIVE.pickContact ? h`<button class="btn block" style="margin-top:8px" data-act="wz-pick-contact" data-i="${k}">${icon('users')} Aus Telefonbuch wählen</button>` : ''}</div>`)}</div>
       ${d.contacts.length < 5 ? h`<button class="btn block" data-act="wz-add-contact">${icon('plus')} Weiteren Kontakt</button>` : ''}`,
   }),
   check: (H, d) => d.contacts.some(c => (c.name || '').trim() && !(c.phone || '').trim()) ? 'Telefonnummer fehlt.' : '',
@@ -137,6 +156,18 @@ WZ_STEP.pdone = {
 /* ---- Aktionen ---- */
 ACT['wz-pset'] = d => { const p = wzDraft(HH()).people[+d.i]; p[d.f] = p[d.f] === d.v ? '' : d.v; persist(); rerender(true); };
 ACT['wz-photo'] = async d => { const pid = await addPhotoTo(null); if (!pid) return; wzDraft(HH()).people[+d.i].photo = pid; persist(); rerender(true); };
+INPUT['wz-count-live'] = el => { const v = $('#wzcountv'); if (v) v.textContent = el.value; };
+INPUT['wz-count'] = el => {
+  const H = HH(); const w = wzDraft(H); const n = clamp(+el.value || 1, 1, 10);
+  while (w.people.length < n) { const p = personShape({ id: uid(), name: '', age: 35 }); p.group = 'adult'; w.people.push(p); w.carry[p.id] = wzCarryDefault(H, p); }
+  while (w.people.length > n) { const p = w.people.pop(); delete w.carry[p.id]; }
+  persist(); rerender(true);
+};
+ACT['wz-group'] = d => { const w = wzDraft(HH()); const p = w.people[+d.i]; const g = AGE_GROUPS.find(x => x[0] === d.v); if (!p || !g) return; p.group = g[0]; if (!p.birth) p.age = g[3]; persist(); rerender(true); };
+ACT['wz-pick-contact'] = async d => {
+  const r = await nativeAsync('pickContact'); if (!r.ok) { if (r.error !== 'abgebrochen') toast(r.error); return; }
+  const c = wzDraft(HH()).contacts[+d.i]; if (!c) return; c.name = r.name || c.name; c.phone = r.phone || c.phone; persist(); rerender(true);
+};
 ACT['wz-add-pet'] = d => { wzDraft(HH()).petList.push({ id: uid(), species: d.v, name: '', count: 1, age: '', weightKg: '', needs: '' }); persist(); rerender(true); };
 ACT['wz-del-pet'] = d => { wzDraft(HH()).petList.splice(+d.i, 1); persist(); rerender(true); };
 ACT['wz-add-person'] = d => { const w = wzDraft(HH()); const p = personShape({ id: uid(), name: '', age: d.kind === 'child' ? 6 : 35 }); w.people.push(p); w.carry[p.id] = wzCarryDefault(HH(), p); persist(); rerender(true); };

@@ -97,7 +97,7 @@ final class MapStore {
       con = (HttpURLConnection) new URL(url).openConnection();
       con.setConnectTimeout(15000);
       con.setReadTimeout(20000);
-      con.setRequestProperty("User-Agent", "NotfallApp/2.2 (Android; Offline-Karten)");
+      con.setRequestProperty("User-Agent", "NotfallApp/2.7 (Android; Notfallvorsorge)");
       int code = con.getResponseCode();
       o.put("status", code);
       if (code != 200) { o.put("ok", false); return o; }

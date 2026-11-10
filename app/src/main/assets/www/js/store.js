@@ -46,7 +46,7 @@ function personShape(p) {
   p.share = Object.assign(Object.fromEntries(SHARE_KEYS.map(k => [k, false])), p.share || {});
   p.passContacts = Array.isArray(p.passContacts) ? p.passContacts.slice(0, 3) : [];
   for (const k of ['pickup', 'doctor', 'confirmedBy']) if (p[k] === undefined) p[k] = '';
-  for (const k of ['sex', 'weightKg', 'heightCm', 'fitness']) if (p[k] === undefined) p[k] = '';
+  for (const k of ['sex', 'weightKg', 'heightCm', 'fitness', 'marital']) if (p[k] === undefined) p[k] = '';
   if (p.noBag === undefined) p.noBag = false;
   p.custom = Array.isArray(p.custom) ? p.custom : [];
   p.hide = Object.assign({}, p.hide || {});

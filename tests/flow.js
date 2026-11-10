@@ -13,14 +13,21 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
   ok('Zuerst: Haushalt mit Adresse, Standort und Wohnsituation', /Haushalt/.test(await p.locator('.q').innerText()) && (await p.locator('[data-act=wz-gps]').count()) === 1);
   await p.fill('[data-path=name]', 'Familie Test'); await p.fill('[data-path=place]', 'Köln'); await click('[data-act=wz-set][data-v=flat]'); await click('[data-act=wz-next]');
   // 2) Personen, danach jede Person einzeln
-  await click('[data-act=wz-add-person][data-kind=child]'); await shot('02-personen'); await click('[data-act=wz-next]');
+  ok('Personen: Schieberegler für die Anzahl', (await p.locator('input[type=range]#wzcount').count()) === 1);
+  await p.locator('#wzcount').fill('2'); await p.waitForFunction(() => document.querySelectorAll('[data-act=wz-group][data-i="1"]').length === 5); await click('[data-act=wz-group][data-i="1"][data-v=child]'); await shot('02-personen'); await click('[data-act=wz-next]');
   ok('Danach jede Person einzeln mit Foto, Blutgruppe, Gewicht, Fitness', (await p.locator('[data-act=wz-photo]').count()) === 1 && (await p.locator('#wf-blood').count()) === 1 && (await p.locator('[data-path="people.0.weightKg"]').count()) === 1 && (await p.locator('[data-act=wz-pset][data-f=fitness]').count()) === 3);
-  await p.fill('[data-path="people.0.name"]', 'Anna'); await p.fill('[data-path="people.0.age"]', '38'); await click('[data-act=wz-pset][data-f=sex][data-v=f]');
+  await p.fill('[data-path="people.0.name"]', 'Anna'); await p.fill('[data-path="people.0.age"]', '38'); ok('Personenstand für Erwachsene', (await p.locator('#wf-mar').count()) === 1); await p.selectOption('#wf-mar', 'married'); await click('[data-act=wz-pset][data-f=sex][data-v=f]');
   await p.fill('[data-path="people.0.weightKg"]', '65'); await p.fill('[data-path="people.0.heightCm"]', '170'); await click('[data-act=wz-pset][data-f=fitness][data-v=mid]');
   await p.selectOption('#wf-blood', 'A+'); await p.fill('[data-path="people.0._meds"]', 'Ramipril');
   ok('Kalorienbedarf aus Gewicht, Größe, Fitness berechnet', /2\.200 kcal/.test(await p.locator('#wzcalc').innerText()), await p.locator('#wzcalc').innerText()); await shot('02b-person');
   await click('[data-act=wz-next]');
-  await p.fill('[data-path="people.1.name"]', 'Mia'); await p.fill('[data-path="people.1.age"]', '4'); await p.fill('[data-path="people.1.needs.allergies"]', 'Erdnüsse'); await click('[data-act=wz-next]');
+  await p.fill('[data-path="people.1.name"]', 'Mia'); await p.fill('[data-path="people.1.birth"]', `${new Date().getFullYear() - 5}-01-01`); await p.waitForSelector('#wzage');
+  ok('Geburtsdatum ergibt das Alter, Feld „Alter“ verschwindet', /\b(4|5) Jahre/.test(await p.locator('#wzage').innerText()) && (await p.locator('[data-path="people.1.age"]').count()) === 0);
+  await p.fill('[data-path="people.1.needs.allergies"]', 'Erdnüsse'); await click('[data-act=wz-next]');
+  ok('Nach den Personen: Übersicht zum Bearbeiten', /Alle Personen/.test(await p.locator('.q').innerText()) && (await p.locator('[data-act=wz-goto][data-ret=pover]').count()) === 2);
+  await click('[data-act=wz-goto][data-key=p0]'); ok('Bearbeiten öffnet die Person oben', /Anna/.test(await p.locator('.q').innerText()) && await p.evaluate(() => scrollY) === 0);
+  await click('[data-act=wz-next]'); ok('Weiter führt zurück zur Übersicht', /Alle Personen/.test(await p.locator('.q').innerText()));
+  await click('[data-act=wz-next]');
   // 3) Tiere
   ok('Dann Tiere', /Tiere/.test(await p.locator('.q').innerText())); await click('[data-act=wz-add-pet][data-v=Hund]'); await p.fill('[data-path="petList.0.name"]', 'Bello'); await click('[data-act=wz-next]');
   ok('Dann Notfallkontakte', /anrufen/.test(await p.locator('.q').innerText()));

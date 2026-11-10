@@ -69,7 +69,7 @@ const URL = 'http://localhost:8123/';
   await p.locator('input[data-path="people.0.age"]').fill(''); await p.click('[data-act=wz-next]'); await p.waitForTimeout(150);
   ok('Fehlendes Alter: kurzer Hinweis statt Weiter', /Alter fehlt/.test(await p.locator('#toasts').innerText()));
   await p.locator('input[data-path="people.0.age"]').fill('30'); await p.click('[data-act=wz-next]');
-  for (let i = 0; i < 4; i++) await p.click('[data-act=wz-next]');
+  for (let i = 0; i < 5; i++) await p.click('[data-act=wz-next]');
   await p.click('[data-act=setup-done][data-then=bags]');
   await p.click('[data-act=wz-pick][data-v=evac]'); await p.click('[data-act=wz-pick][data-v="48"]');
   await p.click('[data-act=wz-later]'); await p.waitForFunction(() => location.hash === '#/home' && /Rucksäcke & Taschen anlegen/.test(document.body.innerText));

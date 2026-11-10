@@ -366,3 +366,5 @@ ol.steps li span{color:var(--muted);font-size:.9375rem}
 .load{margin-top:10px;display:flex;flex-direction:column;gap:6px}
 .load .tmust{color:var(--must)}.load .trec{color:var(--rec)}
 .card.tight{padding:calc(var(--u)*1.5)}
+.slider{width:100%;height:2.75rem;accent-color:var(--primary);margin-top:6px}
+.bignum{font-size:2rem;font-weight:800;line-height:1}

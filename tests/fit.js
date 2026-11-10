@@ -21,7 +21,7 @@ const { start } = require('./serve');
   for (let i = 0; i < 12; i++) {
     const q = await p.locator('.q').innerText(); await check('Anlegen – ' + q);
     if (await p.locator('[data-act=setup-done][data-then=bags]').count()) break;
-    if (/Wer gehört/.test(q)) await p.click('[data-act=wz-add-person][data-kind=child]');
+    if (/Wie viele Personen/.test(q)) { await p.locator('#wzcount').fill('2'); await p.waitForTimeout(150); await p.click('[data-act=wz-group][data-i="1"][data-v=child]'); }
     if (/^Tiere/.test(q)) await p.click('[data-act=wz-add-pet][data-v=Hund]');
     await p.click('.actionbar [data-act=wz-next]');
   }
