@@ -6,5 +6,3 @@ local.properties
 node_modules/
 tests/out/
 
-# Signaturschlüssel nicht ins Repository
-app/signing/
