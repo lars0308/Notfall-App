@@ -291,3 +291,25 @@ select option{background:var(--solid);color:var(--text)}
 .cardprev{background:#fff;color:#000;border-radius:12px;padding:12px;overflow:auto}
 a.chip{text-decoration:none;color:var(--text)}
 a.chip[aria-pressed="true"]{color:var(--on-primary)}
+
+/* ===== Scrollen: das Dokument scrollt, Kopfzeile und Navigation bleiben stehen =====
+   Innere Scrollbereiche mit Unschärfe-Effekt haben in der Android-WebView das Wischen blockiert. */
+html,body{height:auto;min-height:100%}
+body{overflow-x:hidden;overflow-y:visible}
+#app{display:block;height:auto}
+.shell{min-height:100vh;min-height:100dvh}
+.main{min-height:100vh;min-height:100dvh}
+.topbar{position:sticky;top:0;z-index:20}
+.page{flex:1 0 auto;overflow:visible;display:flex;flex-direction:column}
+.page-inner{flex:1 0 auto;width:100%;min-height:0}
+.bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:20}
+.withnav .page{padding-bottom:calc(var(--nav) + var(--u)*2)}
+.actionbar,.wiz-foot,.kbd-sticky{bottom:0}
+.withnav .actionbar,.withnav .wiz-foot,.withnav .kbd-sticky{bottom:var(--nav)}
+.rail{position:sticky;top:0;height:100vh;height:100dvh;align-self:flex-start}
+.main.sos-screen{background:var(--bg)}
+.modal-body,.lock{overscroll-behavior:contain}
+*,*::before,*::after{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+.topbar,.bottomnav,.rail{background:var(--solid)}
+@media(min-width:56rem){.withnav .page{padding-bottom:calc(var(--u)*3)}.withnav .actionbar,.withnav .wiz-foot,.withnav .kbd-sticky{bottom:0}}
+.own{scroll-margin-top:calc(var(--topbar) + 12px)}

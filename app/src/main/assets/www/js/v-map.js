@@ -45,8 +45,8 @@ route('/places', H => { history.replaceState(null, '', '#/map'); return ROUTES.f
 
 ACT['map-zoom'] = d => UI.mapView && UI.mapView.zoomBy(+d.d);
 ACT['map-fit'] = () => { const mv = UI.mapView; if (!mv) return; const pts = HH().meeting.concat(HH().shelters).filter(placeCoord); const bs = mapPacks().map(p => p.bbox).concat(pts.map(p => ({ w: p.lon - .01, e: p.lon + .01, s: p.lat - .01, n: p.lat + .01 }))); if (!bs.length) return; mv.fit({ w: Math.min(...bs.map(b => b.w)), e: Math.max(...bs.map(b => b.e)), s: Math.min(...bs.map(b => b.s)), n: Math.max(...bs.map(b => b.n)) }); };
-ACT['map-show'] = d => { const p = mapPacks().find(x => x.id === d.id); if (p && UI.mapView) { UI.mapView.fit(p.bbox, 0); $('.page').scrollTop = 0; } };
-ACT['map-goto'] = d => { const H = HH(); const p = byId(H.meeting, d.id) || byId(H.shelters, d.id); const c = p && placeCoord(p); if (!c) { MAPUI.pick = d.id; rerender(); return; } if (UI.mapView) { UI.mapView.setView(c.lat, c.lon, Math.max(UI.mapView.z, 14)); $('.page').scrollTop = 0; } };
+ACT['map-show'] = d => { const p = mapPacks().find(x => x.id === d.id); if (p && UI.mapView) { UI.mapView.fit(p.bbox, 0); scroller().scrollTop = 0; } };
+ACT['map-goto'] = d => { const H = HH(); const p = byId(H.meeting, d.id) || byId(H.shelters, d.id); const c = p && placeCoord(p); if (!c) { MAPUI.pick = d.id; rerender(); return; } if (UI.mapView) { UI.mapView.setView(c.lat, c.lon, Math.max(UI.mapView.z, 14)); scroller().scrollTop = 0; } };
 ACT['map-pick-cancel'] = () => { MAPUI.pick = null; rerender(true); };
 ACT['map-del'] = async d => {
   const p = mapPacks().find(x => x.id === d.id); const ok = await confirmDlg('Karte löschen?', `„${p.name}“ wird vom Gerät gelöscht.`, { ok: 'Löschen', danger: true }); if (!ok) return;

@@ -45,6 +45,8 @@ function navLink(href, label, ic, counts, cur) {
 /* ---- Rendering ---- */
 let _renderBusy = false;
 function rerender() { render(true); }
+/* Die ganze Seite scrollt (nicht ein innerer Bereich) – das ist in der Android-WebView am zuverlaessigsten. */
+const scroller = () => document.scrollingElement || document.documentElement;
 function render(keepScroll) {
   if (!DB) return;
   const root = $('#app'); $('#boot') && $('#boot').remove(); root.hidden = false;
@@ -58,7 +60,7 @@ function render(keepScroll) {
   if (UI.sosLimited && !/^#\/sos/.test(cur)) { UI.sosLimited = false; UI.locked = !!DB.users.length; if (UI.locked) { renderLock(root); return; } }
   const rt = parseRoute() || { fn: () => ({ title: 'Nicht gefunden', html: h`<div class="empty">Diese Seite gibt es nicht. <a href="#/home">Zur Startseite</a></div>` }), params: [], path: cur };
   UI.route = rt.path; UI.params = rt.params; UI.q = new URLSearchParams((location.hash.split('?')[1]) || '');
-  const wasTop = $('.page') ? $('.page').scrollTop : 0;
+  const wasTop = scroller().scrollTop;
   let view;
   try { view = rt.fn(...rt.params, H) || {}; } catch (e) { console.error(e); view = { title: 'Fehler', html: h`<div class="notice must"><div><p class="nt">Anzeige fehlgeschlagen</p><p>${String(e.message || e)}</p><p><a href="#/home">Zur Startseite</a></p></div></div>` }; }
   const counts = navCounts();
@@ -73,14 +75,14 @@ function render(keepScroll) {
         <div style="padding:16px 8px 0"><a class="btn sos block" href="#/sos" style="color:#fff">${icon('alert')} Notfallmodus</a></div>
         <div class="small muted" style="padding:16px 12px">${esc(H.name)}${H.sample ? ' · Testdaten' : ''}</div>
       </nav>
-      <div class="main ${sos ? 'sos-screen' : ''}">
+      <div class="main withnav ${sos ? 'sos-screen' : ''}">
         <header class="topbar">${topLeft}<h1>${view.title || ''}</h1>${view.actions || ''}<a class="btn sos sm" href="#/sos" aria-label="Notfallmodus öffnen">${icon('alert')}<span>Notfall</span></a></header>
         <main class="page" id="page"><div class="page-inner">${view.html}</div></main>
         <nav class="bottomnav" aria-label="Navigation">${NAV_MAIN.map(([href, label, ic]) => navLink(href, label, ic, counts, '#' + rt.path))}</nav>
       </div>
     </div>`;
   root.innerHTML = shell.s;
-  if (keepScroll && $('.page')) $('.page').scrollTop = wasTop; else if ($('.page')) $('.page').scrollTop = 0;
+  scroller().scrollTop = keepScroll ? wasTop : 0;
   if (!KV.native && !UI.browserNoticeShown) { UI.browserNoticeShown = true; toast('Browser-Testmodus: Daten sind hier nicht Keystore-verschlüsselt.', 5000); }
   hydratePhotos(root);
   if (view.after) { try { view.after(); } catch (e) { console.error(e); } }

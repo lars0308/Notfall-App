@@ -1,4 +1,4 @@
-# Testergebnisse (Version 2.2.0)
+# Testergebnisse (Version 2.2.1)
 
 Stand: 2026-11-10 08:21 UTC. Echte Ausgaben aus der Build-Umgebung (Node 22, Chromium/Playwright, Android SDK 35, Gradle 8.14.3). Wiederholbar mit `tests/run-all.sh`. Gesamt: **37 Unit-Prüfungen, 115 End-to-End-Prüfungen, 19 Schnittstellen-Prüfungen – 0 fehlgeschlagen.**
 
@@ -9,12 +9,14 @@ Stand: 2026-11-10 08:21 UTC. Echte Ausgaben aus der Build-Umgebung (Node 22, Chr
 | Migration, Backup/Restore, PIN | 29 Prüfungen (`tests/data.js`) | alle bestanden |
 | Neu in 2.2: Pass-Baukasten, Kartendesigner, Lagen, Probealarm, Karten, Kiste, QR-Etikett | 39 Prüfungen (`tests/extra.js`), Karten/Probealarm gegen eine **Attrappe** der Android-Schnittstelle | alle bestanden |
 | Schnittstelle zu Android | 19 Prüfungen gegen die Attrappe (`tests/native-sim.js`) | alle bestanden |
+| Scrollen per Fingerwisch (2.2.1) | 16 Prüfungen (`tests/scroll.js`), Handy-Emulation mit Touch-Ereignissen | alle bestanden |
 | Zufallstest inkl. neuer Seiten | 3 Läufe × ca. 335 Aktionen | keine JS-Fehler |
 | Java-Teil (Keystore, Biometrie, Benachrichtigungen, **Probealarm, Kartendownload, MBTiles-Import**, Kamera, Drucken) | **nur kompiliert**, APK signiert, Berechtigungen mit `aapt2` geprüft | **nicht auf einem Gerät ausgeführt** |
 
 **Wichtig:** Kein Android-Gerät und kein Emulator in dieser Umgebung (kein `/dev/kvm`). Zustellung des Probealarms bei geschlossener App, nach Neustart, nach „Beenden erzwingen“ und unter Energiesparen ist damit **nicht geprüft** – siehe [Geräte-Checkliste](GERAETETEST-CHECKLISTE.md). Der QR-Code wurde mit einem unabhängigen Decoder (jsQR) gelesen, nicht mit einer echten Kamera.
 
 ## Bei den Tests gefunden und behoben
+- 2.2.1: Auf dem Handy ließen sich die meisten Seiten nicht scrollen (Rückmeldung vom Gerät). Jetzt scrollt die ganze Seite statt eines inneren Bereichs, der Unschärfe-Effekt auf Karten ist entfernt. Im Desktop-Chromium war der Fehler nicht nachstellbar – ob er auf dem Gerät behoben ist, muss dort bestätigt werden.
 - Notfallansicht nannte unter „Bei Abreise mitnehmen“ Medikamentennamen, obwohl Medikamente nicht freigegeben waren – jetzt nur „Medikamente & Hilfsmittel (n)“.
 - Nach einem Kartendownload blieb die Karte leer, wenn die Kartenmitte außerhalb des neuen Gebiets lag.
 

@@ -66,7 +66,7 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
   ok('Nach ausdrücklicher Freigabe erscheint nur das freigegebene Feld', /Erdnüsse/.test(q) && !/Asthma|Organspende/.test(q)); await shot('11-qr'); await noMarkup('Notfallpass');
   ok('Warnhinweis „jeder kann das lesen“ + Hinweis Android-Notfallinfos', /Jeder, der den Code scannt/.test(await body()) && /Android-Notfallinfos/.test(await body()));
   // QR wirklich dekodieren (jsQR)
-  await p.evaluate(() => { const s = document.createElement('style'); s.id = 'tmpst'; s.textContent = '.actionbar,#toasts{display:none!important}'; document.head.appendChild(s); }); await p.locator('#qrbox').screenshot({ path: 'tests/out/qr.png' }); await p.evaluate(() => document.getElementById('tmpst').remove());
+  await p.evaluate(() => { const s = document.createElement('style'); s.id = 'tmpst'; s.textContent = '.actionbar,#toasts,.bottomnav,.topbar{display:none!important}'; document.head.appendChild(s); }); await p.locator('#qrbox').screenshot({ path: 'tests/out/qr.png' }); await p.evaluate(() => document.getElementById('tmpst').remove());
   const { PNG } = require('/tmp/claude-0/npm/node_modules/pngjs'); const jsQR = require('/tmp/claude-0/npm/node_modules/jsqr'); const png = PNG.sync.read(fs.readFileSync('tests/out/qr.png')); const dec = jsQR(new Uint8ClampedArray(png.data), png.width, png.height);
   ok('QR-Code ist mit Standard-Decoder lesbar und enthält genau den Vorschautext (Umlaute korrekt)', !!dec && dec.data === q, dec ? dec.data.split('\n')[1] : 'nicht dekodiert');
   const card = await p.evaluate(async id => passCardHtml(HH(), HH().people.find(x => x.id === id)), kid);
