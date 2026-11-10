@@ -23,6 +23,8 @@ function carryForPerson(p, S) {
   if (p.carryKg !== undefined && p.carryKg !== null && p.carryKg !== '') return +p.carryKg;
   const age = p.age === '' || p.age === undefined ? 35 : +p.age;
   let kg = age < 6 ? 0 : age < 10 ? 2 : age < 13 ? 4 : age < 18 ? 8 : age >= 65 ? 8 : (S.plan.carryKg || 12);
+  // Erwachsene mit Gewichtsangabe: 15–25 % des Koerpergewichts je nach Fitness, hoechstens 20 kg
+  if (age >= 18 && +p.weightKg > 30) kg = Math.min(20, Math.max(5, Math.round(+p.weightKg * ({ low: .15, mid: .2, high: .25 }[p.fitness] || .18)))) - (age >= 65 ? 3 : 0);
   if (p.needs && p.needs.mobility && p.needs.mobility.trim()) kg = Math.round(kg / 2);
   return kg;
 }
@@ -30,9 +32,17 @@ function bagLitersForPerson(p) {
   const age = p.age === '' || p.age === undefined ? 35 : +p.age;
   return age < 6 ? 0 : age < 10 ? 8 : age < 13 ? 15 : age < 18 ? 30 : age >= 65 ? 30 : 45;
 }
+/* Grundumsatz (Mifflin-St Jeor) mal Aktivitaet – nur mit Gewicht, Groesse und Geschlecht, sonst Richtwert nach Alter */
+const FIT_FACTOR = { low: 1.4, mid: 1.6, high: 1.8 };
+function kcalForPerson(p, age, S) {
+  const w = +p.weightKg, hcm = +p.heightCm;
+  if (age < 18 || !(w > 20 && w < 300) || !(hcm > 100 && hcm < 250) || !['f', 'm', 'd'].includes(p.sex)) return kcalForAge(age, S);
+  const bmr = 10 * w + 6.25 * hcm - 5 * age + (p.sex === 'm' ? 5 : p.sex === 'f' ? -161 : -78);
+  return Math.round(bmr * (FIT_FACTOR[p.fitness] || 1.5) / 50) * 50;
+}
 function personCalc(p, S) {
   const age = p.age === '' || p.age === undefined || p.age === null ? 35 : +p.age;
-  return { group: ageGroup(age), age, kcal: kcalForAge(age, S), waterL: waterForAge(age, S), carryKg: carryForPerson(p, S), bagL: bagLitersForPerson(p), carrier: age >= 6 };
+  return { group: ageGroup(age), age, kcal: kcalForPerson(p, age, S), waterL: waterForAge(age, S), carryKg: carryForPerson(p, S), bagL: bagLitersForPerson(p), carrier: age >= 6 };
 }
 function petCalc(pet) {
   const t = PET_TABLE[pet.species] || PET_TABLE.Sonstiges; const n = +pet.count || 1;
@@ -78,7 +88,7 @@ function generateDesired(H, S) {
   if (ctx.bagHours > 0) {
     const days = ctx.bagDays;
     for (const { p, c } of calc.people) {
-      const own = c.carrier ? { personId: p.id, scope: 'person' } : { personId: p.id, scope: 'person', flex: true };
+      const own = c.carrier && !p.noBag ? { personId: p.id, scope: 'person' } : { personId: p.id, scope: 'person', flex: true };
       const waterNeed = Math.ceil(c.waterL * days * 10) / 10;
       const carryCap = c.group === 'adult' || c.group === 'senior' ? 2 : c.group === 'teen' ? 1.5 : c.group === 'child' ? 1 : 0.5;
       const carryL = Math.min(waterNeed, carryCap);
@@ -397,7 +407,7 @@ function ensureBags(H, S, calc) {
   const order = carriers.slice().sort((a, b) => b.c.carryKg - a.c.carryKg);
   const bagsSorted = unassigned.slice().sort((a, b) => b.liters - a.liters);
   for (const x of (planContext(H, S).bagHours > 0 ? order : [])) {
-    if (H.bags.some(b => b.owner === x.p.id && b.role !== 'car')) continue;
+    if (x.p.noBag || H.bags.some(b => b.owner === x.p.id && b.role !== 'car')) continue;
     const free = bagsSorted.find(b => !b.owner);
     if (free) { free.owner = x.p.id; continue; }
     const type = x.c.age < 13 ? 'kids' : 'trekking';

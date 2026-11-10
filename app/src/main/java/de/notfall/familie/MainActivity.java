@@ -47,7 +47,8 @@ public class MainActivity extends Activity {
   static final String HOST = "app.notfall.invalid";
   private static final String BASE = "https://" + HOST + "/";
   private static final int REQ_PICK = 4242, REQ_PHOTO = 4243, REQ_MAP = 4244;
-  private static final int PERM_CAMERA = 11, PERM_WEBCAM = 12, PERM_NOTIF = 13;
+  private static final int PERM_CAMERA = 11, PERM_WEBCAM = 12, PERM_NOTIF = 13, PERM_GEO = 14;
+  private android.webkit.GeolocationPermissions.Callback geoCb; private String geoOrigin;
 
   private WebView webView;
   private FrameLayout root;
@@ -81,6 +82,7 @@ public class MainActivity extends Activity {
     s.setBuiltInZoomControls(false);
     s.setMediaPlaybackRequiresUserGesture(false);
     s.setSaveFormData(false);
+    s.setGeolocationEnabled(true);
     webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
     bridge = new NativeBridge(this);
     webView.addJavascriptInterface(bridge, "NotfallAndroid");
@@ -135,6 +137,15 @@ public class MainActivity extends Activity {
           Toast.makeText(MainActivity.this, "Dateiauswahl nicht verfügbar", Toast.LENGTH_LONG).show();
           return false;
         }
+      }
+
+      // Standort nur fuer die eigene Oberflaeche und nur auf Knopfdruck („Standort bestimmen“)
+      @Override public void onGeolocationPermissionsShowPrompt(String origin, android.webkit.GeolocationPermissions.Callback callback) {
+        Uri o = Uri.parse(origin);
+        if (!HOST.equals(o.getHost())) { callback.invoke(origin, false, false); return; }
+        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) { callback.invoke(origin, true, false); return; }
+        geoCb = callback; geoOrigin = origin;
+        requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, PERM_GEO);
       }
 
       @Override public void onPermissionRequest(final PermissionRequest req) {
@@ -309,6 +320,9 @@ public class MainActivity extends Activity {
         if (ok) pendingWebPerm.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE}); else pendingWebPerm.deny();
         pendingWebPerm = null;
       }
+    } else if (code == PERM_GEO) {
+      boolean any = false; for (int r : results) if (r == PackageManager.PERMISSION_GRANTED) any = true;
+      if (geoCb != null) { geoCb.invoke(geoOrigin, any, false); geoCb = null; geoOrigin = null; }
     } else if (code == PERM_NOTIF) {
       int cb = pendingNotifCb;
       pendingNotifCb = -1;

@@ -40,7 +40,7 @@ function attrappe(png) {
     if (native) await p.addInitScript(attrappe, PNG);
     await p.goto(URL); await p.waitForSelector('.q');
     await p.evaluate(() => { loadSampleHousehold(); const H = HH(); H.items.forEach(i => { i.status = 'owned'; }); persist(); go('#/home'); });
-    await p.waitForSelector('.tile');
+    await p.waitForSelector('.page-inner');
     return p;
   };
   const noModal = p => p.waitForFunction(() => !document.querySelector('.modal'));

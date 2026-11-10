@@ -9,25 +9,32 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
   const noMarkup = async name => { const t = await body(); ok(name + ': kein Fehler/Markup im Text', !/Anzeige fehlgeschlagen|undefined|NaN|\[object|<\/?(div|span|button|a|svg)[ >]|class="/.test(t), (t.match(/Anzeige fehlgeschlagen.*|undefined|NaN|\[object[^\]]*\]|class="/) || [''])[0]); };
   await p.goto('http://localhost:8123/'); await p.waitForSelector('.q');
   ok('Erster Start: Packassistent mit einer Frage', (await hash()) === '#/wizard' && (await p.locator('.q').count()) === 1); await shot('01-frage');
-  await p.fill('#wzn', 'Familie Test'); await click('[data-act=wz-next]');
-  await p.locator('input[data-path="people.0.name"]').fill('Anna'); await p.locator('input[data-path="people.0.age"]').fill('38');
-  await click('[data-act=wz-add-person][data-kind=child]'); await p.locator('input[data-path="people.1.name"]').fill('Mia'); await p.locator('input[data-path="people.1.age"]').fill('4'); await shot('02-personen');
-  await click('[data-act=wz-next]'); ok('Nach Name und Personen: Frage nach dem Wohnort', /Wo wohnst du/.test(await p.locator('.q').innerText()));
-  await p.fill('#wzo', 'Köln'); await click('[data-act=wz-pick][data-f=home][data-v=flat]');
+  // 1) Haushalt
+  ok('Zuerst: Haushalt mit Adresse, Standort und Wohnsituation', /Haushalt/.test(await p.locator('.q').innerText()) && (await p.locator('[data-act=wz-gps]').count()) === 1);
+  await p.fill('[data-path=name]', 'Familie Test'); await p.fill('[data-path=place]', 'Köln'); await click('[data-act=wz-set][data-v=flat]'); await click('[data-act=wz-next]');
+  // 2) Personen, danach jede Person einzeln
+  await click('[data-act=wz-add-person][data-kind=child]'); await shot('02-personen'); await click('[data-act=wz-next]');
+  ok('Danach jede Person einzeln mit Foto, Blutgruppe, Gewicht, Fitness', (await p.locator('[data-act=wz-photo]').count()) === 1 && (await p.locator('#wf-blood').count()) === 1 && (await p.locator('[data-path="people.0.weightKg"]').count()) === 1 && (await p.locator('[data-act=wz-pset][data-f=fitness]').count()) === 3);
+  await p.fill('[data-path="people.0.name"]', 'Anna'); await p.fill('[data-path="people.0.age"]', '38'); await click('[data-act=wz-pset][data-f=sex][data-v=f]');
+  await p.fill('[data-path="people.0.weightKg"]', '65'); await p.fill('[data-path="people.0.heightCm"]', '170'); await click('[data-act=wz-pset][data-f=fitness][data-v=mid]');
+  await p.selectOption('#wf-blood', 'A+'); await p.fill('[data-path="people.0._meds"]', 'Ramipril');
+  ok('Kalorienbedarf aus Gewicht, Größe, Fitness berechnet', /2\.200 kcal/.test(await p.locator('#wzcalc').innerText()), await p.locator('#wzcalc').innerText()); await shot('02b-person');
+  await click('[data-act=wz-next]');
+  await p.fill('[data-path="people.1.name"]', 'Mia'); await p.fill('[data-path="people.1.age"]', '4'); await p.fill('[data-path="people.1.needs.allergies"]', 'Erdnüsse'); await click('[data-act=wz-next]');
+  // 3) Tiere
+  ok('Dann Tiere', /Tiere/.test(await p.locator('.q').innerText())); await click('[data-act=wz-add-pet][data-v=Hund]'); await p.fill('[data-path="petList.0.name"]', 'Bello'); await click('[data-act=wz-next]');
   await click('[data-act=wz-pick][data-v=evac]'); ok('Antwortkarte springt direkt zur nächsten Frage', /wie lange/i.test(await p.locator('.q').innerText()));
   await click('[data-act=wz-pick][data-v="72"]'); await click('[data-act=wz-pick][data-v=shelter]');
-  await click('[data-act=wz-pet][data-v=Hund]'); await click('[data-act=wz-next]');
-  await click('[data-act=wz-pick][data-f=needsYes][data-v="1"]'); await p.locator('input[data-path="people.0._meds"]').fill('Ramipril'); await p.locator('input[data-path="people.1.needs.allergies"]').fill('Erdnüsse'); await click('[data-act=wz-next]');
-  // Rucksack auswählen
-  ok('Danach: Rucksack auswählen', /Welchen Rucksack/.test(await p.locator('.q').innerText()) && (await p.locator('[data-act=wz-bag]').count()) >= 6);
-  await click('[data-act=wz-bag][data-type=tactical]'); await p.waitForTimeout(100); await click('[data-act=bag-edit]'); await p.waitForSelector('.modal [name=name]');
-  await p.fill('.modal [name=name]', 'Mein Tactical'); await p.fill('.modal [name=location]', 'Flur'); await p.locator('.modal button[type=submit]').click();
-  await p.waitForFunction(() => !document.querySelector('.modal')); ok('Tasche im Assistenten angelegt, Assistent bleibt offen', (await hash()) === '#/wizard' && await p.evaluate(() => HH().bags.length === 1 && HH().bags[0].name === 'Mein Tactical' && HH().setup.draft.name === 'Familie Test' && HH().setup.draft.place === 'Köln'), await p.evaluate(() => JSON.stringify([HH().bags.map(b => b.name), HH().setup.draft && HH().setup.draft.name]))); await shot('03-taschen');
-  await click('[data-act=wz-finish]'); await p.waitForFunction(() => location.hash === '#/review');
-  ok('Name und Wohnort gespeichert', await p.evaluate(() => HH().name === 'Familie Test' && HH().cfg.housing.place === 'Köln' && HH().cfg.housing.type === 'flat'));
+  // 4) Rucksäcke je Person
+  const annaId = await p.evaluate(() => HH().setup.draft.people[0].id), miaId = await p.evaluate(() => HH().setup.draft.people[1].id);
+  ok('Zum Schluss: Rucksack je Person – Anna vorausgewählt, Mia (4) keinen', /Wer trägt/.test(await p.locator('.q').innerText()) && await p.locator(`[data-act=wz-carry][data-id="${annaId}"][data-v="type:trekking"][aria-pressed=true]`).count() === 1 && await p.locator(`[data-act=wz-carry][data-id="${miaId}"][data-v=none][aria-pressed=true]`).count() === 1);
+  await click(`[data-act=wz-carry][data-id="${annaId}"][data-v="type:tactical"]`); await shot('03-taschen');
+  await click('[data-act=wz-finish]'); await p.waitForFunction(() => location.hash.startsWith('#/review'));
+  ok('Haushalt, Person und Tier gespeichert', await p.evaluate(() => { const H = HH(); const a = H.people[0]; return H.name === 'Familie Test' && H.cfg.housing.place === 'Köln' && H.cfg.housing.type === 'flat' && a.needs.blood === 'A+' && a.weightKg === 65 && a.fitness === 'mid' && H.pets[0].name === 'Bello' && H.bags.length === 1 && H.bags[0].type === 'tactical' && H.bags[0].owner === a.id; }));
+  await p.evaluate(() => { const b = HH().bags[0]; b.name = 'Mein Tactical'; b.location = 'Flur'; persist(); });
   const s1 = await p.evaluate(() => { const H = HH(); return { items: H.items.length, bags: H.bags.length, home: H.items.filter(i => i.container === 'home' && i.source === 'plan').length, med: H.items.some(i => /Ramipril/.test(i.name) && i.lastMinute), pet: H.items.some(i => i.petId), bagOwner: H.bags[0].owner === H.people[0].id }; });
   ok('Packliste erzeugt (ohne Hausvorrat), Medikament „erst bei Abreise“, Tier berücksichtigt, eigene Tasche zugeordnet', s1.items > 40 && s1.home === 0 && s1.med && s1.pet && s1.bagOwner && s1.bags === 1, JSON.stringify(s1)); await shot('04-packliste'); await noMarkup('Packliste');
-  { const t0 = await body(); ok('Packliste: „Das brauchst du“ mit Kategorien', /Das brauchst du/.test(t0) && /hake ab, was du schon hast/i.test(t0) && ['Allgemein', 'Medikamente', 'Kleidung', 'Werkzeug', 'Feuer', 'Wasser', 'Nahrung', 'Technik'].every(w => t0.includes(w))); }
+  { const t0 = await body(); ok('Packliste: ein Rucksack → direkt „Das brauchst du“ mit Kategorien', /Das brauchst du/.test(t0) && /^#\/review\/b\//.test(await hash()) && ['Allgemein', 'Medikamente', 'Kleidung', 'Werkzeug', 'Feuer', 'Wasser', 'Nahrung', 'Technik'].every(w => t0.includes(w))); }
   const cats = await p.locator('a.cat').evaluateAll(as => as.map(a => a.getAttribute('href')));
   const o0 = await p.evaluate(() => HH().items.filter(i => i.status === 'owned').length); let ticked = 0;
   for (const c of cats) { if (ticked >= 10) break; await p.goto('http://localhost:8123/' + c); await p.waitForSelector('.page-inner');
@@ -36,10 +43,10 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
   await p.locator('[data-change=rv-tick]:checked').first().click(); await p.waitForTimeout(50);
   ok('Haken entfernen macht es wieder offen', await p.evaluate(n => HH().items.filter(i => i.status === 'owned').length === n + 9, o0));
   ok('Abgehakte Sachen: Foto-Knopf', (await p.locator('[data-act=pick-photo]').count()) > 0);
-  await p.goto('http://localhost:8123/#/review/c/tools'); await p.waitForSelector('[data-act=pick-add]'); const k0 = await p.locator('[data-act=pick-add]').first().getAttribute('data-key');
+  await p.goto('http://localhost:8123/#/review/c/tools'); await p.waitForSelector('[data-act=pick-add]'); ok('Kategorie zeigt den Rucksack, in den es kommt', /Mein Tactical/.test(await body())); const k0 = await p.locator('[data-act=pick-add]').first().getAttribute('data-key');
   await click('[data-act=pick-add]'); await p.waitForTimeout(100);
   ok('Werkzeug antippen fügt es der Tasche hinzu (vorhanden, Fach zugeteilt)', await p.evaluate(k => { const i = HH().items.find(x => x.key === k && x.source === 'pick'); return !!i && i.status === 'owned' && !!i.bagId && !!i.compId; }, k0));
-  await p.goto('http://localhost:8123/#/review/search'); await p.waitForSelector('#pickq'); await p.keyboard.type('Feuerstahl'); await p.waitForSelector('#pickres [data-act=pick-add]');
+  await click('.topbar [data-act=pick-search]'); await p.waitForSelector('#pickq'); await p.keyboard.type('Feuerstahl'); await p.waitForSelector('#pickres [data-act=pick-add]');
   await p.locator('#pickres [data-act=pick-add]').first().click(); await p.waitForTimeout(100);
   await p.fill('#pickq', 'Ersatzakku Kamera'); await p.waitForTimeout(50); await click('[data-act=pick-custom]'); await p.waitForTimeout(100); await shot('04a-suche');
   ok('Lupe: suchen und direkt hinzufügen, auch eigene Sachen', await p.evaluate(() => HH().items.some(i => i.key === 'ferro_rod' && i.status === 'owned') && HH().items.some(i => i.name === 'Ersatzakku Kamera' && i.status === 'owned' && i.bagId)));
@@ -52,8 +59,8 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
   await p.goto('http://localhost:8123/#/review'); await p.waitForSelector('a.cat');
   ok('Vorhanden/Fehlt markiert, Einkaufsliste gefüllt', await p.evaluate(() => HH().shop.length === 2 && HH().items.filter(i => i.status === 'owned').length >= 12));
   // Start
-  await p.goto('http://localhost:8123/#/home'); await p.waitForSelector('.tile'); await shot('05-start'); await noMarkup('Start');
-  const t = await body(); ok('Start zeigt Tasche mit „X von Y gepackt“, Neue Tasche, Packliste, Notfallpass, Kontrolle', /von \d+ gepackt/.test(t) && /Neue Tasche anlegen/.test(t) && /Notfallplan/.test(t) && /Notfallpass/.test(t) && /Rucksackkontrolle|Kontrolle/.test(t));
+  await p.goto('http://localhost:8123/#/home'); await p.waitForSelector('.stats'); await shot('05-start'); await noMarkup('Start');
+  const t = await body(); ok('Start ist Übersicht: vorhanden/gepackt/fehlt, Termine, Haushalt mit Tagesbedarf, Notrufnummern – keine Taschen-Kacheln', /vorhanden/.test(t) && /gepackt/.test(t) && /Termine/.test(t) && /Rucksackkontrolle|Kontrolle/.test(t) && /Bedarf pro Tag/.test(t) && /Notrufnummern/.test(t) && !/Neue Tasche anlegen/.test(t) && (await p.locator('.page a.tile[href^="#/bags/"]').count()) === 0, JSON.stringify({ v: /vorhanden/.test(t), g: /gepackt/.test(t), te: /Termine/.test(t), k: /Rucksackkontrolle|Kontrolle/.test(t), b: /Bedarf pro Tag/.test(t), n: /Notrufnummern/.test(t), nt: !/Neue Tasche anlegen/.test(t) }));
   ok('Kein Bereitschafts-Score auf dem Start', !/%/.test(t));
   // Tasche
   const bid = await p.evaluate(() => HH().bags[0].id); await p.goto('http://localhost:8123/#/bags/' + bid); await p.waitForSelector('.bag2d'); await shot('06-tasche'); await noMarkup('Tasche');

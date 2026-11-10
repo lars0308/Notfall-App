@@ -9,20 +9,52 @@ function nextCheck(H) {
   const exp = H.items.filter(i => !i.archived && i.status === 'owned' && i.expiry && daysUntil(i.expiry) <= (DB.settings.notif.leadDays || 30)).length;
   return { r, exp };
 }
+/* Luftlinie in Metern */
+function distM(a, b) { const R = 6371000, r = x => x * Math.PI / 180; const dl = r(b.lat - a.lat), dn = r(b.lon - a.lon); const q = Math.sin(dl / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dn / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(q)); }
+const fmtDist = m => m < 1000 ? `${Math.round(m / 10) * 10} m` : `${fmt(Math.round(m / 100) / 10)} km`;
+const inDays = n => n === 0 ? 'heute' : n === 1 ? 'morgen' : n < 0 ? `seit ${-n} ${-n === 1 ? 'Tag' : 'Tagen'}` : `in ${n} Tagen`;
+const stat = (val, label, cls = '') => h`<div class="stat ${cls}"><span class="sv">${val}</span><span class="sl">${label}</span></div>`;
+
+/* Startseite = Übersicht mit Informationen; Bedienung über die Reiter unten */
 route('/home', H => {
-  const S = DB.settings; const nc = nextCheck(H);
-  const unchecked = H.items.filter(i => !i.archived && i.container !== 'home' && i.status === 'planned').length;
-  const shopN = H.shop.filter(s => !s.bought).length;
-  return {
+  const S = DB.settings;
+  if (!H.setup.done && !H.items.length) return {
     title: 'Notfall!',
-    html: h`
-    ${H.bags.map(b => { const st = bagStats(H, S, b); return h`<a class="tile" href="#/bags/${b.id}">${b.photos[0] ? thumb(b.photos[0]) : h`<span class="ti">${icon(b.role === 'car' ? 'car' : 'bag')}</span>`}<span class="grow"><span class="tt">${b.name}</span><br><span class="ts">${bagLine(st)}</span><span style="display:block;margin-top:6px">${bar(st.packedPct, 'ok')}</span></span>${icon('chev', 'chev')}</a>`; })}
-    ${unchecked ? tile('#/review', 'check', 'orange', 'Packliste prüfen', unchecked + ' offen', h`<span class="count">${unchecked}</span>`) : ''}
-    <button class="tile blue" data-act="bag-new"><span class="ti">${icon('plus')}</span><span class="grow"><span class="tt">Neue Tasche anlegen</span></span></button>
-    ${tile('#/wizard', 'list', 'orange', H.setup.draft ? 'Notfallplan fortsetzen' : H.setup.done ? 'Notfallplan anpassen' : 'Notfallplan erstellen', H.setup.done ? '' : 'Name, Personen, Wohnort, Rucksack')}
-    ${tile('#/pass', 'shield', 'red', 'Notfallpass & Kontakte', H.people.length ? H.people.map(p => p.name).join(', ') : '')}
-    ${nc.r ? h`<div class="tile green"><span class="ti">${icon('bell')}</span><a class="grow" href="#/remind" style="color:inherit;text-decoration:none"><span class="tt">${nc.r.title}</span><br><span class="ts">Nächste Kontrolle · ${fmtDate(nc.r.next)}${nc.exp ? ' · ' + nc.exp + ' Ablaufdaten' : ''}</span></a>${daysUntil(nc.r.next) <= 0 ? h`<button class="btn sm ok" data-act="rem-done" data-id="${nc.r.id}">${icon('check')} Erledigt</button>` : ''}</div>` : tile('#/remind', 'bell', 'green', 'Nächste Kontrolle', 'Keine geplant')}
-    ${shopN ? tile('#/shop', 'cart', '', 'Einkaufsliste', shopN + ' zu besorgen', h`<span class="count">${shopN}</span>`) : ''}`,
+    html: h`<div class="card"><h2>Willkommen</h2><p class="muted" style="margin-top:6px">Erst Haushalt, Personen, Tiere und Rucksäcke – danach packst du Rucksack für Rucksack.</p>
+      <a class="btn primary lg block" style="margin-top:16px" href="#/wizard">${icon('list')} ${H.setup.draft ? 'Notfallplan fortsetzen' : 'Notfallplan erstellen'}</a></div>`,
+  };
+  const live = H.items.filter(i => !i.archived && i.container !== 'home');
+  const have = live.filter(i => i.status === 'owned'); const packed = have.filter(i => i.packed && i.bagId);
+  const miss = live.filter(i => i.status !== 'owned');
+  const must = miss.filter(i => i.prio === 'must').slice(0, 4);
+  const lead = (S.notif && S.notif.leadDays) || 30;
+  const exp = H.items.filter(i => !i.archived && i.status === 'owned' && i.expiry && daysUntil(i.expiry) <= lead).sort((a, b) => a.expiry.localeCompare(b.expiry)).slice(0, 4);
+  const remAll = H.reminders.filter(x => x.enabled && x.next).sort((a, b) => a.next.localeCompare(b.next));
+  const rem = remAll.filter(x => x.key === 'bagcheck').concat(remAll.filter(x => x.key !== 'bagcheck')).slice(0, 3);
+  const al = (H.alarms || []).filter(a => a.enabled).map(a => alarmNext(a)).filter(Boolean).sort((a, b) => a - b)[0];
+  const heavy = H.bags.map(b => ({ b, st: bagStats(H, S, b) })).filter(x => x.st.overweight || x.st.overfull);
+  const calc = H.people.map(p => personCalc(p, S)); const kcal = calc.reduce((a, c) => a + c.kcal, 0); const water = calc.reduce((a, c) => a + c.waterL, 0) + H.pets.reduce((a, t) => a + petCalc(t).waterL, 0);
+  const hours = planContext(H, S).bagHours || Math.min(72, (H.cfg && H.cfg.durationHours) || 72);
+  const hs = (H.cfg && H.cfg.housing) || {}; const home = typeof hs.lat === 'number' ? { lat: hs.lat, lon: hs.lon } : null;
+  const meet = H.meeting.slice(0, 3);
+  const country = COUNTRIES[(H.cfg && H.cfg.country) || 'DE'] || COUNTRIES.DE;
+  const ice = H.contacts.filter(c => c.type === 'ice').length;
+  return {
+    title: H.name && H.name !== 'Mein Haushalt' ? H.name : 'Notfall!',
+    html: h`<div class="stats">${stat(`${have.length}/${live.length}`, 'vorhanden', have.length === live.length && live.length ? 'ok' : '')}${stat(`${packed.length}/${live.length}`, 'gepackt')}${stat(miss.length, miss.length === 1 ? 'fehlt' : 'fehlen', miss.length ? 'must' : 'ok')}</div>
+    ${must.length ? h`<div class="card"><h3>Wichtig, aber noch nicht da</h3><ul class="plain">${must.map(i => h`<li>${i.name}<span class="muted small">${i.bagId && byId(H.bags, i.bagId) ? ' · ' + byId(H.bags, i.bagId).name : ''}</span></li>`)}</ul>${miss.filter(i => i.prio === 'must').length > must.length ? h`<p class="muted small">und ${miss.filter(i => i.prio === 'must').length - must.length} weitere</p>` : ''}</div>` : ''}
+    ${heavy.length ? h`<div class="card"><h3>Gewicht</h3><ul class="plain">${heavy.map(x => h`<li><span class="${x.st.overFactor > 1.25 ? 'tmust' : 'trec'}">${x.b.name}: ${x.st.overweight ? `${fmt(x.st.totalG / 1000)} von ${fmt(x.st.capKg)} kg` : `zu voll (${fmt(x.st.volL)} von ${fmt(x.st.usableL)} l)`}</span></li>`)}</ul></div>` : ''}
+    <div class="card"><h3>Termine</h3><ul class="plain">
+      ${rem.length ? rem.map(r => h`<li>${r.title}: <b>${fmtDate(r.next)}</b> <span class="muted small">(${inDays(daysUntil(r.next))})</span></li>`) : h`<li class="muted">Keine Kontrolle geplant</li>`}
+      ${al ? h`<li>Probealarm: <b>${new Date(al).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' })}</b></li>` : ''}
+      ${exp.map(i => h`<li><span class="${daysUntil(i.expiry) < 0 ? 'tmust' : 'trec'}">${i.name}</span> läuft ab: ${fmtDate(i.expiry)} <span class="muted small">(${inDays(daysUntil(i.expiry))})</span></li>`)}</ul></div>
+    <div class="card"><h3>Haushalt</h3>
+      ${hs.place ? h`<p class="muted" style="margin-top:4px">${icon('map')} ${hs.place}</p>` : ''}
+      <div class="chips" style="margin-top:10px">${H.people.map(p => h`<span class="chip static">${avatar(p.photo, p.name, 'sm')} ${p.name}</span>`)}${H.pets.map(t => h`<span class="chip static">${icon('paw')} ${t.name || t.species}</span>`)}</div>
+      ${H.people.length ? h`<p style="margin-top:10px">Bedarf pro Tag: <b>${fmt0(kcal)} kcal</b> · <b>${fmt(water)} l Wasser</b></p><p class="muted small">Für ${hours} Stunden: ${fmt(water * hours / 24)} l Trinkwasser</p>` : ''}
+      ${!ice ? h`<p class="tmust" style="margin-top:8px">Noch kein Notfallkontakt eingetragen.</p>` : h`<p class="muted small" style="margin-top:8px">${ice} ${ice === 1 ? 'Notfallkontakt' : 'Notfallkontakte'}</p>`}</div>
+    ${meet.length ? h`<div class="card"><h3>Treffpunkte</h3><ul class="plain">${meet.map((m, k) => { const c = placeCoord(m); return h`<li>${k + 1}. ${m.name}${home && c ? h` <span class="muted small">· ${fmtDist(distM(home, c))} Luftlinie</span>` : ''}</li>`; })}</ul></div>` : ''}
+    <div class="card"><h3>Notrufnummern</h3><div class="numgrid">${country.numbers.slice(0, 4).map(([n, t]) => h`<button class="numbtn" data-act="call" data-n="${n}"><b>${n}</b><span>${t}</span></button>`)}</div></div>`,
   };
 });
 

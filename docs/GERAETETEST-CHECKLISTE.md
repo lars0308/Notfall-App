@@ -54,3 +54,9 @@ Diese Punkte konnten in der Entwicklungsumgebung **nicht** geprüft werden. Bitt
 - [ ] Treffpunkt auf der Karte setzen; Markierung erscheint; „Karte“-Knopf in der Notfallansicht springt dorthin.
 - [ ] Kartendesigner: Scheckkarte zweiseitig drucken/als PDF speichern, ausschneiden, QR mit fremdem Handy scannen.
 - [ ] QR-Etikett einer Tasche drucken und scannen.
+
+## Neu in 2.5
+- [ ] Haushalt: „Standort bestimmen“ fragt nach der Standort-Berechtigung und zeigt Koordinaten; bei „Nicht erlauben“ kommt ein Hinweis, kein Absturz.
+- [ ] Person: Foto aufnehmen, erscheint im Assistenten und im Notfallpass.
+- [ ] Startseite: Notrufnummer antippen öffnet die Telefon-App.
+- [ ] Kein Dialog ist rechts oder unten abgeschnitten (z. B. „Tasche löschen?“).

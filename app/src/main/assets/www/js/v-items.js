@@ -10,91 +10,120 @@ function groupInfo(H, it) {
 }
 const REV = { tab: 'check', prio: 'all' };
 const PRIO_ORDER = { must: 0, rec: 1, opt: 2 };
-/* Packen nach Kategorien: Vorschläge abhaken, weitere Sachen antippen, Suche mit Lupe */
-const PICK = { cat: null, bag: null, q: '', focus: false };
+/* Packen Rucksack für Rucksack: Rucksack wählen → Kategorien → abhaken oder antippen; Lupe zum Suchen */
+const PICK = { cat: null, bag: null, q: '' };
+const NOBAG = '_none';
 const packItems = H => H.items.filter(i => !i.archived && i.container !== 'home');
-function pickVisible(H) {
-  const mine = packItems(H); const kids = H.people.some(p => +p.age < 13); const car = (H.cfg || {}).purpose === 'car' || H.bags.some(b => b.role === 'car');
-  return PICK_CATS.filter(c => mine.some(i => pickCatOf(i.category) === c.id) || (c.id === 'kids' ? kids : c.id === 'pets' ? H.pets.length > 0 : c.id === 'car' ? car : true));
+const bagItemsOf = (H, bid) => packItems(H).filter(i => bid === NOBAG ? !i.bagId || !byId(H.bags, i.bagId) : i.bagId === bid);
+function packBags(H) { const out = H.bags.slice(); if (bagItemsOf(H, NOBAG).length) out.push({ id: NOBAG, name: 'Ohne Tasche', comps: [], noBag: true }); return out; }
+function bagHref(bid, cat) { return '#/review/b/' + bid + (cat ? '/c/' + cat : ''); }
+function pickVisible(H, bag) {
+  const mine = bagItemsOf(H, bag.id); const owner = bag.owner ? byId(H.people, bag.owner) : null;
+  const kids = owner ? +owner.age < 13 : H.people.some(p => +p.age < 13);
+  const cats = PICK_CATS.filter(c => mine.some(i => pickCatOf(i.category) === c.id) || (c.id === 'kids' ? kids : c.id === 'pets' ? H.pets.length > 0 && (!owner || +owner.age >= 13) : c.id === 'car' ? bag.role === 'car' : true));
+  return bag.role === 'car' ? cats.sort((x, y) => (y.id === 'car') - (x.id === 'car')) : cats;
 }
-function pickBag(H) { const b = byId(H.bags, PICK.bag) || H.bags[0] || null; PICK.bag = b ? b.id : null; return b; }
 function pickable(t, cat) { return !t.nopack && t.z !== 'home' && (t.z !== 'car' || cat === 'car') && !/^stock_/.test(t.k) && t.k !== 'meds'; }
-function pickTemplates(H, catId, q) {
-  const have = new Set(H.items.filter(i => !i.archived && i.container !== 'home').map(i => String(i.key || '').split(':')[0]));
-  const nq = q ? norm(q) : '';
-  return Object.values(T).filter(t => !have.has(t.k) && (catId ? PICK_CAT[catId].cats.includes(t.c) && pickable(t, catId) : pickable(t, pickCatOf(t.c))) && (!nq || norm(t.n + ' ' + t.c).includes(nq))).sort((x, y) => x.n.localeCompare(y.n, 'de'));
+function pickTemplates(H, bid, catId, q) {
+  const have = new Set(bagItemsOf(H, bid).map(i => String(i.key || '').split(':')[0]));
+  const nq = q ? norm(q) : ''; const car = (byId(H.bags, bid) || {}).role === 'car';
+  return Object.values(T).filter(t => !have.has(t.k) && (catId ? PICK_CAT[catId].cats.includes(t.c) && pickable(t, catId) : pickable(t, car ? 'car' : '')) && (!nq || norm(t.n + ' ' + t.c).includes(nq))).sort((x, y) => x.n.localeCompare(y.n, 'de'));
 }
 const sortPrio = (a, b) => (a.source === 'pick') - (b.source === 'pick') || PRIO_ORDER[a.prio] - PRIO_ORDER[b.prio] || a.name.localeCompare(b.name, 'de');
 function addRow(t) {
   return h`<div class="li"><span class="grow"><span class="t">${t.n}</span>${t.w ? h`<br><span class="s">${t.w}</span>` : ''}</span><button class="btn icon primary" data-act="pick-add" data-key="${t.k}" aria-label="${t.n} hinzufügen">${icon('plus')}</button></div>`;
 }
-function bagChooser(H) {
-  if (H.bags.length < 2) return '';
-  const cur = pickBag(H);
-  return h`<div class="row" style="gap:8px;align-items:center"><span class="muted small">Neues kommt in:</span><div class="chips">${H.bags.map(b => h`<button class="chip" aria-pressed="${b.id === cur.id ? 'true' : 'false'}" data-act="pick-bag" data-id="${b.id}">${b.name}</button>`)}</div></div>`;
+const searchBtn = bid => h`<a class="btn icon sm" href="#/review/search" data-act="pick-search" data-bag="${bid}" aria-label="Suchen">${icon('search')}</a>`;
+function progressCard(title, its, extra) {
+  const have = its.filter(i => i.status === 'owned').length, miss = its.filter(i => i.status === 'missing').length;
+  return h`<div class="card"><h2>${title}</h2>
+    ${its.length ? h`<div style="margin-top:10px">${bar(Math.round(have / its.length * 100), 'ok')}</div>` : ''}
+    <div class="row spread" style="margin-top:8px"><span class="bold">${its.length ? `${have} von ${its.length} vorhanden` : 'Noch leer'}</span>${miss ? h`<a class="badge must" href="#/shop" style="text-decoration:none">${miss} ${miss === 1 ? 'fehlt' : 'fehlen'}</a>` : ''}</div>${extra || ''}</div>`;
 }
-const searchBtn = () => h`<a class="btn icon sm" href="#/review/search" aria-label="Suchen">${icon('search')}</a>`;
+function bagMetaShort(H, b) { if (b.id === NOBAG) return 'Gemeinsame Sachen ohne festen Rucksack'; const o = b.owner && byId(H.people, b.owner); return [o ? o.name : 'gemeinsam', fmt0(b.liters) + ' l'].join(' · '); }
 
+/* 1) Welcher Rucksack? */
 route('/review', H => {
-  const live = packItems(H);
-  if (!live.length && !H.bags.length) return { title: 'Packliste', html: h`${empty('Noch keine Packliste.')}<div class="actionbar"><a class="btn primary lg" href="#/wizard">${icon('list')} Notfallplan erstellen</a></div>` };
-  const have = live.filter(i => i.status === 'owned').length, miss = live.filter(i => i.status === 'missing').length, open = live.length - have - miss;
+  const bags = packBags(H);
+  if (!bags.length) return { title: 'Packliste', html: h`${empty('Noch kein Rucksack.')}<div class="actionbar"><a class="btn primary lg" href="#/wizard">${icon('list')} Notfallplan erstellen</a></div>` };
+  if (bags.length === 1) { history.replaceState(null, '', bagHref(bags[0].id)); return ROUTES.find(r => r.re.test('/review/b/x')).fn(bags[0].id, H); }
+  const all = packItems(H);
   return {
-    title: 'Packliste', actions: searchBtn(),
-    html: h`<div class="card"><h2>${open + miss ? 'Das brauchst du' : 'Alles da'}</h2>
-      <p class="muted" style="margin:4px 0 12px">${open + miss ? 'Wähle eine Kategorie und hake ab, was du schon hast.' : 'Alles abgehakt.'}</p>
-      ${live.length ? bar(Math.round(have / live.length * 100), 'ok') : ''}
-      <div class="row spread" style="margin-top:8px"><span class="bold">${have} von ${live.length} vorhanden</span>${miss ? h`<a class="badge must" href="#/shop" style="text-decoration:none">${miss} ${miss === 1 ? 'fehlt' : 'fehlen'}</a>` : ''}</div>
-      ${open ? h`<button class="btn block" style="margin-top:12px" data-act="ask-start">${icon('chev')} Einzeln abfragen (${open} offen)</button>` : ''}</div>
-    <div class="catgrid">${pickVisible(H).map(c => { const its = live.filter(i => pickCatOf(i.category) === c.id); const n = its.filter(i => i.status === 'owned').length; const mustOpen = its.some(i => i.status !== 'owned' && i.prio === 'must');
-      return h`<a class="cat ${its.length && n === its.length ? 'done' : ''}" href="#/review/c/${c.id}"><span class="ti">${icon(c.icon)}</span><span class="cl">${c.label}</span><span class="cs">${its.length ? `${n} von ${its.length}` : 'antippen zum Auswählen'}</span>${mustOpen ? h`<span class="dot" aria-label="Wichtiges offen"></span>` : ''}</a>`; })}</div>
-    <div class="actionbar">${open + miss ? h`<button class="btn primary lg" data-act="rv-done">${icon('check')} Fertig</button>` : h`<a class="btn primary lg" href="#/bags">${icon('bag')} Taschen packen</a>`}</div>`,
+    title: 'Packliste',
+    html: h`${progressCard('Welchen Rucksack packst du?', all)}
+    <div class="stack-s">${bags.map(b => { const its = bagItemsOf(H, b.id); const n = its.filter(i => i.status === 'owned').length;
+      return h`<a class="tile" href="${bagHref(b.id)}"><span class="ti">${icon(b.role === 'car' ? 'car' : 'bag')}</span><span class="grow"><span class="tt">${b.name}</span><br><span class="ts">${bagMetaShort(H, b)} · ${its.length ? `${n} von ${its.length}` : 'leer'}</span><span style="display:block;margin-top:6px">${bar(its.length ? Math.round(n / its.length * 100) : 0, 'ok')}</span></span>${icon('chev', 'chev')}</a>`; })}</div>`,
   };
 });
 
-route('/review/c/:cat', (cat, H) => {
-  const C = PICK_CAT[cat]; if (!C) return { title: 'Packliste', back: '#/review', html: empty('Kategorie nicht gefunden.') };
-  PICK.cat = cat;
-  const mine = packItems(H).filter(i => pickCatOf(i.category) === cat).sort(sortPrio);
-  const more = pickTemplates(H, cat, '');
-  const vis = pickVisible(H); const k = vis.findIndex(c => c.id === cat); const nxt = vis[k + 1];
+/* 2) Kategorien eines Rucksacks */
+route('/review/b/:bid', (bid, H) => {
+  const bag = bid === NOBAG ? packBags(H).find(b => b.id === NOBAG) : byId(H.bags, bid);
+  if (!bag) return { title: 'Packliste', back: '#/review', html: empty('Rucksack nicht gefunden.') };
+  PICK.bag = bid; const its = bagItemsOf(H, bid); const open = its.filter(i => i.status === 'planned').length;
+  const bags = packBags(H); const k = bags.findIndex(b => b.id === bid); const nxt = bags[k + 1];
   return {
-    title: C.label, back: '#/review', actions: searchBtn(),
-    html: h`${bagChooser(H)}
+    title: bag.name, back: bags.length > 1 ? '#/review' : null, actions: searchBtn(bid),
+    html: h`${progressCard(its.length && its.every(i => i.status === 'owned') ? 'Alles da' : 'Das brauchst du', its, h`<p class="muted small" style="margin-top:6px">${bagMetaShort(H, bag)}</p>${open ? h`<button class="btn block" style="margin-top:12px" data-act="ask-start" data-bag="${bid}">${icon('chev')} Einzeln abfragen (${open} offen)</button>` : ''}`)}
+    <div class="catgrid">${pickVisible(H, bag).map(c => { const ci = its.filter(i => pickCatOf(i.category) === c.id); const n = ci.filter(i => i.status === 'owned').length; const mustOpen = ci.some(i => i.status !== 'owned' && i.prio === 'must');
+      return h`<a class="cat ${ci.length && n === ci.length ? 'done' : ''}" href="${bagHref(bid, c.id)}"><span class="ti">${icon(c.icon)}</span><span class="cl">${c.label}</span><span class="cs">${ci.length ? `${n} von ${ci.length}` : 'antippen zum Auswählen'}</span>${mustOpen ? h`<span class="dot" aria-label="Wichtiges offen"></span>` : ''}</a>`; })}</div>
+    <div class="actionbar">${nxt ? h`<a class="btn primary lg" href="${bagHref(nxt.id)}">Nächster: ${nxt.name} ${icon('chev')}</a>` : h`<button class="btn primary lg" data-act="rv-done">${icon('check')} Fertig</button>`}</div>`,
+  };
+});
+
+/* 3) Eine Kategorie in einem Rucksack */
+route('/review/b/:bid/c/:cat', (bid, cat, H) => {
+  const C = PICK_CAT[cat]; const bag = bid === NOBAG ? packBags(H).find(b => b.id === NOBAG) : byId(H.bags, bid);
+  if (!C || !bag) return { title: 'Packliste', back: '#/review', html: empty('Nicht gefunden.') };
+  PICK.bag = bid; PICK.cat = cat;
+  const mine = bagItemsOf(H, bid).filter(i => pickCatOf(i.category) === cat).sort(sortPrio);
+  const more = pickTemplates(H, bid, cat, '');
+  const vis = pickVisible(H, bag); const k = vis.findIndex(c => c.id === cat); const nxt = vis[k + 1];
+  const bags = packBags(H); const nb = bags[bags.findIndex(b => b.id === bid) + 1];
+  return {
+    title: C.label, back: bagHref(bid), actions: searchBtn(bid),
+    html: h`<p class="muted small">${icon('bag')} ${bag.name}</p>
     ${mine.length ? h`<div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h3>Hast du das?</h3><span class="badge">${mine.filter(i => i.status === 'owned').length}/${mine.length}</span></div><div class="list">${mine.map(it => tickRow(it, H))}</div></div>` : ''}
     ${more.length ? h`<div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h3>${mine.length ? 'Noch mehr' : 'Zum Hinzufügen antippen'}</h3></div><div class="list">${more.map(addRow)}</div></div>` : ''}
     <button class="btn block" data-act="pick-custom-open">${icon('plus')} Eigenen Gegenstand hinzufügen</button>
-    <div class="actionbar"><a class="btn lg" href="#/review">Übersicht</a>${nxt ? h`<a class="btn primary lg" href="#/review/c/${nxt.id}">${nxt.label} ${icon('chev')}</a>` : h`<button class="btn primary lg" data-act="rv-done">${icon('check')} Fertig</button>`}</div>`,
+    <div class="actionbar"><a class="btn lg" href="${bagHref(bid)}">Übersicht</a>${nxt ? h`<a class="btn primary lg" href="${bagHref(bid, nxt.id)}">${nxt.label} ${icon('chev')}</a>` : nb ? h`<a class="btn primary lg" href="${bagHref(nb.id)}">Nächster: ${nb.name} ${icon('chev')}</a>` : h`<button class="btn primary lg" data-act="rv-done">${icon('check')} Fertig</button>`}</div>`,
   };
 });
+route('/review/c/:cat', (cat, H) => { const b = packBags(H)[0]; if (!b) return { title: 'Packliste', html: empty('Noch kein Rucksack.') }; history.replaceState(null, '', bagHref(b.id, cat)); return ROUTES.find(r => r.re.test('/review/b/x/c/y')).fn(b.id, cat, H); });
 
 function pickResults(H) {
   const q = PICK.q.trim(); if (!q) return h`<p class="muted">Tippe z. B. „Batterien“, „Feuer“ oder „Pflaster“.</p>`;
-  const nq = norm(q);
-  const mine = packItems(H).filter(i => norm(i.name + ' ' + i.category).includes(nq)).sort(sortPrio).slice(0, 30);
-  const more = pickTemplates(H, null, q).slice(0, 30);
-  return h`${mine.length ? h`<div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h3>Auf deiner Liste</h3></div><div class="list">${mine.map(it => tickRow(it, H))}</div></div>` : ''}
+  const nq = norm(q); const bid = PICK.bag || (packBags(H)[0] || {}).id;
+  const mine = bagItemsOf(H, bid).filter(i => norm(i.name + ' ' + i.category).includes(nq)).sort(sortPrio).slice(0, 30);
+  const more = pickTemplates(H, bid, null, q).slice(0, 30);
+  return h`${mine.length ? h`<div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h3>Schon im Rucksack</h3></div><div class="list">${mine.map(it => tickRow(it, H))}</div></div>` : ''}
     ${more.length ? h`<div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h3>Hinzufügen</h3></div><div class="list">${more.map(addRow)}</div></div>` : ''}
     <button class="btn block" data-act="pick-custom" data-name="${q}">${icon('plus')} „${q}“ hinzufügen</button>`;
 }
-route('/review/search', H => ({
-  title: 'Suchen', back: PICK.cat ? '#/review/c/' + PICK.cat : '#/review',
-  html: h`<div class="field"><label for="pickq">Gegenstand suchen</label><input id="pickq" type="search" value="${PICK.q}" data-input="pick-q" placeholder="z. B. Batterien" autocomplete="off" enterkeyhint="search"></div>
-    ${bagChooser(H)}<div id="pickres" class="stack">${pickResults(H)}</div>`,
-  after: () => { const el = $('#pickq'); if (el && !PICK.q) el.focus(); },
-}));
+route('/review/search', H => {
+  const bags = packBags(H); if (!bags.some(b => b.id === PICK.bag)) PICK.bag = bags[0] ? bags[0].id : null;
+  const bag = bags.find(b => b.id === PICK.bag);
+  return {
+    title: 'Suchen', back: PICK.bag ? bagHref(PICK.bag, PICK.cat) : '#/review',
+    html: h`<div class="field"><label for="pickq">Gegenstand suchen</label><input id="pickq" type="search" value="${PICK.q}" data-input="pick-q" placeholder="z. B. Batterien" autocomplete="off" enterkeyhint="search"></div>
+    ${bags.length > 1 ? h`<div class="chips">${bags.map(b => h`<button class="chip" aria-pressed="${b.id === PICK.bag ? 'true' : 'false'}" data-act="pick-bag" data-id="${b.id}">${b.name}</button>`)}</div>` : bag ? h`<p class="muted small">${icon('bag')} ${bag.name}</p>` : ''}
+    <div id="pickres" class="stack">${pickResults(H)}</div>`,
+    after: () => { const el = $('#pickq'); if (el && !PICK.q) el.focus(); },
+  };
+});
 INPUT['pick-q'] = el => { PICK.q = el.value; const box = $('#pickres'); if (box) { box.innerHTML = pickResults(HH()).s; hydratePhotos(box); } };
 ACT['pick-bag'] = d => { PICK.bag = d.id; rerender(true); };
+ACT['pick-search'] = d => { PICK.bag = d.bag; go('#/review/search'); };
 function pickPut(H, it) {
-  const bag = pickBag(H);
+  const bag = PICK.bag && PICK.bag !== NOBAG ? byId(H.bags, PICK.bag) : null;
   if (bag) { it.bagId = bag.id; it.container = bag.role === 'car' ? 'car' : 'bag'; it.personId = bag.owner || null; }
   H.items.push(it); if (bag) autoPack(H, bag, { onlyUnassigned: true });
-  persist(); toast(`${it.name} hinzugefügt${bag && H.bags.length > 1 ? ' · ' + bag.name : ''}`);
+  persist(); toast(`${it.name} hinzugefügt${bag ? ' · ' + bag.name : ''}`);
 }
 ACT['pick-add'] = d => { const H = HH(); if (!T[d.key]) return; pickPut(H, makeItem({ key: d.key, qty: 1 }, { status: 'owned', source: 'pick', prio: 'opt' })); rerender(true); };
 ACT['pick-custom'] = d => {
   const H = HH(); const name = String(d.name || '').trim().slice(0, 80); if (!name) return;
-  const cat = PICK.cat ? PICK_CAT[PICK.cat].cats[0] : 'Sonstiges';
+  const cat = PICK.cat && PICK_CAT[PICK.cat] ? PICK_CAT[PICK.cat].cats[0] : 'Sonstiges';
   pickPut(H, makeItem({ key: '', name, category: cat, tags: inferTags(name) }, { status: 'owned', source: 'pick', prio: 'opt', key: '' })); PICK.q = ''; rerender(true);
 };
 ACT['pick-custom-open'] = () => {
@@ -104,9 +133,7 @@ ACT['pick-custom-open'] = () => {
 ACT['pick-photo'] = async d => { const H = HH(); const it = byId(H.items, d.id); if (!it) return; const pid = await addPhotoTo(null); if (!pid) return; it.photos = it.photos || []; it.photos.push(pid); persist(); rerender(true); };
 function tickRow(it, H) {
   const own = it.status === 'owned'; const mark = own ? 'done' : it.prio === 'must' ? 'must' : it.prio === 'rec' ? 'rec' : '';
-  const bag = H && H.bags.length > 1 && it.bagId ? byId(H.bags, it.bagId) : null;
-  const sub = [itemQtyLabel(it), bag && bag.name].filter(Boolean).join(' · ');
-  return h`<div class="li tick ${mark}"><label class="tickl grow"><input type="checkbox" data-change="rv-tick" data-id="${it.id}" ${own ? raw('checked') : ''} aria-label="${it.name} vorhanden"><span class="grow"><span class="t">${it.name}</span><br><span class="s">${sub}${it.source !== 'pick' ? h` · ${levelBadge(it.prio)}` : ''}${it.status === 'missing' ? h` <span class="badge must">fehlt</span>` : ''}</span></span></label>
+  return h`<div class="li tick ${mark}"><label class="tickl grow"><input type="checkbox" data-change="rv-tick" data-id="${it.id}" ${own ? raw('checked') : ''} aria-label="${it.name} vorhanden"><span class="grow"><span class="t">${it.name}</span><br><span class="s">${itemQtyLabel(it)}${it.source !== 'pick' ? h` · ${levelBadge(it.prio)}` : ''}${it.status === 'missing' ? h` <span class="badge must">fehlt</span>` : ''}</span></span></label>
     ${it.photos && it.photos[0] ? h`<span class="thumb"><img data-ph="${it.photos[0]}" data-act="ph-view" data-id="${it.photos[0]}" alt="Foto"></span>` : own ? h`<button class="btn icon ghost sm" data-act="pick-photo" data-id="${it.id}" aria-label="Foto von ${it.name}">${icon('camera')}</button>` : ''}
     <a class="btn icon ghost sm" href="#/item/${it.id}" aria-label="Details zu ${it.name}">${icon('chev')}</a></div>`;
 }
@@ -121,24 +148,24 @@ ACT['rv-done'] = async () => {
 };
 
 /* Einzeln abfragen: eine Frage pro Gegenstand, wichtigste zuerst */
-const ASK = { skip: new Set(), yes: 0, no: 0 };
+const ASK = { skip: new Set(), yes: 0, no: 0, bag: null };
 route('/review/ask', H => {
-  const open = packItems(H).filter(i => i.status === 'planned' && !ASK.skip.has(i.id)).sort((a, b) => PRIO_ORDER[a.prio] - PRIO_ORDER[b.prio] || groupInfo(H, a)[1].localeCompare(groupInfo(H, b)[1], 'de') || a.name.localeCompare(b.name, 'de'));
+  const open = (ASK.bag ? bagItemsOf(H, ASK.bag) : packItems(H)).filter(i => i.status === 'planned' && !ASK.skip.has(i.id)).sort((a, b) => PRIO_ORDER[a.prio] - PRIO_ORDER[b.prio] || groupInfo(H, a)[1].localeCompare(groupInfo(H, b)[1], 'de') || a.name.localeCompare(b.name, 'de'));
   if (!open.length) {
     const miss = H.items.filter(i => !i.archived && i.status === 'missing').length;
-    return { title: 'Abfragen', back: '#/review', html: h`<div class="card"><h2>Fertig</h2><p style="margin-top:8px">${ASK.yes} vorhanden · ${ASK.no} ${ASK.no === 1 ? "fehlt" : "fehlen"}${ASK.skip.size ? ` · ${ASK.skip.size} übersprungen` : ''}</p></div>
-      <div class="actionbar"><a class="btn lg" href="#/review">Zur Liste</a>${miss ? h`<a class="btn primary lg" href="#/shop">${icon('cart')} Einkaufsliste</a>` : h`<a class="btn primary lg" href="#/bags">${icon('bag')} Taschen packen</a>`}</div>` };
+    return { title: 'Abfragen', back: ASK.bag ? bagHref(ASK.bag) : '#/review', html: h`<div class="card"><h2>Fertig</h2><p style="margin-top:8px">${ASK.yes} vorhanden · ${ASK.no} ${ASK.no === 1 ? "fehlt" : "fehlen"}${ASK.skip.size ? ` · ${ASK.skip.size} übersprungen` : ''}</p></div>
+      <div class="actionbar"><a class="btn lg" href="${ASK.bag ? bagHref(ASK.bag) : '#/review'}">Zur Liste</a>${miss ? h`<a class="btn primary lg" href="#/shop">${icon('cart')} Einkaufsliste</a>` : h`<a class="btn primary lg" href="#/bags">${icon('bag')} Taschen packen</a>`}</div>` };
   }
   const it = open[0];
   return {
-    title: 'Abfragen', back: '#/review',
+    title: 'Abfragen', back: ASK.bag ? bagHref(ASK.bag) : '#/review',
     html: h`<div class="row spread"><span class="muted small">${groupInfo(H, it)[1]}</span><span class="muted small mono">noch ${open.length}</span></div>
       <div class="card"><p class="muted">Hast du das?</p><h1 class="q" style="margin:6px 0">${it.name}</h1><p class="bold">${itemQtyLabel(it)} · ${levelBadge(it.prio)}</p>${it.why ? h`<p class="muted small" style="margin-top:8px">${it.why}</p>` : ''}</div>
       <button class="btn ghost block" data-act="ask-skip" data-id="${it.id}">Später</button>
       <div class="actionbar"><button class="btn danger lg" data-act="ask-no" data-id="${it.id}">${icon('cart')} Fehlt</button><button class="btn primary lg" data-act="ask-yes" data-id="${it.id}">${icon('check')} Habe ich</button></div>`,
   };
 });
-ACT['ask-start'] = () => { ASK.skip.clear(); ASK.yes = 0; ASK.no = 0; go('#/review/ask'); };
+ACT['ask-start'] = d => { ASK.skip.clear(); ASK.yes = 0; ASK.no = 0; ASK.bag = (d && d.bag) || null; go('#/review/ask'); };
 ACT['ask-yes'] = d => { const H = HH(); const it = byId(H.items, d.id); if (!it) return; setItemStatus(H, it, 'owned'); ASK.yes++; persist(); rerender(); };
 ACT['ask-no'] = d => { const H = HH(); const it = byId(H.items, d.id); if (!it) return; setItemStatus(H, it, 'missing'); ASK.no++; persist(); rerender(); };
 ACT['ask-skip'] = d => { ASK.skip.add(d.id); rerender(); };

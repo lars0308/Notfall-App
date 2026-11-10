@@ -25,12 +25,12 @@ function bag2d(bag, comps, sel, opts = {}) {
 }
 function innerChips(comps, sel, act = 'bg-sel') { const inner = comps.filter(c => !c.slot); return inner.length ? h`<div class="chips">${inner.map(c => h`<button class="chip" aria-pressed="${c.id === sel ? 'true' : 'false'}" data-act="${act}" data-id="${c.id}">${c.name}${c.weightG >= 100 ? ' · ' + fmt(c.weightG / 1000) + ' kg' : ''}</button>`)}</div>` : ''; }
 
-function bagMeta(H, b) { const o = byId(H.people, b.owner); return [(BAG_TYPE[b.type] || {}).label, fmt0(b.liters) + ' l', o && o.name, b.location].filter(Boolean).join(' · '); }
+function bagMeta(H, b) { const o = byId(H.people, b.owner); const t = (BAG_TYPE[b.type] || {}).label; return [t && !b.name.startsWith(t) ? t : '', fmt0(b.liters) + ' l', o ? 'trägt ' + o.name : 'gemeinsam', b.location].filter(Boolean).join(' · '); }
 route('/bags', H => {
   const S = DB.settings;
   return {
     title: 'Meine Taschen',
-    html: h`${H.bags.map(b => { const st = bagStats(H, S, b); return h`<a class="tile" href="#/bags/${b.id}">${b.photos[0] ? thumb(b.photos[0]) : h`<span class="ti">${icon(b.role === 'car' ? 'car' : 'bag')}</span>`}<span class="grow"><span class="tt">${b.name}</span><br><span class="ts">${bagMeta(H, b)}</span><br><span class="ts">${bagLine(st)}${st.overweight ? ' · zu schwer' : ''}</span><span style="display:block;margin-top:6px">${bar(st.packedPct, 'ok')}</span></span>${icon('chev', 'chev')}</a>`; })}
+    html: h`${H.bags.map(b => { const st = bagStats(H, S, b); return h`<a class="tile" href="#/bags/${b.id}">${b.photos[0] ? thumb(b.photos[0]) : h`<span class="ti">${icon(b.role === 'car' ? 'car' : 'bag')}</span>`}<span class="grow"><span class="tt">${b.name}</span><br><span class="ts">${bagMeta(H, b)}</span><br><span class="ts">${bagLine(st)}</span><br><span class="ts ${st.overweight ? 'tmust' : ''}">${fmt(st.totalG / 1000)}${st.capKg ? ' von ' + fmt(st.capKg) : ''} kg${st.overweight ? ' – zu schwer' : ''}${st.overfull ? ' · zu voll' : ''}</span><span style="display:block;margin-top:6px">${bar(st.packedPct, 'ok')}</span></span>${icon('chev', 'chev')}</a>`; })}
     ${H.bags.length ? '' : empty('Noch keine Tasche.')}
     ${H.bags.filter(b => b.owner).length > 1 ? h`<button class="btn" data-act="bags-balance">${icon('repeat')} Gewicht ausgleichen</button>` : ''}
     <div class="actionbar"><button class="btn primary lg" data-act="bag-new">${icon('plus')} Neue Tasche</button></div>`,
@@ -61,9 +61,16 @@ route('/bags/:id', (id, H) => {
       <div class="btns" style="margin-top:12px">${selComp ? h`<button class="btn sm" data-act="comp-edit" data-bag="${bag.id}" data-id="${selComp.id}">${icon('edit')} ${selComp.name}</button><button class="btn sm danger" data-act="comp-del" data-bag="${bag.id}" data-id="${selComp.id}" aria-label="Fach entfernen">${icon('trash')}</button><button class="btn sm ghost" data-act="bg-sel" data-id="">Alle zeigen</button>` : ''}<button class="btn sm" data-act="comp-add" data-bag="${bag.id}">${icon('plus')} Fach</button></div></div>
     <div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h2>${selComp ? selComp.name : 'Packliste'}</h2><span class="badge">${shown.length}</span></div>
       <div class="list">${shown.length ? shown.map(it => bagItemRow(H, bag, it, !selComp)) : empty(selComp ? 'Leer.' : 'Noch nichts in der Tasche.')}</div></div>
-    <div class="btns"><a class="btn" href="#/bags/${bag.id}/missing">${icon('alert')} Was fehlt?${st.missing ? h` <span class="count">${st.missing}</span>` : ''}</a><button class="btn" data-act="bag-print" data-id="${bag.id}">${icon('print')} Drucken</button><button class="btn" data-act="bag-label" data-id="${bag.id}">${icon('scan')} QR-Etikett</button><button class="btn" data-act="bag-edit" data-id="${bag.id}">${icon('edit')} Bearbeiten</button><button class="btn" data-act="bag-pack" data-id="${bag.id}">${icon('cube')} Fächer neu zuteilen</button><button class="btn" data-act="bag-copy" data-id="${bag.id}">${icon('copy')} Kopieren</button><button class="btn danger" data-act="bag-del" data-id="${bag.id}">${icon('trash')} Löschen</button></div>
+    <div class="card"><h3>Weitere Aktionen</h3><div class="actgrid">
+      <a class="btn" href="#/bags/${bag.id}/missing">${icon('alert')} Was fehlt?${st.missing ? h` <span class="count">${st.missing}</span>` : ''}</a>
+      <button class="btn" data-act="item-new-bag" data-bag="${bag.id}" data-comp="${BAGUI.sel || ''}">${icon('plus')} Eigener Gegenstand</button>
+      <button class="btn" data-act="bag-print" data-id="${bag.id}">${icon('print')} Packliste drucken</button>
+      <button class="btn" data-act="bag-label" data-id="${bag.id}">${icon('scan')} QR-Etikett</button>
+      <button class="btn" data-act="bag-pack" data-id="${bag.id}">${icon('cube')} Fächer neu zuteilen</button>
+      <button class="btn" data-act="bag-copy" data-id="${bag.id}">${icon('copy')} Kopieren</button>
+    </div></div>
     ${bag.photos.length ? h`<div class="card"><h3>Fotos</h3>${photoStrip(bag.photos, 'bag-ph-del', { id: bag.id })}<button class="btn sm" style="margin-top:8px" data-act="bag-ph-add" data-id="${bag.id}">${icon('camera')} Foto</button></div>` : ''}
-    <div class="actionbar"><a class="btn primary lg" href="#/bags/${bag.id}/pack">${icon('check')} Packen starten</a><button class="btn lg" data-act="item-new-bag" data-bag="${bag.id}" data-comp="${BAGUI.sel || ''}">${icon('plus')} Gegenstand</button></div>`,
+    <div class="actionbar"><a class="btn lg" href="#/review/b/${bag.id}">${icon('list')} Sachen auswählen</a><a class="btn primary lg" href="#/bags/${bag.id}/pack">${icon('check')} Packen</a></div>`,
     after: () => {
       const cv = $('#bagcv'); if (!cv) return;
       const g = new Bag3D(cv, { onPick: cid => { saveCam(); BAGUI.sel = cid; rerender(true); } });

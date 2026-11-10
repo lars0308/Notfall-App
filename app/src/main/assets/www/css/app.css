@@ -330,3 +330,25 @@ body{overflow-x:hidden;overflow-y:visible}
 .cat.done{border-color:var(--ok)}.cat.done .cs{color:var(--ok);font-weight:700}
 .cat .dot{position:absolute;top:12px;right:12px;width:.75rem;height:.75rem;border-radius:50%;background:var(--must)}
 .li .thumb{width:2.5rem;height:2.5rem}
+/* Nichts darf breiter als der Bildschirm werden (sonst verkleinert Android die Seite und Dialoge werden abgeschnitten) */
+html{overflow-x:hidden}
+body{overflow:visible}
+.page,.page-inner,.card,.main{min-width:0;max-width:100%}
+.actionbar .btn{min-width:0;flex:1 1 0;white-space:normal;text-align:center;line-height:1.2}
+.actionbar .btn.icon{flex:0 0 auto}
+.btns{flex-wrap:wrap;min-width:0}
+.modal{max-height:calc(100dvh - 12px);padding-bottom:env(safe-area-inset-bottom)}
+/* Dashboard */
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:calc(var(--u)*1.25)}
+.stat{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:calc(var(--u)*1.75);border-radius:var(--radius);border:1px solid var(--line);background:var(--surface)}
+.stat .sv{font-size:1.75rem;font-weight:800;line-height:1.1}.stat .sl{color:var(--muted);font-size:.875rem;font-weight:700}
+.stat.ok .sv{color:var(--ok)}.stat.must .sv{color:var(--must)}
+ul.plain{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.tmust{color:var(--must);font-weight:700}.trec{color:var(--rec);font-weight:700}
+.chip.static{display:inline-flex;align-items:center;gap:8px;cursor:default}
+.avatar.sm{width:1.75rem;height:1.75rem;font-size:.75rem}
+.numgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+.numbtn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:12px;border-radius:14px;border:1px solid var(--line-strong);background:var(--surface2);color:var(--text);font:inherit;text-align:left;cursor:pointer;min-height:4rem}
+.numbtn b{font-size:1.375rem}.numbtn span{font-size:.8125rem;color:var(--muted);overflow-wrap:anywhere}
+.actgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+.actgrid .btn{min-width:0;white-space:normal;text-align:left;justify-content:flex-start;line-height:1.2}

@@ -11,12 +11,14 @@ const { start } = require('./serve');
   await p.goto('http://localhost:8123/'); await p.waitForSelector('.q');
   await p.evaluate(() => { loadSampleHousehold(); persist(); go('#/home'); });
   const pid = await p.evaluate(() => HH().people[0].id); const bid = await p.evaluate(() => HH().bags[0].id);
-  for (const r of ['items', 'more', 'bags/' + bid, 'pass/' + pid, 'settings', 'remind', 'sos', 'card/' + pid]) {
+  for (const r of ['items', 'more', 'bags/' + bid, 'bags', 'home', 'review', 'pass/' + pid, 'settings', 'remind', 'sos', 'card/' + pid]) {
     await p.goto('http://localhost:8123/#/' + r); await p.waitForTimeout(400);
     const room = await p.evaluate(() => document.scrollingElement.scrollHeight - innerHeight);
     await swipe(); const st = await p.evaluate(() => document.scrollingElement.scrollTop);
-    ok(`Wischen scrollt: #/${r.split('/')[0]}`, room < 50 || st > 100, `scrollTop=${st}, Platz=${room}`);
+    ok(`Wischen scrollt: #/${r.split('/')[0]}`, room < 50 || st >= Math.min(100, room - 2), `scrollTop=${st}, Platz=${room}`);
     const nav = await p.evaluate(() => { const n = document.querySelector('.bottomnav'), t = document.querySelector('.topbar'); return n.getBoundingClientRect().bottom <= innerHeight + 1 && t.getBoundingClientRect().top === 0; });
+    const wide = await p.evaluate(() => document.scrollingElement.scrollWidth - innerWidth);
+    ok(`Nichts breiter als der Bildschirm: #/${r.split('/')[0]}`, wide <= 1, `zu breit um ${wide}px`);
     ok(`Kopfzeile und Navigation bleiben sichtbar: #/${r.split('/')[0]}`, nav, '');
   }
   await b.close(); srv.close(); process.exitCode = fails ? 1 : 0;

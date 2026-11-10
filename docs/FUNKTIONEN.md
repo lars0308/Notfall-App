@@ -1,14 +1,21 @@
-# Umgesetzte Funktionen (Version 2.4.0)
+# Umgesetzte Funktionen (Version 2.5.0)
 
 Legende: ✅ umgesetzt und im Browser getestet · 📱 braucht Android-Code, nicht auf Gerät geprüft · 🟡 mit Einschränkung · ⬜ offen. Was gestrichen oder verschoben wurde, steht in der [Feature-Matrix](FEATURE-MATRIX.md).
 
-## Notfallplan erstellen und nach Kategorien packen ✅
-- Start: „Notfallplan erstellen“ → Name → Personen (Name, Alter) → Wo wohnst du (Wohnung/Haus/Land, Ort freiwillig; „Land“ macht Wasserfilter notwendig und schlägt ein Solar-Ladegerät vor) → Wofür (Notfallrucksack, Reise, Auto, eigener Zweck) → Dauer, Unterkunft, Tiere, Medikamente → Rucksack auswählen (Typ antippen; oder „Vorschlag machen“).
-- Danach „Das brauchst du“: Kategorien in dieser Reihenfolge – Allgemein, Medikamente & Erste Hilfe, Kleidung, Werkzeug, Feuer & Kochen, Wasser, Nahrung, Technik/Akkus/Licht, Hygiene, Schlafen, Dokumente & Geld (Kind, Haustier, Auto nur wenn passend). Jede Kachel zeigt „x von y“, roter Punkt = Wichtiges offen.
-- In der Kategorie: Vorschläge abhaken („Hast du das?“), darunter weitere Sachen zum Antippen (+) – sie kommen sofort als vorhanden in den gewählten Rucksack, das Fach wird automatisch gewählt. Bei mehreren Taschen: Auswahl „Neues kommt in“. Abgehakte Sachen: Kamera-Knopf für ein Foto 📱. „Weiter“ führt zur nächsten Kategorie.
-- Lupe oben: suchen (z. B. „Batterien“), direkt abhaken oder hinzufügen, auch eigene Sachen („… hinzufügen“).
-- „Einzeln abfragen“: eine Frage pro Gegenstand (Habe ich / Fehlt / Später). „Fertig“: nicht Abgehaktes nach Rückfrage auf die Einkaufsliste.
-- Katalog um 38 Sachen erweitert (u. a. Akkus, Akku- und USB-Ladegerät, Kurbellampe, Funkgeräte, Panzertape, Klappsäge, Feuerstahl, Sturmstreichhölzer, Funktionsunterwäsche, Schmerzmittel, Pflaster, Zeckenzange, Kompass, Landkarte).
+## Notfallplan erstellen ✅
+Reihenfolge: **Haushalt → Personen → jede Person einzeln → Tiere → Zweck/Dauer/Unterkunft → Rucksäcke**.
+- Haushalt: Name, Adresse/Ort, Standort per GPS 📱 (freiwillig, nur auf Knopfdruck, wird nicht gesendet), Wohnsituation (Wohnung/Haus/Land; „Land“ macht Wasserfilter Pflicht und schlägt Solar-Ladegerät vor).
+- Personen: erst Liste (Erwachsene/Kinder), dann je Person ein Schritt mit Foto 📱, Name, Alter oder Geburtsdatum, Geschlecht, Gewicht, Größe, Fitness, Blutgruppe, Allergien, Vorerkrankungen, Medikamenten, Hilfsmitteln, Einschränkung beim Gehen/Tragen. Live berechnet: Kalorien (Mifflin-St Jeor × Aktivität, sonst Richtwert nach Alter), Wasser, Traglast (15–25 % des Körpergewichts, max. 20 kg). Die Packliste nutzt dieselben Werte.
+- Tiere: je Tier Art, Name, Anzahl (Hund mit Gewicht für die Wassermenge).
+- Rucksäcke: „Wer trägt welchen Rucksack?“ – je Person eine Zeile, passend zum Alter vorausgewählt (Kind unter 6: keinen), mit einem Tipp änderbar; vorhandene Taschen wählbar; optional gemeinsame Familientasche.
+
+## Packen Rucksack für Rucksack ✅
+- Packliste: bei mehreren Taschen zuerst „Welchen Rucksack packst du?“, dann dessen Kategorien (Allgemein, Medikamente & Erste Hilfe, Kleidung, Werkzeug, Feuer & Kochen, Wasser, Nahrung, Technik/Akkus/Licht, Hygiene, Schlafen, Dokumente & Geld; Kind/Haustier/Auto nur wenn passend). „Weiter“ führt durch alle Kategorien und dann zum nächsten Rucksack.
+- In der Kategorie: Vorschläge abhaken, weitere Sachen mit + direkt in diesen Rucksack, Foto je Gegenstand 📱, eigener Gegenstand.
+- Lupe: suchen und direkt hinzufügen (in den gewählten Rucksack). „Einzeln abfragen“ je Rucksack. „Fertig“: nicht Abgehaktes nach Rückfrage auf die Einkaufsliste.
+
+## Startseite ✅
+Übersicht ohne Bedienkacheln: vorhanden/gepackt/fehlt (Stückzahlen), wichtige fehlende Sachen, zu schwere Rucksäcke, Termine (Rucksackkontrolle zuerst, Probealarm, Ablaufdaten), Haushalt mit Tagesbedarf (kcal, Wasser, Menge für die Packdauer), Hinweis bei fehlendem Notfallkontakt, Treffpunkte mit Luftlinie vom Zuhause, Notrufnummern zum Antippen. Taschen stehen nur unter „Taschen“.
 
 ## 1 Meine Taschen ✅
 - Beliebig viele Rucksäcke, Taschen, Koffer; 9 Typen; Name, Foto 📱, Volumen, Gewicht, Besitzer, fester Lagerort, Verwendung, Packstatus.
