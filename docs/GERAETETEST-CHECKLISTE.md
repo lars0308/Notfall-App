@@ -65,3 +65,7 @@ Diese Punkte konnten in der Entwicklungsumgebung **nicht** geprüft werden. Bitt
 - [ ] Haushalt: nach „Standort bestimmen“ Rückfrage „Adresse aus dem Standort?“ → Adresse erscheint im Feld; auf dem Dorf ist „Auf dem Land“ gewählt.
 - [ ] Notfallkontakte: „Aus Telefonbuch wählen“ öffnet die Kontaktauswahl; Name und Nummer werden übernommen; App bleibt entsperrt.
 - [ ] Schieberegler „Wie viele Personen“ lässt sich mit dem Daumen gut bedienen.
+
+## Neu in 3.0
+- [ ] Erster Start: „Ein paar Erlaubnisse“ – jede „Erlauben“-Taste zeigt die Android-Abfrage; danach steht „Erlaubt“. „Pünktliche Alarme“ öffnet die Einstellungen; nach Rückkehr aktualisiert sich die Anzeige.
+- [ ] Notfall-Bildschirm: Kontakte erscheinen nur einmal, Telefonnummern sind vollständig lesbar.

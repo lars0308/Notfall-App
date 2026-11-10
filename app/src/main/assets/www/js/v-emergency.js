@@ -33,23 +33,50 @@ route('/sos', H => {
   const advice = sc ? BAG_ADVICE[sc.bags] : null;
   return {
     title: alarm ? 'TESTALARM' : 'NOTFALL', back: limited ? null : '#/home', actions: limited ? h`<button class="btn sm" data-act="sos-exit">${icon('lock')}<span>Sperren</span></button>` : '',
-    html: h`${alarm ? h`<div class="testbanner" role="alert"><div>TESTALARM – KEINE ECHTE GEFAHR</div></div>` : h`<div class="notice must" role="alert">${icon('alert')}<div><p class="nt">Akute Gefahr: 112</p><p>Anweisungen der Behörden haben Vorrang.</p></div></div>`}
-    <div class="stack-s">${c.numbers.slice(0, alarm ? 1 : 9).map(([n, t, s]) => h`<button class="callbtn ${n === '112' ? '' : 'alt'}" data-act="call" data-n="${n}">${icon('phone')}<span><span style="display:block">${n} – ${t}</span>${alarm ? h`<small>Im Test nicht anrufen</small>` : s ? h`<small>${s}</small>` : ''}</span></button>`)}</div>
-    <div class="chips" role="group" aria-label="Lage">${Object.entries(SCEN).map(([k, v]) => h`<a class="chip" aria-pressed="${k === sk ? 'true' : 'false'}" href="${sosHash({ s: k === sk ? '' : k, test: testId, t: occ || '' })}">${v.label}</a>`)}</div>
+    html: h`${alarm ? h`<div class="testbanner" role="alert"><div>TESTALARM – KEINE ECHTE GEFAHR</div></div>` : ''}
+    ${(() => { const [n0, t0] = c.numbers[0]; return h`<button class="callbtn big" data-act="call" data-n="${n0}">${icon('phone')}<span><span style="display:block">${n0} anrufen</span><small>${alarm ? 'Im Test nicht anrufen' : t0 + ' · Behörden-Anweisungen gehen vor'}</small></span></button>`; })()}
+    ${!alarm && c.numbers.length > 1 ? h`<div class="callrow">${c.numbers.slice(1, 5).map(([n, t]) => h`<button class="callbtn alt sm" data-act="call" data-n="${n}">${icon('phone')}<span><b>${n}</b><small>${t}</small></span></button>`)}</div>` : ''}
+    <div><h2 class="sec">Was ist los?</h2><div class="scengrid" role="group" aria-label="Lage">${Object.entries(SCEN).map(([k, v]) => h`<a class="scen" aria-pressed="${k === sk ? 'true' : 'false'}" href="${sosHash({ s: k === sk ? '' : k, test: testId, t: occ || '' })}">${v.label}</a>`)}</div></div>
     ${sc ? h`<div class="card own"><div class="row spread"><h2>${sc.label}</h2><span class="badge">Eigene Checkliste</span></div>
       <p class="small muted">Keine amtliche Anweisung. Amtliche Warnungen und Anweisungen gehen vor.</p>
       <div class="stack-s" style="margin-top:8px">${sc.steps.map((t, i) => h`<label class="check"><input type="checkbox" data-change="sos-step" data-k="${sk + i}" ${SOSUI.done.has(sk + i) ? raw('checked') : ''}><span class="t">${i + 1}. ${t}</span></label>`)}</div>
       ${!limited ? h`<div class="btns" style="margin-top:8px">${OFFICIAL.map(([t, u]) => h`<button class="btn sm" data-act="open-url" data-url="${u}">${icon('eye')} ${t}</button>`)}</div>` : h`<p class="small muted" style="margin-top:8px">${OFFICIAL.map(o => o[1]).join(' · ')}</p>`}</div>` : ''}
-    ${H.bags.length ? h`<div class="card"><h2>Taschen</h2><div class="stack" style="margin-top:8px">${H.bags.map(b => { const st = bagStats(H, S, b); const later = bagItems(H, b).filter(i => i.lastMinute && i.status !== 'missing'); return h`<div><div class="row spread"><b>${b.name}</b>${advice ? h`<span class="badge ${advice[1]}">${advice[0]}</span>` : h`<span class="mono">${st.packed}/${st.total}</span>`}</div>
-      <div class="muted small">${b.location ? 'Ort: ' + b.location : 'Lagerort nicht eingetragen'}${advice ? ' · ' + st.packed + '/' + st.total + ' gepackt' : ''}</div>${bar(st.packedPct, 'ok')}
-      ${later.length && (!sc || sc.bags === 'evac' || sc.bags === 'ready') ? h`<div class="small" style="margin-top:6px"><b>Bei Abreise mitnehmen:</b> ${laterLabels(later).join(', ')}</div>` : ''}</div>`; })}</div></div>` : ''}
-    ${H.people.map(p => iceCard(H, p, { link: !limited && !alarm }))}
-    ${H.meeting.length ? h`<div class="card"><h2>Treffpunkte</h2><div class="stack-s" style="margin-top:8px">${H.meeting.map(p => h`<div class="row nowrap"><div class="grow"><b>${p.name}</b>${p.far ? h` <span class="badge">weiter entfernt</span>` : ''}<br><span class="muted">${[p.address, p.note].filter(Boolean).join(' · ')}</span></div>${!limited && placeCoord(p) ? h`<button class="btn sm" data-act="map-goto-sos" data-id="${p.id}">${icon('map')} Karte</button>` : ''}</div>`)}</div></div>` : ''}
+    ${sosContacts(H)}
+    ${sosPeople(H, { link: !limited && !alarm })}
+    ${H.bags.length ? sosBags(H, S, sc, advice) : ''}
+    ${H.meeting.length ? h`<div class="card"><h2>Treffpunkte</h2><div class="stack-s" style="margin-top:8px">${H.meeting.map(p => h`<div class="row nowrap"><div class="grow"><b>${p.name}</b>${p.far ? h` <span class="badge">weiter entfernt</span>` : ''}${p.address || p.note ? h`<br><span class="muted small">${[p.address, p.note].filter(Boolean).join(' · ')}</span>` : ''}</div>${!limited && placeCoord(p) ? h`<button class="btn sm" data-act="map-goto-sos" data-id="${p.id}">${icon('map')} Karte</button>` : ''}</div>`)}</div></div>` : ''}
     ${alarm ? alarmEvalCard(H, alarm, occ, res) : ''}
     <p class="muted small">${c.warnHint}</p>`,
     after: () => { const own = $('.own'); if (own && !alarm) own.scrollIntoView({ block: 'start' }); },
   };
 });
+/* Kontakte nur einmal, auch wenn sie bei mehreren Personen eingetragen sind */
+function sosContacts(H) {
+  const seen = new Map();
+  for (const p of H.people) for (const c of passContacts(H, p)) if (!seen.has(c.id)) seen.set(c.id, { c, who: [] });
+  for (const p of H.people) for (const c of passContacts(H, p)) seen.get(c.id).who.push(p.name);
+  const list = [...seen.values()]; if (!list.length) return '';
+  const all = H.people.length;
+  return h`<div class="card"><h2>Anrufen</h2><div class="stack-s" style="margin-top:8px">${list.map(({ c, who }) => h`<div class="contact"><div><b>${c.name}</b>${c.relation ? h` <span class="muted">· ${c.relation}</span>` : ''}${who.length < all ? h`<br><span class="muted small">für ${who.join(', ')}</span>` : ''}</div>
+    ${c.phone ? h`<button class="callbtn alt sm" data-act="call" data-n="${c.phone}">${icon('phone')}<span><b>${c.phone}</b></span></button>` : ''}</div>`)}</div></div>`;
+}
+/* Personen kompakt: nur freigegebene Angaben, ohne die Kontakte zu wiederholen */
+function sosPeople(H, opts) {
+  if (!H.people.length) return '';
+  return h`<div class="card"><h2>Personen</h2><div class="stack-s" style="margin-top:8px">${H.people.map(p => { const rows = passShared(H, p);
+    return h`<div class="row nowrap person-row">${avatar(p.share.photo ? p.photo : null, p.name)}<div class="grow"><b>${p.name}</b>${rows.length ? rows.map(([k, v]) => h`<br><span class="small"><span class="muted">${k}:</span> <b>${v}</b></span>`) : h`<br><span class="muted small">Keine freigegebenen Angaben</span>`}</div>
+      ${opts.link ? h`<a class="btn icon sm" href="#/ice/${p.id}" aria-label="Notfallkarte von ${p.name}">${icon('scan')}</a>` : ''}</div>`; })}</div></div>`;
+}
+/* Taschen: eine Zeile je Tasche, „Bei Abreise mitnehmen“ einmal für alle */
+function sosBags(H, S, sc, advice) {
+  const later = []; const seen = new Set();
+  for (const b of H.bags) for (const l of laterLabels(bagItems(H, b).filter(i => i.lastMinute && i.status !== 'missing'))) { const k = l.replace(/ \(\d+\)$/, ''); if (!seen.has(k)) { seen.add(k); later.push(l); } }
+  const health = H.bags.reduce((n, b) => n + bagItems(H, b).filter(i => i.lastMinute && i.status !== 'missing' && (HEALTH_RE.test(i.name) || (i.tags || []).some(t => ['meds', 'device', 'aid', 'care'].includes(t)))).length, 0);
+  const laterTxt = later.map(l => /^Medikamente & Hilfsmittel/.test(l) ? `Medikamente & Hilfsmittel (${health})` : l);
+  return h`<div class="card"><div class="row spread"><h2>Taschen</h2>${advice ? h`<span class="badge ${advice[1]}">${advice[0]}</span>` : ''}</div><div class="stack-s" style="margin-top:8px">${H.bags.map(b => { const st = bagStats(H, S, b);
+    return h`<div class="row spread nowrap"><div class="grow"><b>${b.name}</b><br><span class="small ${b.location ? '' : 'muted'}">${b.location ? 'Ort: ' + b.location : 'Lagerort nicht eingetragen'}</span></div><span class="mono small">${st.packed}/${st.total}</span></div>`; })}</div>
+    ${laterTxt.length && (!sc || sc.bags === 'evac' || sc.bags === 'ready') ? h`<p class="small" style="margin-top:10px"><b>Bei Abreise mitnehmen:</b> ${laterTxt.join(', ')}</p>` : ''}</div>`;
+}
 INPUT['sos-step'] = el => { if (el.checked) SOSUI.done.add(el.dataset.k); else SOSUI.done.delete(el.dataset.k); };
 ACT['map-goto-sos'] = d => { const p = byId(HH().meeting, d.id); if (p && placeCoord(p)) { MAPUI.lat = p.lat; MAPUI.lon = p.lon; MAPUI.z = 15; } go('#/map'); };
 ACT['sos-exit'] = () => { UI.sosLimited = false; UI.locked = true; go('#/home'); render(); };

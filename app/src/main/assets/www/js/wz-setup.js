@@ -13,13 +13,50 @@ const coordLine = o => typeof o.lat === 'number' ? `${o.lat.toFixed(5)}, ${o.lon
 
 WZ_STEP.welcome = {
   view: () => ({
-    q: 'Willkommen bei Notfall!',
-    body: h`<div class="card"><ol class="steps"><li><b>Haushalt anlegen</b><span>Adresse, Personen, Tiere, Notfallkontakte</span></li><li><b>Treffpunkte und Notfallpass</b><span>Wo ihr euch trefft, was Helfer sehen dürfen</span></li><li><b>Rucksäcke und Taschen</b><span>Wer trägt was – danach packen</span></li></ol></div>
-      <p class="muted small">Alles bleibt auf diesem Gerät. Du kannst jederzeit unterbrechen und später weitermachen.</p>
-      <button class="btn ghost block" data-act="load-sample">Erst mit Beispieldaten ansehen</button>`,
+    q: 'Hallo und willkommen!',
+    body: h`<p class="lead">Schön, dass du da bist. Mit Notfall! packst du in Ruhe die Rucksäcke für dich und deine Familie – damit im Ernstfall alles griffbereit ist und niemand lange suchen muss.</p>
+      <div class="card"><ol class="steps"><li><b>Euch anlegen</b><span>Wer wohnt bei euch, wer ist im Notfall zu erreichen, wo trefft ihr euch?</span></li><li><b>Rucksäcke wählen</b><span>Wer trägt was – die App schlägt den passenden vor.</span></li><li><b>Packen</b><span>Abhaken, was da ist. Was fehlt, landet auf der Einkaufsliste.</span></li></ol></div>
+      <p class="muted small">Dauert etwa 10 Minuten. Alles bleibt auf deinem Handy – kein Konto, keine Cloud. Du kannst jederzeit aufhören und später weitermachen.</p>
+      <button class="btn ghost block" data-act="load-sample">Erst mal mit Beispieldaten umschauen</button>`,
     foot: h`<button class="btn primary lg" data-act="wz-next">Los geht's ${icon('chev')}</button>`,
   }),
 };
+
+/* Berechtigungen gleich am Anfang – jede mit kurzem Grund, alles freiwillig */
+const PERMS = [
+  ['notif', 'bell', 'Benachrichtigungen', 'Damit wir dich an Rucksack-Kontrollen, Ablaufdaten und den Probealarm erinnern.'],
+  ['exact', 'clock', 'Pünktliche Alarme', 'Damit der Probealarm genau zur eingestellten Zeit kommt.'],
+  ['location', 'map', 'Standort', 'Für deine Adresse, Treffpunkte in der Nähe und die Entfernung dorthin.'],
+  ['camera', 'camera', 'Kamera', 'Für Fotos von Personen, Rucksäcken und Sachen.'],
+];
+function permState(k) {
+  if (!NATIVE) return 'na';
+  try {
+    if (k === 'notif') return NATIVE.notifStatus ? NATIVE.notifStatus() : 'na';
+    if (k === 'exact') return NATIVE.exactAlarmStatus ? NATIVE.exactAlarmStatus() : 'na';
+    return NATIVE.permStatus ? NATIVE.permStatus(k) : 'na';
+  } catch { return 'na'; }
+}
+WZ_STEP.perms = {
+  view: () => ({
+    q: 'Ein paar Erlaubnisse',
+    body: h`<p class="muted">Die App fragt nur, was sie wirklich braucht. Du kannst alles auch später in den Handy-Einstellungen ändern.</p>
+      <div class="stack-s">${PERMS.map(([k, ic, t, why]) => { const st = permState(k); if (st === 'na') return ''; return h`<div class="person-card perm"><div class="row nowrap"><span class="ti">${icon(ic)}</span><div class="grow"><b>${t}</b><br><span class="muted small">${why}</span></div></div>
+        ${st === 'granted' ? h`<p class="tok small bold" style="margin-top:8px">${icon('check')} Erlaubt</p>` : h`<button class="btn block" style="margin-top:8px" data-act="perm-ask" data-k="${k}">Erlauben</button>`}</div>`; })}
+        <div class="person-card perm"><div class="row nowrap"><span class="ti">${icon('users')}</span><div class="grow"><b>Telefonbuch und Karten</b><br><span class="muted small">Keine Erlaubnis nötig: Kontakte wählst du einzeln aus, Internet wird nur für Karten und die Ortssuche benutzt.</span></div></div></div></div>`,
+  }),
+};
+ACT['perm-ask'] = async d => {
+  if (d.k === 'notif') { const r = await nativeAsync('requestNotifications'); if (!r.ok) toast('Benachrichtigungen sind aus – im Probealarm erscheint dann nichts.'); }
+  else if (d.k === 'exact') { if (NATIVE.openSettings) NATIVE.openSettings('exact'); toast('„Alarme & Erinnerungen“ für Notfall! einschalten und zurückkommen.'); }
+  else if (d.k === 'location') {
+    const r = await nativeAsync('requestPerm', 'location');
+    if (r.ok && navigator.geolocation) navigator.geolocation.getCurrentPosition(pos => { const w = wzDraft(HH()); w.lat = +pos.coords.latitude.toFixed(6); w.lon = +pos.coords.longitude.toFixed(6); w.acc = Math.round(pos.coords.accuracy || 0); persist(); }, () => {}, { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 });
+  }
+  else { await nativeAsync('requestPerm', d.k); }
+  rerender(true);
+};
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && UI.route === '/setup') rerender(true); });
 
 WZ_STEP.household = {
   view: (H, d) => ({

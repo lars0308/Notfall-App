@@ -370,3 +370,25 @@ ol.steps li span{color:var(--muted);font-size:.9375rem}
 .bignum{font-size:2rem;font-weight:800;line-height:1}
 .qty{display:inline-flex;align-items:center;gap:10px}
 .qty .bignum{min-width:2.5rem;text-align:center}
+/* Notfall-Bildschirm: aufgeräumt */
+.callbtn.big{min-height:5.25rem;font-size:1.5rem;width:100%}
+.callbtn.big svg{width:2rem;height:2rem}
+.callrow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.callbtn.sm{min-height:3.25rem;padding:6px 12px;font-size:1rem;gap:10px;min-width:0}
+.callbtn.sm span{min-width:0;overflow-wrap:anywhere;text-align:left}
+.callbtn.sm small{font-size:.75rem}
+h2.sec{font-size:1.0625rem;margin:4px 0 8px}
+.scengrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.scen{display:flex;align-items:center;min-height:3rem;padding:8px 12px;border-radius:12px;border:1px solid var(--line-strong);background:var(--surface);color:var(--text);text-decoration:none;font-weight:700;font-size:.9375rem;line-height:1.2}
+.scen[aria-pressed="true"]{background:var(--must);border-color:var(--must);color:#fff}
+.contact{display:flex;flex-direction:column;gap:6px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.contact:last-child{border-bottom:0;padding-bottom:0}
+.contact .callbtn{align-self:stretch}
+.person-row{align-items:flex-start}
+.lead{font-size:1.125rem;line-height:1.5}
+.perm .ti{flex:none;width:2.75rem;height:2.75rem;border-radius:14px;display:flex;align-items:center;justify-content:center;background:var(--surface2);border:1px solid var(--line)}
+.tok{color:var(--ok);display:flex;align-items:center;gap:6px}.tok svg{width:1.1rem;height:1.1rem}
+.li.need{flex-wrap:wrap}
+.needbtns{display:flex;gap:8px;flex-basis:100%;justify-content:flex-end}
+.needbtns .btn{flex:1}
+.btn.block{white-space:normal;line-height:1.2;text-align:center}

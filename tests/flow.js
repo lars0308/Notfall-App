@@ -8,7 +8,7 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
   const hash = () => p.evaluate(() => location.hash); const body = () => p.locator('body').innerText();
   const noMarkup = async name => { const t = await body(); ok(name + ': kein Fehler/Markup im Text', !/Anzeige fehlgeschlagen|undefined|NaN|\[object|<\/?(div|span|button|a|svg)[ >]|class="/.test(t), (t.match(/Anzeige fehlgeschlagen.*|undefined|NaN|\[object[^\]]*\]|class="/) || [''])[0]); };
   await p.goto('http://localhost:8123/'); await p.waitForSelector('.q');
-  ok('Erster Start: „Haushalt anlegen“ mit Willkommen', (await hash()) === '#/setup' && /Willkommen/.test(await p.locator('.q').innerText())); await shot('01-frage'); await click('[data-act=wz-next]');
+  ok('Erster Start: „Haushalt anlegen“ mit Willkommen', (await hash()) === '#/setup' && /willkommen/i.test(await p.locator('.q').innerText())); await shot('01-frage'); await click('[data-act=wz-next]');
   // 1) Haushalt
   ok('Zuerst: Haushalt mit Adresse, Standort und Wohnsituation', /Haushalt/.test(await p.locator('.q').innerText()) && (await p.locator('[data-act=wz-gps]').count()) === 1);
   await p.fill('[data-path=name]', 'Familie Test'); await p.fill('[data-path=place]', 'Köln'); await click('[data-act=wz-set][data-v=flat]'); await click('[data-act=wz-next]');
@@ -125,6 +125,7 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
   ok('Druckkarte: Name, 3 Kontakte, QR, freigegebene Angabe – keine privaten Daten', /Mia/.test(card) && /<svg/.test(card) && /Oma Erna/.test(card) && /Erdnüsse/.test(card) && !/Asthma/.test(card));
   // Notfallmodus
   await p.goto('http://localhost:8123/#/sos'); await p.waitForSelector('.callbtn'); const sos = await body(); await shot('12-notfall'); await noMarkup('Notfall');
+  ok('Notfallmodus aufgeräumt: jeder Kontakt nur einmal, Lagen als Raster, 112 groß', (sos.match(/Oma Erna/g) || []).length === 1 && (await p.locator('.scengrid .scen').count()) >= 8 && (await p.locator('.callbtn.big').count()) === 1, (sos.match(/Oma Erna/g) || []).length);
   ok('Notfallmodus: 112, Pässe mit Kontakten, Lagerort der Tasche, keine privaten Daten', /112/.test(sos) && /Oma Erna/.test(sos) && /Flur/.test(sos) && /Erdnüsse/.test(sos) && !/Asthma|Ramipril/.test(sos), [/112/.test(sos), /Oma Erna/.test(sos), /Flur/.test(sos), /Erdnüsse/.test(sos), /Asthma/.test(sos), /Ramipril/.test(sos)].join());
   // weitere Seiten
   for (const r of ['bags', 'review', 'more', 'shop', 'remind', 'places', 'items', 'stock', 'recs', 'settings', 'sources', 'households']) { const before = errs.length; await p.goto('http://localhost:8123/#/' + r); await p.waitForTimeout(150); await noMarkup('#/' + r); if (errs.length !== before) ok('#/' + r + ' ohne Konsolenfehler', false, errs.slice(before).join(';')); }

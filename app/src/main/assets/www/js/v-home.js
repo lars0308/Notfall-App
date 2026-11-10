@@ -28,7 +28,7 @@ route('/home', H => {
   const live = H.items.filter(i => !i.archived && i.container !== 'home');
   const have = live.filter(i => i.status === 'owned'); const packed = have.filter(i => i.packed && i.bagId);
   const miss = live.filter(i => i.status !== 'owned');
-  const must = miss.filter(i => i.prio === 'must').slice(0, 4);
+  const needAll = needList(H); const mustN = needAll.filter(g => g.prio === 'must').length; const needs = mustN ? needAll.filter(g => g.prio === 'must') : needAll.filter(g => g.prio === 'rec');
   const lead = (S.notif && S.notif.leadDays) || 30;
   const exp = H.items.filter(i => !i.archived && i.status === 'owned' && i.expiry && daysUntil(i.expiry) <= lead).sort((a, b) => a.expiry.localeCompare(b.expiry)).slice(0, 4);
   const remAll = H.reminders.filter(x => x.enabled && x.next).sort((a, b) => a.next.localeCompare(b.next));
@@ -44,7 +44,8 @@ route('/home', H => {
   return {
     title: H.name && H.name !== 'Mein Haushalt' ? H.name : 'Notfall!',
     html: h`<div class="stats">${stat(`${have.length}/${live.length}`, 'vorhanden', have.length === live.length && live.length ? 'ok' : '')}${stat(`${packed.length}/${live.length}`, 'gepackt')}${stat(miss.length, miss.length === 1 ? 'fehlt' : 'fehlen', miss.length ? 'must' : 'ok')}</div>
-    ${must.length ? h`<div class="card"><h3>Wichtig, aber noch nicht da</h3><ul class="plain">${must.map(i => h`<li>${i.name}<span class="muted small">${i.bagId && byId(H.bags, i.bagId) ? ' · ' + byId(H.bags, i.bagId).name : ''}</span></li>`)}</ul>${miss.filter(i => i.prio === 'must').length > must.length ? h`<p class="muted small">und ${miss.filter(i => i.prio === 'must').length - must.length} weitere</p>` : ''}</div>` : ''}
+    ${needs.length ? h`<div class="card"><div class="row spread"><h3>${mustN ? 'Das fehlt noch' : 'Noch sinnvoll'}</h3>${mustN ? h`<span class="badge must">${mustN} wichtig</span>` : ''}</div><ul class="plain">${needs.slice(0, 4).map(g => h`<li><b>${g.name}</b><span class="muted small"> · ${fmt(g.qty)} ${g.unit}</span></li>`)}</ul>
+      <a class="btn primary block" style="margin-top:12px" href="#/needs">${icon('cart')} ${needs.length > 4 ? `Alle ${needs.length} ansehen` : 'Ansehen'} – Habe ich / Kaufen</a></div>` : ''}
     ${heavy.length ? h`<div class="card"><h3>Gewicht</h3><ul class="plain">${heavy.map(x => h`<li><span class="${x.st.overFactor > 1.25 ? 'tmust' : 'trec'}">${x.b.name}: ${x.st.overweight ? `${fmt(x.st.totalG / 1000)} von ${fmt(x.st.capKg)} kg` : `zu voll (${fmt(x.st.volL)} von ${fmt(x.st.usableL)} l)`}</span></li>`)}</ul></div>` : ''}
     <div class="card"><h3>Termine</h3><ul class="plain">
       ${rem.length ? rem.map(r => h`<li>${r.title}: <b>${fmtDate(r.next)}</b> <span class="muted small">(${inDays(daysUntil(r.next))})</span></li>`) : h`<li class="muted">Keine Kontrolle geplant</li>`}
@@ -67,7 +68,7 @@ route('/more', H => {
     html: h`${tile('#/setup', 'users', '', 'Haushalt, Personen & Tiere', [H.people.length + ' ' + (H.people.length === 1 ? 'Person' : 'Personen'), H.pets.length ? H.pets.length + ' Tiere' : ''].filter(Boolean).join(' · '))}
     ${tile('#/wizard', 'bag', '', 'Rucksäcke & Taschen neu planen', '')}
     ${tile('#/shop', 'cart', '', 'Einkaufsliste', shopN ? shopN + ' zu besorgen' : '')}
-    ${tile('#/recs', 'alert', '', 'Was fehlt?', '')}
+    ${tile('#/needs', 'cart', '', 'Was fehlt?', 'Zusammengefasst, mit „Habe ich“ oder „Kaufen“')}
     ${tile('#/remind', 'bell', '', 'Erinnerungen', '')}
     ${tile('#/map', 'map', '', 'Karte & Treffpunkte', [H.meeting.length ? H.meeting.length + ' Treffpunkte' : '', (DB.maps || []).length ? DB.maps.length + ' Karten' : ''].filter(Boolean).join(' · '))}
     ${tile('#/alarm', 'bell', '', 'Probealarm', (H.alarms || []).filter(a => a.enabled && alarmNext(a)).length ? 'geplant' : '')}

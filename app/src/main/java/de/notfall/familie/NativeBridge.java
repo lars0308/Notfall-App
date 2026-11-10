@@ -136,6 +136,17 @@ public class NativeBridge {
   @JavascriptInterface public void requestNotifications(final int cb) {
     act.runOnUiThread(() -> act.requestNotifPermission(cb));
   }
+  // Berechtigungen für die Begrüßung: Standort und Kamera
+  @JavascriptInterface public String permStatus(String name) {
+    String p = "camera".equals(name) ? android.Manifest.permission.CAMERA : "location".equals(name) ? android.Manifest.permission.ACCESS_FINE_LOCATION : null;
+    if (p == null) return "na";
+    if (act.checkSelfPermission(p) == android.content.pm.PackageManager.PERMISSION_GRANTED) return "granted";
+    if ("location".equals(name) && act.checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED) return "granted";
+    return "denied";
+  }
+  @JavascriptInterface public void requestPerm(final int cb, final String name) {
+    act.runOnUiThread(() -> act.requestNamedPermission(cb, name));
+  }
   @JavascriptInterface public String alarmLog() { return Reminders.logJson(act); }
   @JavascriptInterface public String exactAlarmStatus() {
     if (Build.VERSION.SDK_INT < 31) return "na";

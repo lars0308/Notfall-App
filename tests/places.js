@@ -22,7 +22,11 @@ const { start } = require('./serve');
     };
   });
   const next = () => p.click('.actionbar [data-act=wz-next]');
-  await p.goto('http://localhost:8123/'); await p.waitForSelector('.q'); await next();
+  await p.goto('http://localhost:8123/'); await p.waitForSelector('.q');
+  await p.screenshot({ path: 'tests/out/welcome.png' }); ok('Begrüßung, menschlich formuliert', /Hallo und willkommen/.test(await p.locator('.q').innerText()) && /Schön, dass du da bist/.test(await p.locator('body').innerText()));
+  await next();
+  await p.screenshot({ path: 'tests/out/perms.png' }); ok('Gleich danach: Erlaubnisse mit Grund (Benachrichtigungen, Alarme)', /Erlaubnisse/.test(await p.locator('.q').innerText()) && /Rucksack-Kontrollen/.test(await p.locator('body').innerText()) && /Erlaubt/.test(await p.locator('body').innerText()));
+  await next();
   // Adresse aus Standort
   await p.click('[data-act=wz-gps]'); await p.waitForSelector('.modal [data-act=dlg-yes]'); ok('Vor der Adressabfrage wird gefragt', /OpenStreetMap/.test(await p.locator('.modal').innerText()));
   await p.click('.modal [data-act=dlg-yes]'); await p.waitForFunction(() => /Köln/.test(HH().setup.draft.place));

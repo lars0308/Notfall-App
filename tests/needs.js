@@ -1,0 +1,31 @@
+// „Was fehlt?“: gleiche Sachen zusammengefasst, nach Wichtigkeit, „Habe ich“ / „Kaufen“ / „Alles Wichtige auf die Einkaufsliste“
+const { chromium } = require('playwright');
+const { start } = require('./serve');
+(async () => {
+  const srv = await start(8123); const b = await chromium.launch();
+  const p = await (await b.newContext({ viewport: { width: 360, height: 740 }, isMobile: true, hasTouch: true })).newPage();
+  const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+  let fails = 0; const ok = (n, c, d = '') => { console.log((c ? 'OK   ' : 'FAIL ') + n + (c ? '' : ' ' + d)); if (!c) fails++; };
+  await p.goto('http://localhost:8123/'); await p.waitForSelector('.q');
+  await p.evaluate(() => { loadSampleHousehold(); persist(); });
+  await p.goto('http://localhost:8123/#/home'); await p.waitForSelector('.stats');
+  ok('Startseite: „Das fehlt noch“ mit Knopf zu „Was fehlt?“', /Das fehlt noch/.test(await p.locator('body').innerText()) && (await p.locator('a[href="#/needs"]').count()) === 1);
+  await p.click('a[href="#/needs"]'); await p.waitForSelector('.li.need');
+  const agg = await p.evaluate(() => { const L = needList(HH()); const raw = HH().items.filter(i => !i.archived && i.status !== 'owned' && i.container !== 'home').length; const g = L.find(x => x.items.length > 1); return { groups: L.length, raw, multi: g ? [g.name, g.items.length, g.qty, [...g.who].length] : null, order: L.map(x => x.prio[0]).join('') }; });
+  ok('Gleiche Sachen über alle Rucksäcke zusammengefasst', agg.groups < agg.raw && agg.multi && agg.multi[1] > 1, JSON.stringify(agg));
+  ok('Wichtigstes zuerst', /^m*r*o*$/.test(agg.order), agg.order);
+  ok('Kapitel „Zuerst besorgen“, „Sinnvoll“', /Zuerst besorgen/.test(await p.locator('body').innerText()) && /Sinnvoll/.test(await p.locator('body').innerText()));
+  const k = await p.locator('[data-act=need-have]').first().getAttribute('data-k');
+  await p.click(`[data-act=need-have][data-k="${k}"]`); await p.waitForTimeout(100);
+  ok('„Habe ich“ hakt alle zusammengefassten ab', await p.evaluate(k => !needList(HH()).some(g => g.k === k), k));
+  const k2 = await p.locator('[data-act=need-buy]').first().getAttribute('data-k'); const shop0 = await p.evaluate(() => HH().shop.filter(s => !s.bought).length);
+  await p.click(`[data-act=need-buy][data-k="${k2}"]`); await p.waitForTimeout(100);
+  ok('„Kaufen“ setzt auf die Einkaufsliste', await p.evaluate(([k, n]) => HH().shop.filter(s => !s.bought).length > n && needList(HH()).find(g => g.k === k).items.every(i => i.status === 'missing'), [k2, shop0]));
+  await p.click('[data-act=need-buy-all]'); await p.waitForFunction(() => location.hash === '#/shop');
+  ok('„Alles Wichtige auf die Einkaufsliste“ → Einkaufsliste', await p.evaluate(() => needList(HH()).filter(g => g.prio === 'must').every(g => g.items.every(i => i.status === 'missing'))));
+  await p.evaluate(() => { HH().items.forEach(i => { if (i.status === 'missing') i.status = 'planned'; }); persist(); }); await p.goto('http://localhost:8123/#/needs'); await p.waitForTimeout(3500);
+  const wide = await p.evaluate(() => document.scrollingElement.scrollWidth - innerWidth); ok('Passt auf 360 px', wide <= 1);
+  await p.evaluate(() => { document.getElementById('toasts').innerHTML = ''; }); await p.screenshot({ path: 'tests/out/needs.png' });
+  ok('Keine JS-Fehler', !errs.length, errs.join(' | '));
+  await b.close(); srv.close(); process.exitCode = fails ? 1 : 0;
+})();

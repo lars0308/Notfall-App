@@ -48,7 +48,8 @@ public class MainActivity extends Activity {
   private static final String BASE = "https://" + HOST + "/";
   private static final int REQ_PICK = 4242, REQ_PHOTO = 4243, REQ_MAP = 4244, REQ_CONTACT = 4245;
   private int contactCb = -1;
-  private static final int PERM_CAMERA = 11, PERM_WEBCAM = 12, PERM_NOTIF = 13, PERM_GEO = 14;
+  private static final int PERM_CAMERA = 11, PERM_WEBCAM = 12, PERM_NOTIF = 13, PERM_GEO = 14, PERM_NAMED = 15;
+  private int namedCb = -1;
   private android.webkit.GeolocationPermissions.Callback geoCb; private String geoOrigin;
 
   private WebView webView;
@@ -309,6 +310,15 @@ public class MainActivity extends Activity {
     requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, PERM_NOTIF);
   }
 
+  void requestNamedPermission(int cb, String name) {
+    String[] p = "camera".equals(name) ? new String[]{Manifest.permission.CAMERA}
+      : "location".equals(name) ? new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION} : null;
+    if (p == null) { resolve(cb, "{\"ok\":false}"); return; }
+    if (namedCb >= 0) resolve(namedCb, "{\"ok\":false}");
+    namedCb = cb;
+    requestPermissions(p, PERM_NAMED);
+  }
+
   @Override public void onRequestPermissionsResult(int code, String[] perms, int[] results) {
     super.onRequestPermissionsResult(code, perms, results);
     boolean ok = results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED;
@@ -321,6 +331,9 @@ public class MainActivity extends Activity {
         if (ok) pendingWebPerm.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE}); else pendingWebPerm.deny();
         pendingWebPerm = null;
       }
+    } else if (code == PERM_NAMED) {
+      boolean any = false; for (int r : results) if (r == PackageManager.PERMISSION_GRANTED) any = true;
+      int cb = namedCb; namedCb = -1; resolve(cb, "{\"ok\":" + any + "}");
     } else if (code == PERM_GEO) {
       boolean any = false; for (int r : results) if (r == PackageManager.PERMISSION_GRANTED) any = true;
       if (geoCb != null) { geoCb.invoke(geoOrigin, any, false); geoCb = null; geoOrigin = null; }

@@ -1,9 +1,9 @@
-# Umgesetzte Funktionen (Version 2.9.0)
+# Umgesetzte Funktionen (Version 3.0.0)
 
 Legende: ✅ umgesetzt und im Browser getestet · 📱 braucht Android-Code, nicht auf Gerät geprüft · 🟡 mit Einschränkung · ⬜ offen. Was gestrichen oder verschoben wurde, steht in der [Feature-Matrix](FEATURE-MATRIX.md).
 
 ## Erster Start: Haushalt anlegen, dann Rucksäcke ✅
-Beim ersten Öffnen: **Willkommen → Haushalt (Standort; Adresse und Wohnlage auf Wunsch aus dem Standort 📱) → Anzahl Personen per Schieberegler oder −/+ (bis 30) mit Altersgruppe → jede Person einzeln (Geburtsdatum ergibt das Alter, Personenstand ab 16) → Übersicht „Alle Personen“ mit Bearbeiten → Tiere → Notfallkontakte (auch aus dem Telefonbuch 📱) → Treffpunkte (nah / außerhalb; „Ich bin hier“ speichert die Position; „In der Nähe suchen“ findet z. B. den nächsten Sportplatz 📱) → Notfallpass (nur eingetragene Angaben zum Anhaken, nichts vorausgewählt) → Übersicht „Haushalt angelegt“**. Danach direkt **Rucksäcke & Taschen: Zweck → Dauer → Unterkunft → Wer trägt was → Packliste**. Beides lässt sich unterbrechen und später fortsetzen; unter „Mehr“ jederzeit „Haushalt, Personen & Tiere“ bearbeiten (Packlisten passen sich an) und „Rucksäcke & Taschen neu planen“.
+Beim ersten Öffnen: **Begrüßung → Erlaubnisse 📱 (Benachrichtigungen, pünktliche Alarme, Standort, Kamera – jeweils mit kurzem Grund, alles freiwillig) → Haushalt (Standort; Adresse und Wohnlage auf Wunsch aus dem Standort 📱) → Anzahl Personen per Schieberegler oder −/+ (bis 30) mit Altersgruppe → jede Person einzeln (Geburtsdatum ergibt das Alter, Personenstand ab 16) → Übersicht „Alle Personen“ mit Bearbeiten → Tiere → Notfallkontakte (auch aus dem Telefonbuch 📱) → Treffpunkte (nah / außerhalb; „Ich bin hier“ speichert die Position; „In der Nähe suchen“ findet z. B. den nächsten Sportplatz 📱) → Notfallpass (nur eingetragene Angaben zum Anhaken, nichts vorausgewählt) → Übersicht „Haushalt angelegt“**. Danach direkt **Rucksäcke & Taschen: Zweck → Dauer → Unterkunft → Wer trägt was → Packliste**. Beides lässt sich unterbrechen und später fortsetzen; unter „Mehr“ jederzeit „Haushalt, Personen & Tiere“ bearbeiten (Packlisten passen sich an) und „Rucksäcke & Taschen neu planen“.
 - Haushalt: Name, Adresse/Ort, Standort per GPS 📱 (freiwillig, nur auf Knopfdruck, wird nicht gesendet), Wohnsituation (Wohnung/Haus/Land; „Land“ macht Wasserfilter Pflicht und schlägt Solar-Ladegerät vor).
 - Personen: erst Liste (Erwachsene/Kinder), dann je Person ein Schritt mit Foto 📱, Name, Alter oder Geburtsdatum, Geschlecht, Gewicht, Größe, Fitness, Blutgruppe, Allergien, Vorerkrankungen, Medikamenten, Hilfsmitteln, Einschränkung beim Gehen/Tragen. Live berechnet: Kalorien (Mifflin-St Jeor × Aktivität, sonst Richtwert nach Alter), Wasser, Traglast (15–25 % des Körpergewichts, max. 20 kg). Die Packliste nutzt dieselben Werte.
 - Tiere: je Tier Art, Name, Anzahl (Hund mit Gewicht für die Wassermenge).
@@ -65,3 +65,9 @@ Beim ersten Öffnen: **Willkommen → Haushalt (Standort; Adresse und Wohnlage a
 Mobile First, dunkler Glas-Look, große untereinander angeordnete Karten, Hauptaktionen unten im Daumenbereich, Navigation mit fünf Punkten (Start, Taschen, Packliste, Notfallpass, Mehr). Erklärtexte entfernt; Hinweise nur bei Fehlern, Risiken und Datenschutz.
 
 - Karte: „In der Nähe suchen“ legt einen gefundenen Ort direkt als Treffpunkt an (weiter als 2 km → „außerhalb“) 📱.
+
+## Was fehlt? ✅
+Alles Fehlende aus allen Rucksäcken zusammengefasst (z. B. „3 Stück · Lars, Kyara, Adam“), sortiert nach „Zuerst besorgen“, „Sinnvoll“, „Wenn Platz ist“ (eingeklappt). Je Zeile „Habe ich“ oder „Kaufen“ (→ Einkaufsliste), oben „Alles Wichtige kaufen“. Die Startseite zeigt die ersten vier mit Knopf dorthin.
+
+## Notfall-Bildschirm ✅
+Aufgeräumt: 112 als großer Knopf, weitere Nummern klein daneben, Lagen als Raster, Kontakte nur einmal (auch wenn sie bei mehreren Personen eingetragen sind), Personen kompakt mit den freigegebenen Angaben, Taschen eine Zeile je Tasche, „Bei Abreise mitnehmen“ einmal für alle, Treffpunkte mit Karte.

@@ -31,7 +31,7 @@ function wzDraft(H) {
 }
 
 const wzFlow = () => UI.route === '/setup' ? 'setup' : 'bags';
-function profSteps(H, d) { const s = H.profileDone || H.setup.done ? [] : ['welcome']; s.push('household', 'people'); d.people.forEach((p, k) => s.push('p' + k)); s.push('pover', 'pets', 'contacts', 'meet', 'share', 'pdone'); return s; }
+function profSteps(H, d) { const s = H.profileDone || H.setup.done ? [] : IS_NATIVE ? ['welcome', 'perms'] : ['welcome']; s.push('household', 'people'); d.people.forEach((p, k) => s.push('p' + k)); s.push('pover', 'pets', 'contacts', 'meet', 'share', 'pdone'); return s; }
 function bagSteps(d) { const s = ['purpose']; if (d.purpose !== 'car') s.push('hours', 'where'); s.push('bags'); return s; }
 function wzSteps(d, H = HH()) { return wzFlow() === 'setup' ? profSteps(H, d) : bagSteps(d); }
 const stepKey = () => wzFlow() === 'setup' ? 'pstep' : 'step';

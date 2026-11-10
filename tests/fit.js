@@ -34,7 +34,7 @@ const { start } = require('./serve');
   await p.waitForFunction(() => location.hash.startsWith('#/review'));
   await p.evaluate(() => { loadSampleHousehold(); persist(); });
   const H = await p.evaluate(() => ({ bag: HH().bags[0].id, pid: HH().people[0].id, item: HH().items[0].id }));
-  for (const r of ['home', 'bags', 'bags/' + H.bag, 'bags/' + H.bag + '/pack', 'bags/' + H.bag + '/missing', 'review', 'review/b/' + H.bag, 'review/b/' + H.bag + '/c/tech', 'review/search', 'review/ask', 'pass', 'pass/' + H.pid, 'card/' + H.pid, 'ice/' + H.pid, 'more', 'items', 'item/' + H.item, 'shop', 'remind', 'map', 'alarm', 'sos', 'settings', 'stock', 'recs', 'setup', 'wizard']) {
+  for (const r of ['home', 'bags', 'bags/' + H.bag, 'bags/' + H.bag + '/pack', 'bags/' + H.bag + '/missing', 'review', 'review/b/' + H.bag, 'review/b/' + H.bag + '/c/tech', 'review/search', 'review/ask', 'needs', 'pass', 'pass/' + H.pid, 'card/' + H.pid, 'ice/' + H.pid, 'more', 'items', 'item/' + H.item, 'shop', 'remind', 'map', 'alarm', 'sos', 'settings', 'stock', 'recs', 'setup', 'wizard']) {
     await p.goto('http://localhost:8123/#/' + r); await p.waitForTimeout(250); await check('#/' + r);
   }
   // Dialoge
