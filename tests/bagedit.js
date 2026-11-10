@@ -1,0 +1,32 @@
+// Tasche bearbeiten und löschen über die Knöpfe in der Kopfzeile (Handy-Emulation).
+const { chromium, devices } = require('playwright');
+const { start } = require('./serve');
+(async () => {
+  const srv = await start(8123); const b = await chromium.launch();
+  const p = await (await b.newContext({ ...devices['Pixel 7'] })).newPage();
+  const errs = []; p.on('pageerror', e => errs.push(e.message));
+  let fails = 0; const ok = (n, c, d = '') => { console.log((c ? 'OK   ' : 'FAIL ') + n + (c ? '' : ' ' + d)); if (!c) fails++; };
+  await p.goto('http://localhost:8123/'); await p.waitForSelector('.q');
+  await p.evaluate(() => { loadSampleHousehold(); persist(); go('#/home'); });
+  const bag = await p.evaluate(() => { const H = HH(); const b = H.bags[0]; return { id: b.id, n: bagItems(H, b).length, total: H.items.length, bags: H.bags.length }; });
+  await p.goto('http://localhost:8123/#/bags/' + bag.id); await p.waitForTimeout(400);
+  const edit = p.locator('.topbar [data-act=bag-edit]'), del = p.locator('.topbar [data-act=bag-del]');
+  ok('Bearbeiten-Knopf oben sichtbar', await edit.isVisible());
+  ok('Löschen-Knopf oben sichtbar', await del.isVisible());
+  await edit.click(); await p.waitForSelector('.modal form');
+  await p.fill('.modal input[name=name]', 'Fluchtrucksack Papa'); await p.fill('.modal input[name=location]', 'Garderobe');
+  await p.locator('.modal button[type=submit]').click(); await p.waitForTimeout(300);
+  const after = await p.evaluate(id => { const b = byId(HH().bags, id); return { name: b.name, loc: b.location, title: document.querySelector('.topbar h1').textContent }; }, bag.id);
+  ok('Name und Lagerort geändert', after.name === 'Fluchtrucksack Papa' && after.loc === 'Garderobe', JSON.stringify(after));
+  ok('Titel zeigt neuen Namen', after.title === 'Fluchtrucksack Papa', after.title);
+  await del.click(); await p.waitForSelector('[data-act=dlg-no], .modal [data-act=modal-close]');
+  await p.locator('.modal [data-act=modal-close]').last().click(); await p.waitForTimeout(200);
+  ok('Abbrechen löscht nichts', await p.evaluate(id => !!byId(HH().bags, id), bag.id));
+  await del.click(); await p.locator('[data-act=dlg-yes]').click(); await p.waitForTimeout(400);
+  const res = await p.evaluate(id => ({ gone: !byId(HH().bags, id), bags: HH().bags.length, items: HH().items.length, home: HH().items.filter(i => (i.place || '').includes('Fluchtrucksack Papa')).length, hash: location.hash }), bag.id);
+  ok('Tasche gelöscht, zurück zur Liste', res.gone && res.bags === bag.bags - 1 && res.hash === '#/bags', JSON.stringify(res));
+  ok('Gegenstände bleiben erhalten (nach „Zuhause“)', res.items === bag.total && res.home === bag.n, JSON.stringify(res));
+  ok('Keine JS-Fehler', !errs.length, errs.join(' | '));
+  await p.screenshot({ path: 'tests/out/bag-del.png' });
+  await b.close(); srv.close(); process.exitCode = fails ? 1 : 0;
+})();

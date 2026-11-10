@@ -1,11 +1,11 @@
-# Umgesetzte Funktionen (Version 2.2.0)
+# Umgesetzte Funktionen (Version 2.2.2)
 
 Legende: ✅ umgesetzt und im Browser getestet · 📱 braucht Android-Code, nicht auf Gerät geprüft · 🟡 mit Einschränkung · ⬜ offen. Was gestrichen oder verschoben wurde, steht in der [Feature-Matrix](FEATURE-MATRIX.md).
 
 ## 1 Meine Taschen ✅
 - Beliebig viele Rucksäcke, Taschen, Koffer; 9 Typen; Name, Foto 📱, Volumen, Gewicht, Besitzer, fester Lagerort, Verwendung, Packstatus.
 - Fächer frei anlegen, umbenennen, verschieben, entfernen; jeder Gegenstand hat ein Fach.
-- Tasche kopieren, bearbeiten, löschen (Gegenstände bleiben erhalten).
+- Tasche bearbeiten und löschen direkt oben auf der Taschenseite (Stift- und Papierkorb-Knopf); löschen nur nach Rückfrage, Gegenstände bleiben erhalten und kommen nach „Zuhause“. Tasche kopieren.
 - 2D-Fachansicht zum Antippen als Basis, 3D-Ansicht optional.
 - Gewichts- und Volumenwarnung; Angaben als „ca.“, wenn Maße fehlen. Nichts wird automatisch gestrichen.
 

@@ -48,8 +48,9 @@ route('/bags/:id', (id, H) => {
   const noDims = items.some(i => !i.weightG || !i.volL);
   return {
     title: bag.name, back: '#/bags',
+    actions: h`<button class="btn icon sm" data-act="bag-edit" data-id="${bag.id}" aria-label="Tasche bearbeiten">${icon('edit')}</button><button class="btn icon sm danger" data-act="bag-del" data-id="${bag.id}" aria-label="Tasche löschen">${icon('trash')}</button>`,
     html: h`<div class="card"><div class="row nowrap">${bag.photos[0] ? h`<span class="thumb lg"><img data-ph="${bag.photos[0]}" data-act="ph-view" data-id="${bag.photos[0]}" alt="Foto"></span>` : h`<button class="thumb lg" data-act="bag-ph-add" data-id="${bag.id}" aria-label="Foto hinzufügen" style="cursor:pointer">${icon('camera')}</button>`}
-        <div class="grow"><div class="muted small">${bagMeta(H, bag)}${bag.use ? ' · ' + bag.use : ''}</div><div class="bold" style="font-size:1.125rem;margin:2px 0">${bagLine(st)}</div>
+        <div class="grow"><div class="bold" style="font-size:1.125rem;overflow-wrap:anywhere">${bag.name}</div><div class="muted small">${bagMeta(H, bag)}${bag.use ? ' · ' + bag.use : ''}</div><div class="bold" style="font-size:1.125rem;margin:2px 0">${bagLine(st)}</div>
         <div class="muted small">${noDims ? 'ca. ' : ''}${fmt(st.totalG / 1000)} kg${st.capKg ? ' von ' + fmt(st.capKg) + ' kg' : ''} · ${noDims ? 'ca. ' : ''}${fmt0(st.fillPct)} % Volumen</div></div></div>
       <div style="margin-top:12px">${bar(st.packedPct, 'ok')}</div></div>
     ${st.overweight ? noticeBox(st.overFactor > 1.25 ? 'must' : 'rec', `Zu schwer: ${fmt(st.totalG / 1000)} kg (Richtwert ${fmt(st.capKg)} kg)`, '', H.bags.filter(b => b.owner).length > 1 ? h`<button class="btn sm" data-act="bags-balance">Gewicht ausgleichen</button>` : '') : ''}
@@ -218,10 +219,10 @@ ACT['bag-edit'] = d => {
 };
 ACT['bag-del'] = async d => {
   const H = HH(); const b = byId(H.bags, d.id); const n = bagItems(H, b).length;
-  const ok = await confirmDlg('Rucksack löschen?', `„${b.name}“ wird gelöscht. Die ${n} Gegenstände darin bleiben im Inventar erhalten und werden „Zuhause“ zugeordnet.`, { ok: 'Rucksack löschen', danger: true });
+  const ok = await confirmDlg('Tasche löschen?', n ? `„${b.name}“ wird gelöscht. Die ${n} Gegenstände darin bleiben erhalten und kommen nach „Zuhause“.` : `„${b.name}“ wird gelöscht.`, { ok: 'Tasche löschen', danger: true });
   if (!ok) return;
   for (const i of H.items.filter(i => i.bagId === b.id)) { i.container = 'home'; i.bagId = null; i.compId = null; i.packed = false; if (!i.place) i.place = 'Zuhause (aus ' + b.name + ')'; }
-  H.bags = H.bags.filter(x => x.id !== b.id); persist(); setTimeout(sweepPhotos, 300); go('#/bags');
+  H.bags = H.bags.filter(x => x.id !== b.id); persist(); setTimeout(sweepPhotos, 300); toast('Tasche gelöscht'); go('#/bags');
 };
 ACT['bag-ph-add'] = async d => { const b = byId(HH().bags, d.id); const pid = await addPhotoTo(null); if (!pid) return; b.photos.push(pid); persist(); rerender(true); };
 ACT['bag-ph-del'] = async d => { const ok = await confirmDlg('Foto entfernen?', 'Das Foto wird gelöscht.', { ok: 'Entfernen', danger: true }); if (!ok) return; const b = byId(HH().bags, d.id); b.photos = b.photos.filter(x => x !== d.pid); persist(); setTimeout(sweepPhotos, 300); rerender(true); };

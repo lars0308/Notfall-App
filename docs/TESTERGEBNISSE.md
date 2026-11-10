@@ -1,4 +1,4 @@
-# Testergebnisse (Version 2.2.1)
+# Testergebnisse (Version 2.2.2)
 
 Stand: 2026-11-10 08:21 UTC. Echte Ausgaben aus der Build-Umgebung (Node 22, Chromium/Playwright, Android SDK 35, Gradle 8.14.3). Wiederholbar mit `tests/run-all.sh`. Gesamt: **37 Unit-Prüfungen, 115 End-to-End-Prüfungen, 19 Schnittstellen-Prüfungen – 0 fehlgeschlagen.**
 
@@ -10,6 +10,7 @@ Stand: 2026-11-10 08:21 UTC. Echte Ausgaben aus der Build-Umgebung (Node 22, Chr
 | Neu in 2.2: Pass-Baukasten, Kartendesigner, Lagen, Probealarm, Karten, Kiste, QR-Etikett | 39 Prüfungen (`tests/extra.js`), Karten/Probealarm gegen eine **Attrappe** der Android-Schnittstelle | alle bestanden |
 | Schnittstelle zu Android | 19 Prüfungen gegen die Attrappe (`tests/native-sim.js`) | alle bestanden |
 | Scrollen per Fingerwisch (2.2.1) | 16 Prüfungen (`tests/scroll.js`), Handy-Emulation mit Touch-Ereignissen | alle bestanden |
+| Tasche bearbeiten/löschen (2.2.2) | 8 Prüfungen (`tests/bagedit.js`): Knöpfe oben sichtbar, Ändern, Abbrechen, Löschen, Gegenstände bleiben | alle bestanden |
 | Zufallstest inkl. neuer Seiten | 3 Läufe × ca. 335 Aktionen | keine JS-Fehler |
 | Java-Teil (Keystore, Biometrie, Benachrichtigungen, **Probealarm, Kartendownload, MBTiles-Import**, Kamera, Drucken) | **nur kompiliert**, APK signiert, Berechtigungen mit `aapt2` geprüft | **nicht auf einem Gerät ausgeführt** |
 
