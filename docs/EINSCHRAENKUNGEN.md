@@ -25,5 +25,5 @@ Der Java-Teil (Keystore-Verschlüsselung, Biometrie, Benachrichtigungen, Kamera-
 - **App-Sperre:** eine PIN für die App. Die Daten liegen per Android-Keystore verschlüsselt auf dem Gerät. Exportierte CSV- und PDF-Dateien sind unverschlüsselt.
 - **Kamera-Fotos** liegen kurz als temporäre Datei im App-Cache und werden danach gelöscht.
 - **Gestrichene Bereiche:** Schutzräume, Aufgabenliste, Benutzerverwaltung, Budget und Verbrauchsbuchung haben kein Menü mehr; ihre Daten bleiben gespeichert und im Backup. Ein bereits angelegter Dokumenten-Safe bleibt unter „Mehr“ erreichbar.
-- **Tablet-Layout und helles Farbschema** wurden nach dem Umbau nicht erneut geprüft.
+- **Tablet-Layout und helles Farbschema** sind nur per Screenshot gesichtet, nicht automatisch getestet.
 - **Sprache:** nur Deutsch. **targetSdk 34**, minSdk 29.

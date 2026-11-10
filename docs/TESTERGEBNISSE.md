@@ -13,7 +13,7 @@ Stand: 2026-11-10 07:35 UTC. Echte Ausgaben aus der Build-Umgebung (Node 22, Chr
 
 **QR-Code:** Der erzeugte Code wurde im Test als Bild aufgenommen und mit einem unabhängigen Standard-Decoder (jsQR) gelesen; der Inhalt stimmt mit der Vorschau überein, Umlaute eingeschlossen. Ein Scan mit einer echten Handykamera und der Ausdruck als PDF stehen noch aus (siehe [Geräte-Checkliste](GERAETETEST-CHECKLISTE.md)). Die Online-Variante (Webseite) gibt es nicht, es gibt also keinen Online-Fall zu testen.
 
-**Tablet-Layout** und **helles Farbschema** wurden nach dem Umbau nicht erneut gesichtet.
+**Tablet-Layout (1100×820)** und **helles Farbschema** wurden per Screenshot gesichtet (`tests/shots.js`); dabei wurde die im hellen Schema unleserliche Fachbeschriftung behoben. Automatische Prüfungen laufen nur im Handyformat, dunkel.
 
 ## 1. Unit-Tests
 ```
