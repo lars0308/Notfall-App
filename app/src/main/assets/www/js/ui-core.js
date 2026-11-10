@@ -21,28 +21,26 @@ function parseRoute() {
 window.addEventListener('hashchange', () => { closeAllModals(); render(); });
 
 const NAV_MAIN = [
-  ['#/home', 'Start', 'home'], ['#/bags', 'Rucksäcke', 'bag'], ['#/stock', 'Vorrat', 'box'], ['#/shop', 'Einkauf', 'cart'], ['#/more', 'Mehr', 'grid'],
+  ['#/home', 'Start', 'home'], ['#/bags', 'Taschen', 'bag'], ['#/review', 'Packliste', 'check'], ['#/pass', 'Notfallpass', 'shield'], ['#/more', 'Mehr', 'grid'],
 ];
 const NAV_ALL = [
-  ['#/home', 'Start', 'home'], ['#/review', 'Ausrüstung prüfen', 'check'], ['#/bags', 'Rucksäcke', 'bag'], ['#/items', 'Inventar', 'list'], ['#/stock', 'Hausvorrat', 'box'],
-  ['#/recs', 'Empfehlungen', 'bulb'], ['#/shop', 'Einkauf', 'cart'], ['#/safe', 'Safe & Dokumente', 'lock'], ['#/contacts', 'Kontakte & Treffpunkte', 'phone'],
-  ['#/rooms', 'Schutzräume', 'building'], ['#/remind', 'Erinnerungen', 'bell'], ['#/people', 'Haushalt & Personen', 'users'], ['#/settings', 'Einstellungen', 'gear'],
+  ['#/home', 'Start', 'home'], ['#/bags', 'Meine Taschen', 'bag'], ['#/review', 'Packliste', 'check'], ['#/pass', 'Notfallpass & Kontakte', 'shield'],
+  ['#/shop', 'Einkaufsliste', 'cart'], ['#/remind', 'Erinnerungen', 'bell'], ['#/more', 'Mehr', 'grid'],
 ];
 function navCounts() {
   const H = HH(); const S = DB.settings; const c = {};
   try {
-    const rc = recCounts(H, S); c['#/recs'] = rc.must;
     c['#/shop'] = H.shop.filter(s => !s.bought).length;
     c['#/review'] = H.items.filter(i => !i.archived && i.status === 'planned').length;
     c['#/remind'] = H.reminders.filter(r => r.enabled && daysUntil(r.next) !== null && daysUntil(r.next) <= 0).length;
   } catch (e) { console.error(e); }
   return c;
 }
-function navLink(href, label, ic, counts, cur, bottom) {
-  const n = counts[href]; const active = (cur === href || (href !== '#/home' && cur.startsWith(href + '/')) || (href === '#/more' && MORE_ROUTES.some(r => cur.startsWith(r))));
+const NAV_GROUP = { '#/pass': ['#/pass', '#/ice', '#/contacts'], '#/more': ['#/more', '#/items', '#/item', '#/recs', '#/safe', '#/settings', '#/stock', '#/places', '#/sources', '#/households', '#/docs'] };
+function navLink(href, label, ic, counts, cur) {
+  const n = counts[href]; const active = cur === href || (href !== '#/home' && cur.startsWith(href + '/')) || (NAV_GROUP[href] || []).some(r => cur === r || cur.startsWith(r + '/'));
   return h`<a href="${href}" ${active ? raw('aria-current="page"') : ''}>${icon(ic)}<span>${label}</span>${n ? h`<span class="count">${n}</span>` : ''}</a>`;
 }
-const MORE_ROUTES = ['#/more', '#/items', '#/item', '#/recs', '#/safe', '#/contacts', '#/rooms', '#/remind', '#/people', '#/settings', '#/review', '#/docs', '#/households', '#/users', '#/sources'];
 
 /* ---- Rendering ---- */
 let _renderBusy = false;
@@ -55,7 +53,7 @@ function render(keepScroll) {
   if (UI.locked) { renderLock(root); return; }
   const H = HH();
   let cur = location.hash || '#/home';
-  if (!H.setup.done && !H.setup.skipped && !/^#\/(wizard|settings|sos|households)/.test(cur)) { history.replaceState(null, '', '#/wizard'); cur = '#/wizard'; }
+  if (!H.setup.done && !H.setup.skipped && !H.bags.length && !/^#\/(wizard|settings|sos|households|ice)/.test(cur)) { history.replaceState(null, '', '#/wizard'); cur = '#/wizard'; }
   if (UI.sosLimited && !/^#\/sos/.test(cur)) { UI.sosLimited = false; UI.locked = !!DB.users.length; if (UI.locked) { renderLock(root); return; } }
   const rt = parseRoute() || { fn: () => ({ title: 'Nicht gefunden', html: h`<div class="empty">Diese Seite gibt es nicht. <a href="#/home">Zur Startseite</a></div>` }), params: [], path: cur };
   UI.route = rt.path; UI.params = rt.params;
@@ -75,9 +73,9 @@ function render(keepScroll) {
         <div class="small muted" style="padding:16px 12px">${esc(H.name)}${H.sample ? ' · Testdaten' : ''}</div>
       </nav>
       <div class="main ${sos ? 'sos-screen' : ''}">
-        <header class="topbar">${topLeft}<h1>${view.title || ''}</h1>${view.actions || ''}<a class="btn icon sm" href="#/items" data-act="quick-search" aria-label="Suchen im Inventar">${icon('search')}</a><a class="btn sos sm" href="#/sos" aria-label="Notfallmodus öffnen">${icon('alert')}<span>Notfall</span></a></header>
+        <header class="topbar">${topLeft}<h1>${view.title || ''}</h1>${view.actions || ''}<a class="btn sos sm" href="#/sos" aria-label="Notfallmodus öffnen">${icon('alert')}<span>Notfall</span></a></header>
         <main class="page" id="page"><div class="page-inner">${view.html}</div></main>
-        <nav class="bottomnav" aria-label="Navigation">${NAV_MAIN.map(([href, label, ic]) => navLink(href, label, ic, counts, '#' + rt.path, true))}</nav>
+        <nav class="bottomnav" aria-label="Navigation">${NAV_MAIN.map(([href, label, ic]) => navLink(href, label, ic, counts, '#' + rt.path))}</nav>
       </div>
     </div>`;
   root.innerHTML = shell.s;
@@ -112,7 +110,7 @@ function openModal({ title, body, foot, wide, onClose }) {
   $('#overlay').appendChild(bg); $('#overlay').style.pointerEvents = 'auto';
   const m = { el: bg, onClose }; UI.modals.push(m);
   bg.addEventListener('mousedown', e => { if (e.target === bg) closeModal(m); });
-  const first = $('input:not([type=hidden]):not([type=checkbox]),select,textarea', bg); if (first && !first.matches('[data-nofocus]')) setTimeout(() => first.focus(), 30);
+  const first = $('input:not([type=hidden]):not([type=checkbox]),select,textarea', bg); if (first && !first.matches('[data-nofocus]')) first.focus();
   hydratePhotos(bg);
   return m;
 }
@@ -148,7 +146,7 @@ function formDlg({ title, body, ok = 'Speichern', wide, extraFoot = [], onSubmit
   const f = $('#' + fid, m.el);
   f.addEventListener('submit', async e => {
     e.preventDefault(); const btn = $('button[type=submit]', m.el); if (btn) btn.disabled = true;
-    try { const r = await onSubmit(new FormData(f), f, m); if (r !== false) closeModal(m); } catch (err) { toast(err.message || String(err)); console.error(err); }
+    try { const r = await onSubmit(new FormData(f), f, m); if (r !== false) closeModal(m); } catch (err) { toast(err.message || String(err)); }
     if (btn) btn.disabled = false;
   });
   m.el.addEventListener('click', e => { const a = e.target.closest('[data-act="dlg-no"]'); if (a) closeModal(m); });
@@ -216,7 +214,7 @@ function renderLock(root) {
       ${bioOk ? h`<button class="btn block" data-act="pin-bio">${icon('eye')} Mit Fingerabdruck/Gesicht entsperren</button>` : ''}
       ${users.length > 1 ? h`<button class="btn ghost block" data-act="pin-switch">Anderen Benutzer wählen</button>` : ''}`
       : h`<div class="stack-s">${users.map(x => h`<button class="btn block" data-act="pin-user" data-id="${x.id}">${icon('users')} ${x.name}</button>`)}</div>`}
-    ${S.lockContacts ? h`<a class="btn danger block" href="#/sos" data-act="lock-sos">${icon('alert')} Notruf & Notfallkontakte (ohne Entsperren)</a>` : ''}
+    ${S.lockContacts ? h`<a class="btn danger block" href="#/sos" data-act="lock-sos">${icon('alert')} Notruf & Notfallpass</a>` : ''}
   </div></div>`.s;
 }
 ACT['pin-user'] = d => { _lockUser = d.id; _pin = ''; render(); };

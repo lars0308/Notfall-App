@@ -4,7 +4,7 @@ const c = load(['util.js', 'store.js', 'catalog.js', 'planner.js', 'recs.js']); 
 let pass = 0, fail = 0; const out = [];
 function t(name, fn) { try { fn(); pass++; out.push('OK   ' + name); } catch (e) { fail++; out.push('FAIL ' + name + ' -> ' + e.message); process.exitCode = 1; } }
 const mk = (people, goals, extra = {}) => E(`(() => { DB = emptyDB(); const S = DB.settings; const H = DB.households[0]; H.people = ${JSON.stringify(people)}.map((p,i)=>({id:'p'+i,name:p.n,age:p.a,needs:p.needs||{allergies:'',intolerances:'',meds:[],devices:'',aids:'',diet:'',care:'',mobility:'',hygiene:''}}));
-  H.cfg = Object.assign({goals:${JSON.stringify(goals)},strategies:['home'],country:'DE',housing:{},durationHours:72,includeOptional:false}, ${JSON.stringify(extra)}); H.pets = ${JSON.stringify(extra.pets || [])}; return true; })()`);
+  H.cfg = Object.assign({goals:${JSON.stringify(goals)},strategies:['home'],country:'DE',housing:{},durationHours:72,includeOptional:false}, ${JSON.stringify(extra)}); H.pets = ${JSON.stringify(extra.pets || [])}; const sd = ${JSON.stringify(goals)}.map(g => (GOAL[g] || {}).days || 0); if (Math.max(0, ...sd) > 0) H.box = { enabled: true, days: Math.max(...sd) }; H.people.forEach(personShape); return true; })()`);
 
 t('Altersgruppen', () => { assert.equal(E('ageGroup(0)'), 'baby'); assert.equal(E('ageGroup(3)'), 'toddler'); assert.equal(E('ageGroup(8)'), 'child'); assert.equal(E('ageGroup(15)'), 'teen'); assert.equal(E('ageGroup(40)'), 'adult'); assert.equal(E('ageGroup(70)'), 'senior'); });
 t('Wasserbedarf: Erwachsene 2 l, Kleinkind 1,2 l, Baby 0,8 l', () => { const S = E('defaultSettings()'); assert.equal(E('waterForAge(40, defaultSettings())'), 2); assert.equal(E('waterForAge(3, defaultSettings())'), 1.2); assert.equal(E('waterForAge(0, defaultSettings())'), 0.8); });
@@ -20,10 +20,23 @@ t('Lebensmittel nach BBK-Verhältnis: Getreide ~3,5 kg/10 Tage/Person (skaliert)
   const kg = E(`(() => { const H = HH(); applyPlan(H, DB.settings); return H.items.find(i => i.key === 'stock_grain').qty; })()`);
   assert.ok(kg > 3.0 && kg < 3.6, 'kg=' + kg);
 });
-t('Rucksack ohne Szenario: nur Hausvorrat, kein Rucksack wenn nur "Stromausfall" gewählt', () => {
-  mk([{ n: 'A', a: 40 }], ['blackout']);
-  const r = E(`(() => { const H = HH(); applyPlan(H, DB.settings); return [H.bags.length, H.items.filter(i=>i.container==='bag').length, H.items.filter(i=>i.container==='home').length > 5]; })()`);
-  assert.equal(r[0], 0); assert.equal(r[1], 0); assert.ok(r[2]);
+t('Ohne angelegte Zuhause-Kiste wird kein Hausvorrat geplant', () => {
+  mk([{ n: 'A', a: 40 }], ['bag72']);
+  const r = E(`(() => { const H = HH(); applyPlan(H, DB.settings); return [H.bags.length, H.items.filter(i=>i.container==='home').length, H.items.filter(i=>i.container==='bag').length > 20]; })()`);
+  assert.deepEqual(r, [1, 0, true]);
+});
+t('Auto-Notfalltasche: eigene Tasche, Pflichtteile darin, kein Personen-Rucksack', () => {
+  mk([{ n: 'A', a: 40 }], ['car'], { boxOnly: true });
+  const r = E(`(() => { const H = HH(); applyPlan(H, DB.settings); const b = H.bags.find(x => x.role === 'car'); return [H.bags.length, !!b, H.items.filter(i => i.bagId === b.id).map(i => i.key).includes('car_triangle'), bagStats(H, DB.settings, b).overweight]; })()`);
+  assert.deepEqual(r, [1, true, true, false]);
+});
+t('Packanleitung: unten → Hauptfach (schwer zuerst) → oben/außen; Medikamente erst bei Abreise', () => {
+  mk([{ n: 'A', a: 40, needs: { meds: [{ id: 'm', name: 'X', dose: '', expiry: '' }] } }], ['bag72']);
+  const r = E(`(() => { const H = HH(), S = DB.settings; applyPlan(H, S); H.items.forEach(i => { i.status = 'owned'; }); const ps = packSteps(H, H.bags[0]); const rk = s => s.comp && s.comp.slot ? SLOT_RANK[s.comp.slot] : 3;
+    const mono = ps.steps.every((s, i) => i === 0 || rk(ps.steps[i-1]) <= rk(s)); const main = ps.steps.filter(s => s.comp && s.comp.slot === 'main').map(s => s.item.qty * s.item.weightG); const heavyFirst = main.every((w, i) => i === 0 || main[i-1] >= w);
+    const quick = ps.steps.filter(s => s.item.tags.includes('firstaid') || s.item.tags.includes('rain')).every(s => s.comp && ['lid','top','front','front2'].includes(s.comp.slot));
+    return [mono, heavyFirst, quick, ps.later.some(s => /Medikament/.test(s.item.name)), ps.steps.some(s => /Medikament/.test(s.item.name))]; })()`);
+  assert.deepEqual(r, [true, true, true, true, false]);
 });
 t('72-h-Rucksack: je tragfähiger Person ein Rucksack, Kleinkind trägt keinen', () => {
   mk([{ n: 'A', a: 40 }, { n: 'B', a: 38 }, { n: 'K', a: 3 }], ['bag72']);
@@ -51,7 +64,7 @@ t('Haustier: Transportbox, Futter, Impfpass werden geplant', () => {
   for (const k of ['pet_transport', 'pet_food', 'pet_docs']) assert.ok(keys.includes(k), k);
 });
 t('Plan ist idempotent (zweiter Lauf erzeugt keine Dubletten)', () => {
-  mk([{ n: 'A', a: 40 }, { n: 'B', a: 38 }, { n: 'K', a: 3 }], ['bag72', 'stock7', 'flood', 'car']);
+  mk([{ n: 'A', a: 40 }, { n: 'B', a: 38 }, { n: 'K', a: 3 }], ['bag72', 'stock7', 'car']);
   const r = E(`(() => { const H = HH(); applyPlan(H, DB.settings); const n1 = H.items.length; const t1 = H.tasks.length, c1 = H.contacts.length, r1 = H.reminders.length; applyPlan(H, DB.settings); return [n1, H.items.length, t1, H.tasks.length, c1, H.contacts.length, r1, H.reminders.length]; })()`);
   assert.equal(r[0], r[1]); assert.equal(r[2], r[3]); assert.equal(r[4], r[5]); assert.equal(r[6], r[7]);
 });
@@ -106,4 +119,14 @@ t('Ablauf-Benachrichtigungen: Zeitpunkte pro Gegenstand (Vorlauf, 7 Tage, Ablauf
   // buildNotifEvents liegt in v-remind.js (benötigt UI-Globals) – hier nur Logik von notifAt/addDays
   assert.equal(E("addDays('2026-03-01', -30)"), '2026-01-30'); assert.equal(E("daysUntil(addDays(todayISO(), 5))"), 5);
 });
+t('Migration v3 → v4: Daten bleiben, Personen bekommen Pass-Felder (alles privat), Kiste nur bei vorhandenem Vorrat', () => {
+  const r = E(`(() => { const old = { v: 3, active: 'h', settings: { theme: 'light' }, users: [{ id: 'u', name: 'A', role: 'admin' }], households: [
+      { id: 'h', name: 'Alt', setup: { done: true }, cfg: { goals: ['bag72', 'stock14'], strategies: ['home'] }, people: [{ id: 'p', name: 'Anna', age: 38, needs: { allergies: 'Pollen', meds: [{ id: 'm', name: 'X' }] } }], pets: [], bags: [{ id: 'b', name: 'R', type: 'trekking', liters: 55, comps: [{ id: 'c', name: 'Hauptfach', slot: 'main' }] }],
+        items: [{ id: 'i1', name: 'Wasser', container: 'home', status: 'owned', qty: 54, photos: ['ph1'], notes: 'Keller' }, { id: 'i2', name: 'Lampe', container: 'bag', bagId: 'b', compId: 'c', status: 'owned', packed: true }], shop: [], contacts: [{ id: 'k', name: 'Oma', type: 'ice', phone: '1' }], meeting: [{ id: 'm1', name: 'Platz' }], shelters: [], rooms: [{ id: 'r', name: 'Keller' }], reminders: [], docs: [], tasks: [{ id: 't' }], recs: {} },
+      { id: 'h2', name: 'Leer', people: [], pets: [], bags: [], items: [], shop: [], contacts: [], meeting: [], shelters: [], rooms: [], reminders: [], docs: [], tasks: [], recs: {} }] };
+    const d = ensureShape(old); const H = d.households[0], p = H.people[0];
+    return [d.v, H.items.length, H.items[0].notes, H.items[0].photos[0], H.items[1].packed, H.rooms.length, H.tasks.length, d.users.length, H.contacts[0].name, H.meeting[0].name, p.needs.allergies, p.needs.meds.length, Object.values(p.share).some(Boolean), p.passContacts.length, H.box.enabled, H.box.days, d.households[1].box.enabled, d.settings.theme]; })()`);
+  assert.deepEqual(r, [4, 2, 'Keller', 'ph1', true, 1, 1, 1, 'Oma', 'Platz', 'Pollen', 1, false, 0, true, 14, false, 'light']);
+});
+t('Alter aus Geburtsdatum', () => { const y = new Date().getFullYear(); assert.equal(E(`ageFromBirth('${y - 5}-01-01')`), 5); assert.equal(E("ageFromBirth('')"), null); });
 console.log(out.join('\n')); console.log(`\n${pass} bestanden, ${fail} fehlgeschlagen`);

@@ -14,15 +14,10 @@ route('/shop', H => {
   const order = { must: 0, rec: 1, opt: 2 };
   const list = t.open.filter(s => SHOP.prio === 'all' || s.priority === SHOP.prio).sort((a, b) => order[a.priority] - order[b.priority] || (a.category || '').localeCompare(b.category || '') || a.name.localeCompare(b.name, 'de'));
   return {
-    title: 'Einkauf', actions: h`<button class="btn primary sm" data-act="shop-new">${icon('plus')}<span>Neu</span></button>`,
-    html: h`<div class="card"><h2>Budget</h2>
-      <div class="grid c3" style="margin:12px 0"><div class="stat"><span class="v">${fmtEUR(t.est)}</span><span class="l">geschätzt offen${t.noPrice ? ' (' + t.noPrice + ' ohne Preis)' : ''}</span></div><div class="stat"><span class="v">${fmtEUR(t.spent)}</span><span class="l">bereits ausgegeben</span></div>
-        <div class="stat"><span class="v">${t.budget ? fmtEUR(t.budget - t.spent - t.est) : '–'}</span><span class="l">${t.budget ? 'Rest von ' + fmtEUR(t.budget) : 'kein Budget gesetzt'}</span></div></div>
-      ${t.budget ? bar(pct(t.spent + t.est, t.budget), t.spent + t.est > t.budget ? 'must' : 'ok') : ''}
-      <div class="btns" style="margin-top:12px"><button class="btn sm" data-act="budget-set">${icon('edit')} Budget festlegen</button></div></div>
-    ${unchecked ? noticeBox('rec', `${unchecked} geplante Positionen sind noch nicht geprüft`, 'Vielleicht hast du sie schon. Prüfe zuerst, um Doppelkäufe zu vermeiden.', h`<div class="btns" style="margin-top:8px"><a class="btn sm" href="#/review">Jetzt prüfen</a></div>`) : ''}
-    <div class="chips">${[['all', 'Alle'], ['must', 'Notwendig'], ['rec', 'Empfohlen'], ['opt', 'Optional']].map(([k, l]) => h`<button class="chip" aria-pressed="${SHOP.prio === k}" data-act="shop-prio" data-prio="${k}">${l}</button>`)}</div>
-    <div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h2>Zu besorgen</h2><span class="badge">${list.length}</span></div><div class="list">${list.length ? list.map(s => shopRow(s)) : empty('Nichts zu besorgen. Markiere in „Ausrüstung prüfen“ fehlende Teile mit „Fehlt“.')}</div></div>
+    title: 'Einkaufsliste', back: '#/more', actions: h`<button class="btn primary sm" data-act="shop-new">${icon('plus')}<span>Neu</span></button>`,
+    html: h`${t.est || t.spent ? h`<div class="card"><div class="row spread"><span>Geschätzt offen</span><span class="bold">${fmtEUR(t.est)}</span></div>${t.spent ? h`<div class="row spread"><span>Ausgegeben</span><span class="bold">${fmtEUR(t.spent)}</span></div>` : ''}</div>` : ''}
+    ${unchecked ? h`<a class="btn" href="#/review">${unchecked} Positionen noch offen – erst prüfen</a>` : ''}
+    <div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h2>Zu besorgen</h2><span class="badge">${list.length}</span></div><div class="list">${list.length ? list.map(s => shopRow(s)) : empty('Nichts zu besorgen.')}</div></div>
     ${t.bought.length ? h`<div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h2>Gekauft</h2><button class="btn sm" data-act="shop-toggle-bought">${SHOP.showBought ? 'Ausblenden' : 'Anzeigen (' + t.bought.length + ')'}</button></div>${SHOP.showBought ? h`<div class="list">${t.bought.map(s => h`<div class="li done"><span class="grow"><span class="t">${s.name}</span><br><span class="s">${fmt(s.qty)} ${s.unit || ''} · ${s.actualPrice ? fmtEUR(s.actualPrice) : 'ohne Preis'}${s.store ? ' · ' + s.store : ''}</span></span><button class="btn sm" data-act="shop-unbuy" data-id="${s.id}">Rückgängig</button></div>`)}</div>` : ''}</div>` : ''}`,
   };
 });
@@ -70,12 +65,11 @@ ACT['shop-edit'] = d => {
 };
 ACT['shop-remove'] = async d => {
   const H = HH(); const s = byId(H.shop, d.id); const it = s && byId(H.items, s.itemId);
-  const ok = await confirmDlg('Von der Liste nehmen?', 'Der Gegenstand bleibt im Plan, wird aber wieder als „Zu prüfen“ geführt.', { ok: 'Entfernen' }); if (!ok) return;
-  H.shop = H.shop.filter(x => x.id !== d.id); if (it && it.status === 'missing') it.status = 'planned'; closeAllModals(); persist(); rerender(true);
+    H.shop = H.shop.filter(x => x.id !== d.id); if (it && it.status === 'missing') it.status = 'planned'; closeAllModals(); persist(); rerender(true);
 };
 ACT['shop-buy'] = d => {
   const H = HH(); const s = byId(H.shop, d.id); const it = byId(H.items, s.itemId);
-  formDlg({ title: 'Gekauft: ' + s.name, body: h`${F.num('qty', 'Gekaufte Menge (' + (s.unit || 'Stück') + ')', s.qty, { req: true, min: 0.01 })}${F.num('price', 'Tatsächlicher Kaufpreis gesamt (€, optional)', s.estPrice ? +(s.estPrice * s.qty).toFixed(2) : '')}${F.text('store', 'Händler', s.store || '')}${F.date('date', 'Kaufdatum', todayISO())}${F.date('expiry', 'Ablaufdatum (falls vorhanden)', '')}<p class="small muted">Der Gegenstand wird danach automatisch als „Vorhanden“ ins Inventar übernommen.</p>`, ok: 'Ins Inventar übernehmen',
+  formDlg({ title: 'Gekauft: ' + s.name, body: h`${F.num('qty', 'Gekaufte Menge (' + (s.unit || 'Stück') + ')', s.qty, { req: true, min: 0.01 })}${F.num('price', 'Tatsächlicher Kaufpreis gesamt (€, optional)', s.estPrice ? +(s.estPrice * s.qty).toFixed(2) : '')}${F.text('store', 'Händler', s.store || '')}${F.date('date', 'Kaufdatum', todayISO())}${F.date('expiry', 'Ablaufdatum (falls vorhanden)', '')}`, ok: 'Ins Inventar übernehmen',
     onSubmit: fd => {
       const q = num(fd.get('qty'), s.qty); if (q <= 0) throw new Error('Bitte eine Menge größer 0 eintragen.');
       s.bought = true; s.actualPrice = fd.get('price') === '' ? null : num(fd.get('price')); s.store = fd.get('store') || s.store; s.boughtAt = fd.get('date') || todayISO(); s.boughtQty = q;

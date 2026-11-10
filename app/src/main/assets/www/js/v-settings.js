@@ -8,41 +8,37 @@ route('/settings', H => {
     title: 'Einstellungen', back: '#/more',
     html: h`
     <div class="card"><h2>Darstellung</h2><div class="stack">
-      <div><div class="label" style="margin-bottom:8px">Farbschema</div>${radio('theme', [['system', 'Wie Gerät'], ['light', 'Hell'], ['dark', 'Dunkel']], S.theme, 'set-theme')}</div>
-      <div><div class="label" style="margin-bottom:8px">Schriftgröße</div>${radio('scale', [['m', 'Normal'], ['l', 'Groß'], ['xl', 'Sehr groß']], S.scale, 'set-scale')}</div>
-      ${F.check('contrast', 'Hoher Kontrast', S.contrast === 'high', { desc: 'Deutlichere Linien und Texte', attrs: { 'data-change': 'set-contrast' } })}</div></div>
-    <div class="card"><h2>Sicherheit & Datenschutz</h2><div class="stack">
-      <div class="row spread"><div class="grow"><b>App-Sperre (PIN)</b><div class="small muted">${lockOn ? DB.users.length + ' Benutzer · Gesundheitsdaten geschützt' : 'Aus – empfohlen, sobald Gesundheitsdaten gespeichert sind'}</div></div><a class="btn" href="#/users">${icon('lock')} ${lockOn ? 'Verwalten' : 'Einrichten'}</a></div>
-      ${lockOn ? F.select('lockMin', 'Automatisch sperren, nachdem die App verlassen wurde', [[0, 'Sofort'], [1, 'Nach 1 Minute'], [5, 'Nach 5 Minuten'], [15, 'Nach 15 Minuten']], S.lockMin, { attrs: { 'data-change': 'set-lockmin' } }) : ''}
-      ${F.check('secure', 'Screenshots und Vorschau im App-Wechsler verhindern', S.secure, { desc: 'Schützt sensible Inhalte (nur Android-App)', attrs: { 'data-change': 'set-secure' } })}
-      ${lockOn ? F.check('lockContacts', 'Notruf und Notfallkontakte ohne Entsperren zeigen', S.lockContacts, { desc: 'Auf dem Sperrbildschirm. Sinnvoll für Ersthelfer.', attrs: { 'data-change': 'set-lockcontacts' } }) + F.check('lockMedical', 'Medizinische Hinweise auch ohne Entsperren zeigen', S.lockMedical, { desc: 'Allergien/Medikamente im Notfallmodus. Standard: aus.', attrs: { 'data-change': 'set-lockmedical' } }) : ''}
-      <p class="small muted">Alle Daten bleiben auf diesem Gerät. Die App hat keine Internetberechtigung und sendet nichts an Server. Es gibt keine Werbung, keine Registrierung, keine Analyse.</p></div></div>
-    <div class="card"><h2>Benachrichtigungen</h2><div class="stack">
-      <div class="row spread"><div class="grow"><b>Lokale Erinnerungen</b><div class="small muted">${S.notif.on ? 'An – auch bei geschlossener App' : 'Aus'}</div></div>${S.notif.on ? h`<button class="btn" data-act="notif-off">Ausschalten</button>` : h`<button class="btn primary" data-act="notif-enable">${icon('bell')} Einschalten</button>`}</div>
-      <div class="form-grid">${F.select('hour', 'Uhrzeit der Erinnerungen', [...Array(24).keys()].filter(x => x >= 6 && x <= 22).map(x => [x, x + ':00 Uhr']), S.notif.hour, { attrs: { 'data-change': 'set-hour' } })}${F.select('leadDays', 'Ablaufwarnung vorher', [[7, '7 Tage'], [14, '14 Tage'], [30, '30 Tage'], [60, '60 Tage'], [90, '90 Tage']], S.notif.leadDays, { attrs: { 'data-change': 'set-lead' } })}</div>
-      <div class="btns"><a class="btn" href="#/remind">Erinnerungen ansehen</a>${IS_NATIVE ? h`<button class="btn" data-act="open-settings" data-k="notif">Android-Einstellungen</button><button class="btn" data-act="open-settings" data-k="battery">Akku-Optimierung</button>` : ''}</div></div></div>
-    <form class="card" data-form="set-plan"><h2>Planungswerte</h2><p class="muted small">Grundlage aller Schätzwerte (Wasser, Lebensmittel, Rucksackgewicht). Änderungen wirken auf neue Berechnungen und die Reichweite.</p><div class="stack">
-      <div class="form-grid">${F.num('waterPerDay', 'Wasser pro Erwachsenem und Tag (Liter)', S.plan.waterPerDay, { min: 0.5, step: 0.1 })}${F.num('adultKcal', 'Energiebedarf Erwachsene (kcal/Tag)', S.plan.adultKcal, { min: 1200, step: 50 })}${F.num('reserve', 'Reservefaktor für Vorräte', S.plan.reserve, { min: 1, step: 0.05, hint: '1 = genau Bedarf, 1,2 = 20 % Reserve' })}${F.num('carryKg', 'Tragfähigkeit Erwachsene (kg)', S.plan.carryKg, { min: 3, step: 0.5 })}${F.num('budget', 'Gesamtbudget Einkauf (€, 0 = keins)', S.plan.budget || 0, { min: 0, step: 10 })}</div>
-      <div class="btns"><button class="btn primary" type="submit">${icon('check')} Speichern</button><button class="btn" type="button" data-act="plan-defaults">Standardwerte</button></div></div></form>
-    <div class="card"><h2>Backup & Wiederherstellung</h2><div class="stack">
-      <p class="muted">Backups sind mit einem Passwort verschlüsselt (AES-256) und enthalten alle Daten inklusive Fotos und verschlüsseltem Safe. ${S.backupLastAt ? 'Letztes Backup: ' + fmtDate(S.backupLastAt.slice(0, 10)) : 'Noch kein Backup erstellt.'}</p>
-      <div class="btns"><button class="btn primary" data-act="backup-make">${icon('download')} Backup erstellen</button><button class="btn" data-act="backup-restore">${icon('upload')} Backup wiederherstellen</button></div>
-      <p class="small muted">Das Backup landet in „Downloads/Notfall“. Bewahre es an einem sicheren Ort auf. Das Passwort kann nicht zurückgesetzt werden.</p></div></div>
-    <div class="card"><h2>Daten & Plan</h2><div class="btns">
-      <button class="btn" data-act="wz-restart">${icon('repeat')} Einrichtungsassistent erneut starten</button><button class="btn" data-act="plan-update">${icon('repeat')} Plan aktualisieren</button>
-      <a class="btn" href="#/households">${icon('home')} Haushalte (${DB.households.length})</a><button class="btn" data-act="load-sample">${icon('cube')} Beispielhaushalt laden</button>
-      <button class="btn" data-act="export-csv" data-what="items">${icon('download')} Inventar als CSV exportieren</button><button class="btn" data-act="export-csv" data-what="shop">${icon('download')} Einkaufsliste als CSV exportieren</button>
-      ${legacy ? h`<button class="btn" data-act="legacy-import">${icon('download')} Daten der alten Version importieren</button>` : ''}</div>
-      ${H.sample ? noticeBox('rec', 'Du nutzt Testdaten', 'Dieser Haushalt enthält erfundene Beispieldaten und kann im Bereich Haushalte gelöscht werden.') : ''}</div>
-    <div class="card"><h2>Gefahrenbereich</h2><p class="muted">Löscht alle Haushalte, Fotos, den Safe und die Sperre unwiderruflich von diesem Gerät.</p><button class="btn danger" data-act="wipe-all">${icon('trash')} Alle Daten löschen</button></div>
-    <div class="card"><h2>Über Notfall!</h2><p>Version ${info.version || '2.0.0 (Browser)'}${info.device ? ' · ' + info.device : ''}${info.sdk ? ' · Android API ' + info.sdk : ''}</p><p class="muted small">Planungshilfe für Notfallvorsorge. Kein amtliches Warnsystem. Bei Gefahr: 112 und Anweisungen der Behörden.</p><a class="btn" href="#/sources">${icon('info')} Quellen & Hinweise</a></div>`,
+      ${radio('theme', [['dark', 'Dunkel'], ['light', 'Hell'], ['system', 'Wie Gerät']], S.theme, 'set-theme')}
+      ${radio('scale', [['m', 'Schrift normal'], ['l', 'Groß'], ['xl', 'Sehr groß']], S.scale, 'set-scale')}
+      ${F.check('contrast', 'Hoher Kontrast (ohne Glas-Effekt)', S.contrast === 'high', { attrs: { 'data-change': 'set-contrast' } })}</div></div>
+    <div class="card"><h2>Sicherheit</h2><div class="stack">
+      <div class="row spread"><b>App-Sperre (PIN)</b>${lockOn ? h`<span class="btns"><button class="btn sm" data-act="lock-now">${icon('lock')} Sperren</button><button class="btn sm danger" data-act="lock-disable">Ausschalten</button></span>` : h`<button class="btn primary" data-act="lock-enable">${icon('lock')} Einrichten</button>`}</div>
+      ${lockOn ? F.select('lockMin', 'Automatisch sperren', [[0, 'Sofort'], [1, 'Nach 1 Minute'], [5, 'Nach 5 Minuten'], [15, 'Nach 15 Minuten']], S.lockMin, { attrs: { 'data-change': 'set-lockmin' } }) : ''}
+      ${lockOn ? F.check('lockContacts', 'Notfallpass ohne Entsperren zeigen', S.lockContacts, { desc: 'Nur freigegebene Angaben', attrs: { 'data-change': 'set-lockcontacts' } }) : ''}
+      ${F.check('secure', 'Screenshots verhindern', S.secure, { attrs: { 'data-change': 'set-secure' } })}
+      <p class="small muted">Alle Daten bleiben auf diesem Gerät. Kein Konto, keine Internetverbindung.</p></div></div>
+    <div class="card"><h2>Erinnerungen</h2><div class="stack">
+      <div class="row spread"><b>Benachrichtigungen</b>${S.notif.on ? h`<button class="btn sm" data-act="notif-off">Ausschalten</button>` : h`<button class="btn primary" data-act="notif-enable">${icon('bell')} Einschalten</button>`}</div>
+      <div class="form-grid">${F.select('hour', 'Uhrzeit', [...Array(24).keys()].filter(x => x >= 6 && x <= 22).map(x => [x, x + ':00 Uhr']), S.notif.hour, { attrs: { 'data-change': 'set-hour' } })}${F.select('leadDays', 'Ablaufwarnung vorher', [[7, '7 Tage'], [14, '14 Tage'], [30, '30 Tage'], [60, '60 Tage'], [90, '90 Tage']], S.notif.leadDays, { attrs: { 'data-change': 'set-lead' } })}</div></div></div>
+    <div class="card"><h2>Backup</h2><p class="muted small">${S.backupLastAt ? 'Letztes Backup: ' + fmtDate(S.backupLastAt.slice(0, 10)) : 'Noch kein Backup.'} Verschlüsselt mit deinem Passwort, Ablage in „Downloads/Notfall“.</p>
+      <div class="btns" style="margin-top:8px"><button class="btn primary" data-act="backup-make">${icon('download')} Backup erstellen</button><button class="btn" data-act="backup-restore">${icon('upload')} Wiederherstellen</button></div></div>
+    <form class="card" data-form="set-plan"><h2>Schätzwerte</h2><div class="stack">
+      <div class="form-grid">${F.num('carryKg', 'Tragfähigkeit Erwachsene (kg)', S.plan.carryKg, { min: 3, step: 0.5 })}${F.num('waterPerDay', 'Wasser je Erwachsenem/Tag (l)', S.plan.waterPerDay, { min: 0.5, step: 0.1 })}${F.num('adultKcal', 'Energie Erwachsene (kcal/Tag)', S.plan.adultKcal, { min: 1200, step: 50 })}</div>
+      <input type="hidden" name="reserve" value="${S.plan.reserve}"><input type="hidden" name="budget" value="${S.plan.budget || 0}">
+      <div class="btns"><button class="btn primary" type="submit">${icon('check')} Speichern</button><button class="btn" type="button" data-act="plan-defaults">Standard</button></div></div></form>
+    <div class="card"><h2>Daten</h2><div class="btns">
+      <button class="btn" data-act="plan-update">${icon('repeat')} Packliste aktualisieren</button><a class="btn" href="#/households">${icon('home')} Haushalte (${DB.households.length})</a>
+      <button class="btn" data-act="export-csv" data-what="items">${icon('download')} Gegenstände als CSV</button><button class="btn" data-act="load-sample">${icon('cube')} Beispielhaushalt</button>
+      ${legacy ? h`<button class="btn" data-act="legacy-import">${icon('download')} Alte Version importieren</button>` : ''}
+      <button class="btn danger" data-act="wipe-all">${icon('trash')} Alle Daten löschen</button></div></div>
+    <p class="muted small center">Notfall! ${info.version || '2.1.0 (Browser)'}${info.sdk ? ' · Android API ' + info.sdk : ''}</p>`,
   };
 });
 INPUT['set-theme'] = el => { DB.settings.theme = el.value; persist(); applyTheme(); };
 INPUT['set-scale'] = el => { DB.settings.scale = el.value; persist(); applyTheme(); };
 INPUT['set-contrast'] = el => { DB.settings.contrast = el.checked ? 'high' : 'normal'; persist(); applyTheme(); };
 INPUT['set-lockmin'] = el => { DB.settings.lockMin = +el.value; persist(); };
-INPUT['set-secure'] = el => { DB.settings.secure = el.checked; persist(); if (NATIVE && NATIVE.setSecure) NATIVE.setSecure(el.checked); if (!IS_NATIVE) toast('Gilt nur in der Android-App.'); };
+INPUT['set-secure'] = el => { DB.settings.secure = el.checked; persist(); if (NATIVE && NATIVE.setSecure) NATIVE.setSecure(el.checked);  };
 INPUT['set-lockcontacts'] = el => { DB.settings.lockContacts = el.checked; persist(); };
 INPUT['set-lockmedical'] = el => { DB.settings.lockMedical = el.checked; persist(); };
 INPUT['set-hour'] = el => { DB.settings.notif.hour = +el.value; persist(); syncNotifications(); };
@@ -83,7 +79,7 @@ ACT['wipe-all'] = async () => {
 };
 ACT['legacy-import'] = async () => {
   const old = readLegacy(); if (!old) { toast('Keine Daten der alten Version gefunden.'); return; }
-  const ok = await confirmDlg('Alte Daten importieren?', `Gefunden: ${old.items.length} Gegenstände, ${old.bags.length} Rucksäcke, ${(old.contacts || []).length} Kontakte. Sie werden als neuer Haushalt „Importierter Haushalt“ angelegt. Die alte Version hatte keine Gesundheitsdaten.`, { ok: 'Importieren' }); if (!ok) return;
+  const ok = await confirmDlg('Alte Daten importieren?', `${old.items.length} Gegenstände, ${old.bags.length} Taschen – als eigener Haushalt.`, { ok: 'Importieren' }); if (!ok) return;
   const H = legacyToHousehold(old); DB.households.push(H); DB.active = H.id; persist(); go('#/home'); toast('Importiert');
 };
 

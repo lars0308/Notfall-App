@@ -23,24 +23,37 @@ const KV = (() => {
 })();
 
 /* --- Standardwerte --- */
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 function defaultSettings() {
   return {
-    theme: 'system', scale: 'm', contrast: 'normal',
+    theme: 'dark', scale: 'm', contrast: 'normal',
     lockMin: 1, secure: false, lockContacts: true, lockMedical: false,
     notif: { on: false, hour: 9, leadDays: 30 },
     plan: { waterPerDay: 2, adultKcal: 2200, reserve: 1, carryKg: 12, budget: 0 },
     backupLastAt: null, backupRemindDays: 30, lastUserId: null,
   };
 }
-const emptyNeeds = () => ({ allergies: '', intolerances: '', meds: [], devices: '', aids: '', diet: '', care: '', mobility: '', hygiene: '' });
+const emptyNeeds = () => ({ allergies: '', intolerances: '', meds: [], devices: '', aids: '', diet: '', care: '', mobility: '', hygiene: '', conditions: '', blood: '', notes: '' });
+const SHARE_KEYS = ['photo', 'birth', 'allergies', 'conditions', 'meds', 'aids', 'blood', 'notes', 'organ'];
+/* Personenprofil inkl. Notfallpass: alles ist privat, bis es ausdruecklich freigegeben wird */
+function personShape(p) {
+  p.needs = Object.assign(emptyNeeds(), p.needs || {});
+  if (p.birth === undefined) p.birth = '';
+  if (p.role === undefined) p.role = '';
+  if (p.photo === undefined) p.photo = null;
+  p.organ = Object.assign({ status: '', place: '' }, p.organ || {});
+  p.share = Object.assign(Object.fromEntries(SHARE_KEYS.map(k => [k, false])), p.share || {});
+  p.passContacts = Array.isArray(p.passContacts) ? p.passContacts.slice(0, 3) : [];
+  return p;
+}
+function ageFromBirth(iso) { const d = parseISO(iso); if (!d) return null; const n = new Date(); let a = n.getFullYear() - d.getFullYear(); if (n.getMonth() < d.getMonth() || (n.getMonth() === d.getMonth() && n.getDate() < d.getDate())) a--; return Math.max(0, a); }
 function newHousehold(name = 'Mein Haushalt') {
   return {
     id: uid(), name, createdAt: new Date().toISOString(),
     setup: { done: false, skipped: false, step: 0, draft: null },
     cfg: null,
     people: [], pets: [], bags: [], items: [], shop: [], contacts: [], meeting: [], shelters: [], rooms: [],
-    reminders: [], docs: [], tasks: [], recs: {}, plan: { strategyNote: '', summary: null, lastBuilt: null }, usage: [], sample: false, budget: 0,
+    reminders: [], docs: [], tasks: [], recs: {}, box: { enabled: false, days: 3 }, plan: { strategyNote: '', summary: null, lastBuilt: null }, usage: [], sample: false, budget: 0,
   };
 }
 function emptyDB() {
@@ -55,13 +68,15 @@ function ensureShape(d) {
   d.users = d.users || [];
   if (!Array.isArray(d.households) || !d.households.length) d.households = [newHousehold()];
   for (const H of d.households) {
+    if (H.box === undefined) { const sd = ((H.cfg && H.cfg.goals) || []).map(g => (GOAL[g] || {}).days || 0); H.box = { enabled: (H.items || []).some(i => i.container === 'home' && !i.archived), days: Math.max(3, ...sd) }; }
     const base = newHousehold();
     for (const k of Object.keys(base)) if (H[k] === undefined) H[k] = base[k];
     H.setup = Object.assign({ done: false, skipped: false, step: 0, draft: null }, H.setup || {});
     H.plan = Object.assign({ strategyNote: '', summary: null, lastBuilt: null }, H.plan || {});
     for (const it of H.items) { it.photos = it.photos || []; it.tags = it.tags || []; it.status = it.status || 'owned'; }
     for (const b of H.bags) { b.photos = b.photos || []; b.comps = b.comps || []; }
-    for (const p of H.people) { p.needs = Object.assign(emptyNeeds(), p.needs || {}); }
+    for (const p of H.people) personShape(p);
+    for (const it of H.items) if (it.lastMinute === undefined) it.lastMinute = false;
   }
   if (!d.households.find(x => x.id === d.active)) d.active = d.households[0].id;
   d.v = DB_VERSION;
@@ -81,7 +96,11 @@ async function loadDB() {
     try { d = JSON.parse(txt); } catch { d = null; }
     if (!d && !KV.native) d = null;
   }
-  if (d) { DB = ensureShape(d); return { fresh: false }; }
+  if (d) {
+    // Vor einer Datenmodell-Umstellung den alten Stand unveraendert sichern
+    if ((d.v || 1) < DB_VERSION) { try { await KV.put('db_vor_v' + DB_VERSION, txt); } catch { /* Sicherung optional */ } }
+    DB = ensureShape(d); return { fresh: false };
+  }
   DB = emptyDB();
   return { fresh: true, corrupt: !!txt };
 }
@@ -150,6 +169,8 @@ function referencedPhotoIds() {
     for (const b of H.bags) (b.photos || []).forEach(p => s.add(p));
     for (const r of H.rooms) (r.photos || []).forEach(p => s.add(p));
     for (const p of H.pets) (p.photos || []).forEach(x => s.add(x));
+    for (const p of H.people) if (p.photo) s.add(p.photo);
+    for (const c of H.contacts) if (c.photo) s.add(c.photo);
   }
   return s;
 }
@@ -221,7 +242,7 @@ function readLegacy() {
 function legacyToHousehold(old) {
   const H = newHousehold('Importierter Haushalt');
   const slotOf = { front: 'front', main: 'main', lower: 'bottom', sidep: 'sideL' };
-  H.people = (old.people || []).map(p => ({ id: p.id || uid(), name: p.name || 'Person', age: /kind/i.test(p.role || '') ? 3 : 35, needs: emptyNeeds() }));
+  H.people = (old.people || []).map(p => ({ id: p.id || uid(), name: p.name || 'Person', age: /kind/i.test(p.role || '') ? 3 : 35, needs: emptyNeeds() })).map(personShape);
   H.bags = (old.bags || []).map(b => ({
     id: b.id || uid(), name: b.name || 'Rucksack', type: 'trekking', liters: +b.liters || 40, ownKg: 1.5, maxLoadKg: 0, owner: b.owner || null, photos: [], color: 'olive',
     comps: (b.pockets || []).map(p => ({ id: p.id || uid(), name: p.name, slot: slotOf[p.shape] || null, capL: 0 })),

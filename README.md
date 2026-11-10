@@ -1,27 +1,21 @@
-# Notfall! – persönlicher Vorsorge-Assistent für Android
+# Notfall! – Pack-App für Rucksäcke und Taschen mit Notfallpass
 
-Deutschsprachige, vollständig offline arbeitende Android-App für Notfallvorsorge. Sie stellt einige Fragen, erstellt daraus einen persönlichen Plan (Packlisten je Person, Hausvorrat, Aufgaben, Erinnerungen), erkennt fehlende Ausrüstung und führt dich von „Plan bestätigen“ über „Einkaufen“ bis „Packen“ und „regelmäßig prüfen“.
+Deutschsprachige, offline arbeitende Android-App: Taschen anlegen, per Fragen eine Packliste erhalten, jedes Teil einem Fach zuweisen, Schritt für Schritt packen – dazu Notfallkontakte und ein Notfallpass mit QR-Code je Person.
 
-> **Kein amtliches Warnsystem.** Bei Gefahr: 112 und Anweisungen der Behörden. Alle Mengen sind Schätzwerte.
+> Kein amtliches Warnsystem. Bei Gefahr: 112 und Anweisungen der Behörden. Gewichte und Mengen sind Schätzwerte.
 
-**Test-APK:** [`dist/Notfall-2.0.0-debug.apk`](dist/Notfall-2.0.0-debug.apk) (Android 10+, Debug-signiert) · Prüfsumme in `dist/SHA256.txt`
+**Test-APK:** [`dist/Notfall-2.1.0-debug.apk`](dist/Notfall-2.1.0-debug.apk) (Android 10+, Debug-signiert)
 
 | Dokument | Inhalt |
 |---|---|
-| [docs/INSTALLATION.md](docs/INSTALLATION.md) | APK installieren, selbst bauen, Tests ausführen |
-| [docs/FUNKTIONEN.md](docs/FUNKTIONEN.md) | Umgesetzte Funktionen im Abgleich mit dem Arbeitsauftrag |
-| [docs/EINSCHRAENKUNGEN.md](docs/EINSCHRAENKUNGEN.md) | Bekannte Einschränkungen (bitte lesen) |
-| [docs/TESTERGEBNISSE.md](docs/TESTERGEBNISSE.md) | Echte Testausgaben, was getestet wurde und was nicht |
-| [docs/GERAETETEST-CHECKLISTE.md](docs/GERAETETEST-CHECKLISTE.md) | Punkte, die nur auf einem Gerät prüfbar sind |
+| [docs/INSTALLATION.md](docs/INSTALLATION.md) | Installation am Handy, selbst bauen, Tests |
+| [docs/FEATURE-MATRIX.md](docs/FEATURE-MATRIX.md) | behalten / vereinfacht / verschoben / entfernt, Migration |
+| [docs/FUNKTIONEN.md](docs/FUNKTIONEN.md) | Umgesetzte Funktionen |
+| [docs/EINSCHRAENKUNGEN.md](docs/EINSCHRAENKUNGEN.md) | Bekannte Einschränkungen |
+| [docs/NACHRANGIGER-PLAN.md](docs/NACHRANGIGER-PLAN.md) | Offline-Karten, QR-Webseite, Warnmodul, Sync |
+| [docs/TESTERGEBNISSE.md](docs/TESTERGEBNISSE.md) | Echte Testausgaben |
+| [docs/GERAETETEST-CHECKLISTE.md](docs/GERAETETEST-CHECKLISTE.md) | Nur auf dem Gerät prüfbar |
 | [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md) | Aufbau, Datenmodell, Sicherheit |
-
-## Kurzüberblick
-- **Einrichtungsassistent** (7 Schritte) → Plan mit Rucksäcken pro Person, Gewicht, Wasser/Kalorien, Aufgaben.
-- **Rucksäcke mit interaktiver 3D-Ansicht**, Fächer, Packstatus, Gewichts- und Volumenwarnungen.
-- **Empfehlungen** (Notwendig/Empfohlen/Optional) mit Begründung; **Einkauf** mit Budget und Doppelkauf-Schutz.
-- **Hausvorrat** mit Reichweite, **Erinnerungen** (lokal), **Notfallmodus**, **Schutzräume** (nur Dokumentation).
-- **Verschlüsselter Safe**, **Backup** mit Passwort, **PIN/Biometrie**, mehrere Benutzer und Haushalte.
-- Flaches, kontrastreiches Design (Hell/Dunkel), Handy und Tablet.
 
 ## Projektstruktur
 ```

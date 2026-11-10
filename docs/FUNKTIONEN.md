@@ -1,65 +1,46 @@
-# Umgesetzte Funktionen (Abgleich mit dem Arbeitsauftrag)
+# Umgesetzte Funktionen (Version 2.1.0, Fokus-Update)
 
-Legende: ✅ umgesetzt und getestet (siehe Testergebnisse) · 🟡 umgesetzt mit Einschränkung · 📱 Teil läuft in Android-Code, nicht auf Gerät geprüft · ⬜ nicht umgesetzt
+Legende: ✅ umgesetzt und im Browser getestet · 📱 braucht Android-Code, nicht auf Gerät geprüft · 🟡 mit Einschränkung · ⬜ offen. Was gestrichen oder verschoben wurde, steht in der [Feature-Matrix](FEATURE-MATRIX.md).
 
-## 1/2 Einrichtungsassistent
-| Anforderung | Status |
-|---|---|
-| Erster Start, überspringbar, zwischenspeichern („Später“), fortsetzen, erneut starten | ✅ |
-| Schritt 1: alle Vorsorge-Optionen (Rucksäcke 24/48/72 h, Evakuierung, Familie, Hausvorrat 3/7/10/14/30 Tage, Stromausfall, Hochwasser, Sturm, Brand, Schutzraum, Auto, Haustier, individuell) | ✅ (🟡 „Individuelles Szenario“ ist ein Freitext ohne eigene Planungsregeln) |
-| Drei Strategien (zu Hause bleiben / Notunterkunft / Selbstversorgung unterwegs) – beeinflussen den Plan (z. B. Schlafsack, Zelt, Tarp, Filter, Kocher, Vorrat) | ✅ |
-| Schritt 2: Erwachsene/Kinder, Alter, Namen, Haushaltstyp, Haustiere (Art, Anzahl, Alter, Gewicht, Bedürfnisse), Unterstützungsbedarf | ✅ (🟡 Haushaltstyp wird nur gespeichert/angezeigt) |
-| Schritt 3: Land, Region, PLZ/Ort (freiwillig), Wohnform, Keller, Schutzraum, Kamin, Kochen ohne Strom, Wasser-/Lebensmittelvorrat (mit Menge), Auto, Ausweichunterkunft; keine Pflicht-Adresse | ✅ (🟡 „Keller/Schutzraum möglich/Ausweichunterkunft“ werden erfasst, lösen aber keine eigenen Regeln aus) |
-| Schritt 4: Allergien, Unverträglichkeiten, Medikamente (mit Ablaufdatum), Geräte, Hilfsmittel, Ernährung, Pflege, Einschränkungen, Hygiene – pro Person, freiwillig, verschlüsselt gespeichert | ✅ 📱 (Keystore) |
-| Schritt 5: vorhandene Ausrüstung (16 Kategorien mit Anzahl) und Rucksäcke/Taschen → direkt ins Inventar, Zuordnung zu Personen/Rucksäcken | ✅ |
-| Schritt 6: Zeitraum 24/48/72 h, 7/10/14/30 Tage, individuell | ✅ |
-| Schritt 7: automatisch Rucksäcke, Packlisten je Person, Familienausrüstung, Hausvorrat, Einkaufs-/Prüfliste, Gewicht je Rucksack, Wasser- und Kalorienbedarf, Erinnerungen, Hinweise, Notfallkontakte (Notrufnummern + Platzhalter), Dokumenten-Checkliste, offene Aufgaben | ✅ (Einkaufsliste entsteht nach deiner Prüfung „Fehlt“, damit nichts doppelt gekauft wird) |
-| Alles editierbar | ✅ |
+## 1 Meine Taschen ✅
+- Beliebig viele Rucksäcke, Taschen, Koffer; 9 Typen; Name, Foto 📱, Volumen, Gewicht, Besitzer, fester Lagerort, Verwendung, Packstatus.
+- Fächer frei anlegen, umbenennen, verschieben, entfernen; jeder Gegenstand hat ein Fach.
+- Tasche kopieren, bearbeiten, löschen (Gegenstände bleiben erhalten).
+- 2D-Fachansicht zum Antippen als Basis, 3D-Ansicht optional.
+- Gewichts- und Volumenwarnung; Angaben als „ca.“, wenn Maße fehlen. Nichts wird automatisch gestrichen.
 
-## 3 Rucksackverwaltung
-| Anforderung | Status |
-|---|---|
-| Beliebig viele Rucksäcke/Taschen/Koffer, 9 Typen | ✅ |
-| Hersteller, Modell, Volumen, Eigengewicht, empfohlene Zuladung, Besitzer, Einsatzbereich, Ort, Fotos, Anzahl Fächer, Hüft-/Brustgurt, Trinksystem, Außenbefestigung | ✅ (🟡 Gurte/Trinksystem/Außenbefestigung werden gespeichert, beeinflussen die 3D-Darstellung nicht) |
-| Aufteilungsvorschlag nach Typ, Volumen, Tragfähigkeit, Szenario, Personen, Alter | ✅ |
-| Interaktive 3D-Ansicht: 7 Grundformen, drehen, zoomen, Vorne/Hinten/Seiten/Oben, Fächer hinzufügen/umbenennen/entfernen, Gegenstände Fächern zuweisen/verschieben, Fach antippen → Inhalt, Gewicht je Fach, Auslastung, Gesamtgewicht, Packstatus farbig | ✅ (🟡 schematisch) |
-| Fotos des echten Rucksacks | ✅ 📱 (Kamera) |
-| Wichtige Gegenstände werden bei vollem Rucksack nicht gestrichen, sondern deutlich gemeldet | ✅ |
+## 2 Packassistent ✅
+- Eine Frage pro Schritt mit großen Antwortkarten: Zweck (Notfallrucksack, Reise-Notfall, Auto, eigener Zweck), Dauer, Unterkunft, Personen/Alter, Tiere, Medikamente/Hilfsmittel (freiwillig), vorhandene Ausstattung, Taschen.
+- Antworten werden automatisch gespeichert; schließen und später fortsetzen.
+- Ergebnis: editierbare Packliste. Je Position Menge, vorhanden/fehlt, dauerhaft eingepackt oder erst bei Abreise, Gewicht, Foto 📱, Ablaufdatum, Notiz, Fach.
+- Fehlendes kommt auf eine kleine Einkaufsliste; „Gekauft“ übernimmt es als vorhanden. Doppelkauf-Hinweis.
+- Kein Hausinventar nötig.
 
-## 4 Empfehlungen und Fehlteilanalyse
-✅ 40+ Regeln in drei Stufen (Notwendig/Empfohlen/Optional), jede mit Begründung und Quellenangabe: Lampe ohne Batterien, Filter ohne Transport/Aufbereitung, Kocher ohne Kochgeschirr/Brennstoff/Zünder, Schlafsack-/Isomatten-/Zeltzahl, Kind ohne Wechselkleidung/Windeln/Babynahrung, Rucksack zu schwer/zu voll, Wasser-/Lebensmittel-Reichweite, Medikamente fehlen/laufen ab, Haustier ohne Transportbox/Futter/Impfpass, Rauch-/CO-Melder, Radio, Powerbank, Auto-Pflichtausrüstung, Kontakte, Treffpunkte, Ausweichunterkunft, Bargeld, Dokumente, Schutzraum-Risiken, überfällige Kontrollen, Budget u. a.
-Aktionen: akzeptieren, Gegenstand hinzufügen, auf Einkaufsliste, als vorhanden markieren, Alternative wählen, ausblenden (wieder einblendbar), eigene Notiz ✅
+## 3 Packanleitung ✅
+- Schrittweise Reihenfolge: leichte, selten gebrauchte Dinge unten; schwere körpernah im Hauptfach (schwerste zuerst); Schnellzugriff oben und außen; Seiten zum Ausgleich.
+- Erste Hilfe, Regen-/Wärmeschutz, Wasser, Papiere landen in gut erreichbaren Fächern; Medikamente und Hilfsmittel stehen unter „Erst bei Abreise“.
+- Jeder Schritt zeigt das Zielfach in der Fachansicht; Fach änderbar, „Später“ zum Überspringen, „Neu packen“.
+- Hinweis bei seitlich ungleicher Last.
+- 🟡 „Nichts außen baumeln lassen“ wird nicht geprüft – die App kennt keine Außenbefestigung einzelner Gegenstände.
 
-## 5 Einkaufsliste und Budget ✅
-Alle geforderten Felder, Gesamtkosten, Budget mit Warnung, „Gekauft“ übernimmt den Gegenstand ins Inventar (mit Preis, Datum, Ablaufdatum), Doppelkauf-Erkennung gegen Inventar und Plan.
+## 4 Notfallkontakte & Pässe ✅
+- Je Person: Name, Geburtsdatum, Rolle, Foto 📱, Allergien, Krankheiten, Medikamente, Hilfsmittel, Blutgruppe, Hinweise, Organspende-Angabe mit Hinweis, dass sie keinen Ausweis ersetzt.
+- **Jedes Feld ist privat, bis es einzeln freigegeben wird.**
+- Bis zu drei priorisierte Kontakte je Person mit Beziehung, Telefon, Foto 📱; Reihenfolge änderbar; Schnellwahl öffnet die Wählansicht 📱.
+- Notfallpass-Ansicht zeigt nur Freigegebenes; auch ohne Entsperren erreichbar (abschaltbar).
+- QR-Code Variante A: freigegebene Angaben als Text direkt im Code, ohne App und ohne Internet lesbar; Vorschau „das kann jeder lesen“.
+- Notfallkarte als PDF/Druck 📱 mit Fotos, Kontakten, QR.
+- Hinweis auf die Android-Notfallinfos.
+- ⬜ QR Variante B (Webseite mit Fotos) und freier Kartendesigner: nicht umgesetzt.
 
-## 6 Gegenstände ✅
-Detailseite mit allen geforderten Feldern (Name, Beschreibung, Kategorie, Anzahl, Gewicht, Volumen, Fotos, Notizen, Kaufdatum, Ablaufdatum, Zustand, Ort, Rucksack/Fach, Preis, Anleitung (Link + Fotos), Kaufbeleg (Fotos), Erinnerungsintervall, Packstatus). Hinzufügen, ändern, duplizieren, verschieben, archivieren, löschen. 📱 Kamera.
+## Zusätzlich, schlank
+- ✅ Erinnerungen: Packkontrolle, Powerbanks, Batterien, Kinderkleidung, Medikamente, Ablaufdaten, eigene Termine; 📱 Benachrichtigung auch bei geschlossener App.
+- ✅ Optionale Notfallkiste zu Hause: erst nach „Kiste anlegen“; Mengen und Ablaufdaten.
+- ✅ Treffpunkte speichern. ⬜ **Offline-Karten: noch nicht gebaut.**
+- ✅ Packliste mit Fachbelegung drucken 📱; verschlüsseltes Backup mit geprüfter Wiederherstellung; CSV-Export.
+- ✅ Mehrere Personenprofile; mehrere Haushalte unter Einstellungen. ⬜ Synchronisierung zwischen Handys.
+- ✅ App-Sperre mit einer PIN, 📱 optional Biometrie.
+- ⬜ Warnmodul und Probealarm: späteres Modul.
 
-## 7 Hausvorrat ✅
-Mengen, Lagerorte, Mindestbestand, Ablaufdaten, Verbrauch erfassen, Auffüllen, Reichweite (Wasser/Lebensmittel, Schätzwert, nur aus bestätigten Positionen), Fehlübersicht, Fotos/Notizen, Verbrauchsprotokoll. 🟡 Barcode: nur wenn die WebView `BarcodeDetector` bietet, sonst Nummer eintippen; kein Online-Produktkatalog.
-
-## 8 Verschlüsselter Dokumenten-Safe
-✅ Eigenes Passwort (PBKDF2 310.000 Iterationen + AES-256-GCM), Dateien **und** Metadaten verschlüsselt (Test prüft Speicher auf Klartext), PDF-/Foto-Import, Scannen (Kamera + Kontrast), Ordner, Kategorien, Suche, Passwort ändern, Export einzelner/ausgewählter Dokumente (mit Warnung), Backups verschlüsselt. 📱 Biometrische Entsperrung (Keystore-Schlüssel mit Biometrie-Pflicht). 🟡 keine PDF-Vorschau, keine Kantenerkennung beim Scannen.
-
-## 9 Familie, Benutzer, Kontakte
-✅ Personenprofile, mehrere Haushalte, mehrere Benutzer mit PIN, Rollen/Berechtigungen (Gesundheit, Safe, Notfall-Medizin, Bearbeiten, Einstellungen), Brute-Force-Bremse, Auto-Sperre, Notfallkontakte (alle geforderten Felder inkl. Priorität und alternativer Kontaktweg), ICE, Treffpunkte, Ausweichunterkünfte, Kontaktkarte zum Drucken 📱, offline. ⬜ Synchronisierung mehrerer Geräte (nicht gefordert als Voraussetzung; nur Backup-Abgleich). 🟡 Rechte sind Oberflächen-Rechte (siehe Einschränkungen).
-
-## 10 Erinnerungen und Benachrichtigungen
-✅ Planung/Intervalle (einmalig, monatlich, vierteljährlich, halbjährlich, jährlich, frei), automatische Kontrollen (Rucksack, Powerbank, Batterien, Wasser, Vorrat, Kinderkleidung, Medikamente, fehlende Gegenstände, Backup), Ablaufwarnungen (Vorlauf einstellbar, 7 Tage, am Tag), Kontrollintervall je Gegenstand, eigene Termine. 📱 Lokale Android-Benachrichtigungen auch bei geschlossener App (AlarmManager, Boot-Neuplanung) – Energiesparmodi der Hersteller können abweichen.
-
-## 11 Notfallmodus ✅
-Immer erreichbare „Notfall“-Taste. 112 & Landesnummern (nur Wählansicht), Notfallkontakte, Treffpunkte, Unterkünfte, medizinische Hinweise (mit Berechtigung bzw. Einstellung), persönlicher Plan + Notizen, Packstatus je Rucksack mit fehlenden Pflichtteilen, Link zum Safe, Hinweise auf offizielle Warnungen (NINA, DWD, Alertswiss …), Evakuierungs-Checkliste ohne pauschale Handlungsanweisungen; Vorrang der Behörden. Auch ohne Entsperren nutzbar (eingeschränkt, einstellbar).
-
-## 12 Schutzräume ✅
-Name, Lage, Größe, Fotos, Zu-/Ausgänge, Lüftung, Beleuchtung, Wasser, Sanitär, Lagerorte, Notizen, Checkliste, 10 Risikomarkierungen. Jeder Raum trägt dauerhaft „Nicht fachlich geprüft“; es gibt keine Einstufung als sicher.
-
-## 13 Design ✅
-Deutsch, Hell/Dunkel/System, Schriftgröße (3 Stufen), Hoher Kontrast, flache Flächen ohne Verläufe, klare Signalfarben (Notwendig rot, Empfohlen gelb, Optional grau, OK grün, Aktion blau), sichtbare Schaltflächen mit 48-px-Zielen, Bottom-Navigation (Handy) / Seitenleiste (Tablet), Fortschrittsanzeigen, Karten, Suche, Filter, keine Werbung, keine Registrierung. Dashboard mit allen geforderten Kennzahlen; der „Vorbereitungsstand“ ist ausdrücklich als Planungsstand und nicht als Sicherheitsgarantie beschriftet.
-
-## 14 Beispielhaushalt ✅
-Optional ladbar/löschbar (2 Erwachsene, Kind 3 J., Trekking 55 L, Tactical 40 L, 54 l Wasser, 2 Filter, 2 Powerbanks (1 solar), Batterieradio, Fenix-Lampe, 2 Stirnlampen, Esbit- und Campingkocher, Bushcraft-Ausrüstung, Erste-Hilfe, Schlafsäcke, Isomatten, Tarps, Zelte). Standardmäßig sind **keine** persönlichen Daten eingebaut.
-
-## 15 Technik ✅
-Android 10+, Offline (keine INTERNET-Berechtigung), persistente Speicherung mit Sicherungskopie der Datenbank, Keystore-Verschlüsselung 📱, optionale Biometrie 📱, Fotoverwaltung mit Vorschaubildern, Backup/Restore mit Rollback, CSV-Export (Inventar, Einkaufsliste), Übernahme von Daten der Vorversion, sparsame Hintergrundaktivität (keine Dienste, nur geplante Alarme).
-Weitere Einstellungen: Farbschema, Schriftgröße, Kontrast, Auto-Sperre-Zeit, Screenshot-Schutz, Notfallinfos auf Sperrbildschirm, Uhrzeit & Vorlauf der Erinnerungen, Planungswerte (Wasser, kcal, Reserve, Tragfähigkeit, Budget), Backup, Haushalte, Benutzer, Daten löschen.
+## Design
+Mobile First, dunkler Glas-Look, große untereinander angeordnete Karten, Hauptaktionen unten im Daumenbereich, Navigation mit fünf Punkten (Start, Taschen, Packliste, Notfallpass, Mehr). Erklärtexte entfernt; Hinweise nur bei Fehlern, Risiken und Datenschutz.

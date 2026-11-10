@@ -104,7 +104,7 @@ function def(k, n, c, u, g, l, z, t, w, o) { T[k] = Object.assign({ k, n, c, u, 
 // Wasser
 def('water_bottle', 'Trinkflasche 1 L (stabil, lebensmittelecht)', 'Wasser', 'Stück', 150, 1.1, 'side', ['water_container', 'water_transport'], 'Wasser muss sicher getragen werden können.');
 def('water_collapsible', 'Faltbarer Wasserbehälter 2–5 L', 'Wasser', 'Stück', 90, .25, 'main', ['water_container', 'water_transport'], 'Leicht, um unterwegs gefiltertes Wasser zu sammeln und zu transportieren.');
-def('water_carry', 'Trinkwasser (abgefüllt)', 'Wasser', 'Liter', 1000, 1, 'back', ['water_supply'], 'Wasser ist das Wichtigste. Im Rucksack wird nur eine Grundmenge getragen, der Rest über Aufbereitung.');
+def('water_carry', 'Trinkwasser (abgefüllt)', 'Wasser', 'Liter', 1000, 1, 'side', ['water_supply'], 'Wasser ist das Wichtigste. Im Rucksack wird nur eine Grundmenge getragen, der Rest über Aufbereitung.');
 def('water_filter', 'Wasserfilter (Hohlfaser, 0,1 µm oder feiner)', 'Wasser', 'Stück', 120, .3, 'front', ['water_filter'], 'Macht Wasser aus Bächen/Regenwasser trinkbarer. Viren entfernen nicht alle Filter – siehe Hinweis zur Aufbereitung.');
 def('water_treat', 'Wasseraufbereitungstabletten', 'Wasser', 'Packung', 30, .05, 'belt', ['water_treat'], 'Ergänzt den Filter (z. B. gegen Viren) und dient als Reserve.');
 def('water_canister', 'Wasserkanister 10–20 L (lebensmittelecht)', 'Wasser', 'Stück', 900, 0, 'home', ['water_container', 'water_transport'], 'Zum Lagern und Transportieren größerer Wassermengen.');

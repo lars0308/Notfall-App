@@ -44,3 +44,9 @@ Wichtig: Der **Plan** erzeugt Gegenstände mit Status `planned` („zu prüfen�
 - PIN: PBKDF2 (150.000 Iterationen, Salt), 5 Fehlversuche → wachsende Wartezeit.
 - Safe-Passwort/Backup-Passwort: PBKDF2-SHA256 310.000 Iterationen, AES-256-GCM.
 - Benachrichtigungstexte enthalten keine Gesundheitsdaten; Sperrbildschirm-Sichtbarkeit „privat“.
+
+## Änderungen in 2.1 (Fokus-Update)
+- Datenmodell Version 4: Person erhält `birth`, `role`, `photo`, `organ`, `share{…}` (Freigabe je Feld, Standard aus), `passContacts[≤3]`; Gegenstand erhält `lastMinute` und `role`; Haushalt erhält `box{enabled,days}`. Vor der Umstellung wird der alte Stand als `db_vor_v4` gesichert.
+- Neue Module: `v-pass.js` (Notfallpass, Kontakte, QR, Druckkarte), Packanleitung (`packSteps` in `planner.js`), 2D-Fachansicht (`bag2d` in `v-bags.js`).
+- QR-Code: mitgelieferte Bibliothek `js/vendor/qrcode.js` (qrcode-generator 1.4.4, MIT, Kazuhiko Arase), keine Netzabfrage.
+- Entfallen: `v-people.js`, `v-rooms.js`; Navigation auf Start, Taschen, Packliste, Notfallpass, Mehr reduziert.

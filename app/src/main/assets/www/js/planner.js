@@ -51,18 +51,14 @@ function householdCalc(H, S) {
 function planContext(H, S) {
   const cfg = H.cfg || { goals: [] };
   const goals = new Set(cfg.goals || []);
-  const strategies = new Set(cfg.strategies && cfg.strategies.length ? cfg.strategies : ['home']);
+  const strategies = new Set(cfg.strategies && cfg.strategies.length ? cfg.strategies : ['shelter']);
   const durHours = +(cfg.durationHours) || 72;
   const bagGoalHours = GOALS.filter(g => g.group === 'Rucksack' && g.hours && goals.has(g.id)).map(g => g.hours);
-  const scenarioBag = goals.has('flood') || goals.has('fire') || goals.has('shelter') || goals.has('family') || strategies.has('shelter') || strategies.has('mobile');
+  // Rucksack/Tasche ist der Kern: sobald ein Packplan existiert, wird fuer hoechstens 72 h gepackt
   let bagHours = 0;
-  if (bagGoalHours.length) bagHours = Math.min(72, Math.max(...bagGoalHours));
-  else if (scenarioBag) bagHours = Math.min(72, Math.max(24, durHours));
-  const stockGoalDays = GOALS.filter(g => g.days && goals.has(g.id)).map(g => g.days);
-  const homeScenario = goals.has('blackout') || goals.has('storm') || goals.has('flood') || goals.has('shelter') || strategies.has('home');
-  let homeDays = stockGoalDays.length ? Math.max(...stockGoalDays) : 0;
-  if (homeScenario) homeDays = Math.max(homeDays, durHours > 72 ? Math.ceil(durHours / 24) : 3);
-  else if (durHours > 72) homeDays = Math.max(homeDays, Math.ceil(durHours / 24));
+  if (H.cfg && !cfg.boxOnly) bagHours = bagGoalHours.length ? Math.min(72, Math.max(...bagGoalHours)) : Math.min(72, Math.max(24, durHours));
+  // Zuhause-Kiste ist optional: Vorrat wird nur geplant, wenn sie angelegt wurde
+  const homeDays = H.box && H.box.enabled ? Math.max(1, +H.box.days || 3) : 0;
   const hs = cfg.housing || {};
   return { cfg, goals, strategies, durHours, bagHours, bagDays: Math.max(1, Math.ceil(bagHours / 24)), homeDays, hs, mobile: strategies.has('mobile'), shelterStrategy: strategies.has('shelter'), kids: H.people.some(p => (+p.age) < 13), car: goals.has('car'), pets: H.pets.length > 0 || goals.has('pet'), optional: !!cfg.includeOptional };
 }
@@ -219,17 +215,17 @@ function generateDesired(H, S) {
 
   /* --- Auto --- */
   if (ctx.car) {
-    add('car_triangle', { container: 'car', prio: 'must' });
-    add('car_vest', { qty: Math.max(2, Math.min(5, nP)), container: 'car', prio: 'must' });
-    add('car_firstaid', { container: 'car', prio: 'must' });
-    add('car_blanket', { container: 'car', prio: 'rec' });
-    add('car_flash', { container: 'car', prio: 'rec' });
-    add('car_water', { container: 'car', prio: 'rec' });
-    add('car_charger', { container: 'car', prio: 'rec' });
-    add('car_jumper', { container: 'car', prio: 'rec' });
-    add('car_scraper', { container: 'car', prio: 'opt' });
-    add('car_towrope', { container: 'car', prio: 'opt' });
-    add('car_map', { container: 'car', prio: 'opt' });
+    add('car_triangle', { role: 'car', prio: 'must' });
+    add('car_vest', { qty: Math.max(2, Math.min(5, nP)), role: 'car', prio: 'must' });
+    add('car_firstaid', { role: 'car', prio: 'must' });
+    add('car_blanket', { role: 'car', prio: 'rec' });
+    add('car_flash', { role: 'car', prio: 'rec' });
+    add('car_water', { role: 'car', prio: 'rec' });
+    add('car_charger', { role: 'car', prio: 'rec' });
+    add('car_jumper', { role: 'car', prio: 'rec' });
+    add('car_scraper', { role: 'car', prio: 'opt' });
+    add('car_towrope', { role: 'car', prio: 'opt' });
+    add('car_map', { role: 'car', prio: 'opt' });
   }
 
   /* --- Haustiere --- */
@@ -247,7 +243,7 @@ function generateDesired(H, S) {
       add('pet_comfort', Object.assign({ prio: 'opt', flex: true }, base));
     }
     if (pet.needs && pet.needs.trim()) add('pet_meds', Object.assign({ prio: 'must', flex: true, container: ctx.bagHours > 0 ? 'bag' : 'home', name: 'Tiermedikamente: ' + pet.needs.trim().slice(0, 40) }, base));
-    add('pet_transport', Object.assign({ container: 'home', prio: pet.species === 'Hund' && +pet.weightKg > 25 ? 'rec' : 'must', why: 'Notunterkünfte nehmen Tiere meist nur gesichert im Transportbehälter auf.' }, base));
+    add('pet_transport', Object.assign({ weightG: 0, volL: 0, lastMinute: true, flex: true, prio: pet.species === 'Hund' && +pet.weightKg > 25 ? 'rec' : 'must', why: 'Notunterkünfte nehmen Tiere meist nur gesichert im Transportbehälter auf.' }, base));
     if (ctx.homeDays > 0) add('pet_food', Object.assign({ qty: ctx.homeDays * pc.n, container: 'home', prio: 'must', weightG: pc.foodG / pc.n, uniq: 'home-pf', why: `Futtervorrat für ${label} für ${ctx.homeDays} Tage.` }, base));
   }
   return out;
@@ -265,6 +261,10 @@ function makeItem(d, extra) {
     tags: Array.from(new Set([...(t.t || []), ...(d.tags || [])])), zone: t.z || 'main', expiry: d.expiry || '', photos: [], notes: '', price: null, purchaseDate: '', condition: '',
     barcode: '', minQty: 0, remindDays: 0, kind: (d.container || 'bag') === 'bag' ? 'pack' : (t.t || []).includes('stock_food') || (t.t || []).includes('water_supply') ? 'stock' : 'gear', archived: false, created: new Date().toISOString(), uniq: d.uniq || '', flex: !!d.flex,
   };
+  it.role = d.role || '';
+  if (it.zone === 'car') it.zone = 'main';
+  // Dinge, die taeglich gebraucht werden, kommen erst bei Abreise in die Tasche
+  it.lastMinute = d.lastMinute !== undefined ? !!d.lastMinute : (d.key === 'meds' || d.key2 === 'device' || d.key2 === 'aid' || d.key2 === 'allergy' || d.key2 === 'care');
   if (it.container === 'home' && it.unit === 'kg') it.weightG = 1000;
   if (T[d.key] && T[d.key].nopack) it.container = 'home';
   return Object.assign(it, extra || {});
@@ -299,7 +299,7 @@ function applyPlan(H, S) {
   const report = { added: 0, matched: 0, ownedFromInventory: 0, bags: 0, updated: 0 };
 
   /* 1) Rucksaecke fuer Traeger sicherstellen */
-  if (ctx.bagHours > 0) report.bags += ensureBags(H, S, calc);
+  if (ctx.bagHours > 0 || ctx.car) report.bags += ensureBags(H, S, calc);
 
   /* 2) Gegenstaende abgleichen */
   const pool = ownedPool(H);
@@ -308,7 +308,7 @@ function applyPlan(H, S) {
   const fresh = [];
   for (const d of desired) {
     const key = d.key2 ? d.key + ':' + d.key2 : d.key;
-    const existing = H.items.filter(i => !poolSet.has(i) && !i.archived && i.key === key && i.container === (T[d.key] && T[d.key].nopack ? 'home' : d.container) && sameScope(i, d) && (i.uniq || '') === (d.uniq || '') && i.source !== 'sample-extra');
+    const existing = H.items.filter(i => !poolSet.has(i) && !i.archived && i.key === key && i.container === (T[d.key] && T[d.key].nopack ? 'home' : d.container) && sameScope(i, d) && (i.role || '') === (d.role || '') && (i.uniq || '') === (d.uniq || '') && i.source !== 'sample-extra');
     const have = existing.reduce((a, i) => a + (+i.qty || 0), 0);
     let need = d.qty;
     if (d.uniq && existing.length && (d.key === 'meds' || key.indexOf(':') > 0)) { report.matched++; continue; }
@@ -392,12 +392,12 @@ function applyDeclaredStocks(H, S, fresh, ctx, calc) {
 function ensureBags(H, S, calc) {
   let created = 0;
   const carriers = calc.people.filter(x => x.c.carrier);
-  const unassigned = H.bags.filter(b => !b.owner);
+  const unassigned = H.bags.filter(b => !b.owner && b.role !== 'car' && b.type !== 'box');
   // Reihenfolge: groesste Taeger zuerst, groesste unzugewiesene Rucksaecke zuerst
   const order = carriers.slice().sort((a, b) => b.c.carryKg - a.c.carryKg);
   const bagsSorted = unassigned.slice().sort((a, b) => b.liters - a.liters);
-  for (const x of order) {
-    if (H.bags.some(b => b.owner === x.p.id)) continue;
+  for (const x of (planContext(H, S).bagHours > 0 ? order : [])) {
+    if (H.bags.some(b => b.owner === x.p.id && b.role !== 'car')) continue;
     const free = bagsSorted.find(b => !b.owner);
     if (free) { free.owner = x.p.id; continue; }
     const type = x.c.age < 13 ? 'kids' : 'trekking';
@@ -406,6 +406,7 @@ function ensureBags(H, S, calc) {
     H.bags.push(newBag({ name: 'Notfallrucksack ' + (x.p.name || 'Person'), type, liters, owner: x.p.id, suggested: true, ownKg: x.c.age < 13 ? .4 : 1.6 }));
     created++;
   }
+  if (planContext(H, S).car && !H.bags.some(b => b.role === 'car')) { H.bags.push(newBag({ name: 'Auto-Notfalltasche', type: 'travel', liters: 40, role: 'car', location: 'Auto', use: 'Auto', suggested: true, color: 'black' })); created++; }
   return created;
 }
 function newBag(o) {
@@ -426,6 +427,7 @@ function defaultComps(bag, count) {
   return comps;
 }
 function bagCapacityKg(H, S, bag) {
+  if (bag.role === 'car') return +bag.maxLoadKg || 0; // wird nicht getragen
   const p = bag.owner ? byId(H.people, bag.owner) : null;
   let cap = p ? carryForPerson(p, S) : (S.plan.carryKg || 12);
   if (bag.maxLoadKg > 0) cap = cap > 0 ? Math.min(cap, bag.maxLoadKg) : bag.maxLoadKg;
@@ -437,18 +439,20 @@ function bagItems(H, bag, opts = {}) {
 /* Fehlende Teile mitrechnen: Plangewicht = alles, was in den Rucksack soll */
 function assignToBags(H, S) {
   const calc = householdCalc(H, S);
-  const bags = H.bags.filter(b => b.owner && byId(H.people, b.owner) && personCalc(byId(H.people, b.owner), S).carrier);
+  const carBag = H.bags.find(b => b.role === 'car');
+  if (carBag) for (const i of H.items) if (!i.archived && i.container === 'bag' && !i.bagId && i.role === 'car') i.bagId = carBag.id;
+  const bags = H.bags.filter(b => b.owner && b.role !== 'car' && byId(H.people, b.owner) && personCalc(byId(H.people, b.owner), S).carrier);
   if (!bags.length) return;
   const load = new Map(bags.map(b => [b.id, (b.ownKg || 0) * 1000 + bagItems(H, b).reduce((a, i) => a + i.qty * (i.weightG || 0), 0)]));
   const cap = new Map(bags.map(b => [b.id, Math.max(1, bagCapacityKg(H, S, b))]));
-  const todo = H.items.filter(i => !i.archived && i.container === 'bag' && !i.bagId);
+  const todo = H.items.filter(i => !i.archived && i.container === 'bag' && !i.bagId && i.role !== 'car');
   // 1) feste Zuordnung
   for (const i of todo.filter(i => i.personId && !i.flex)) {
     const b = bags.find(b => b.owner === i.personId);
     if (b) { i.bagId = b.id; load.set(b.id, load.get(b.id) + i.qty * (i.weightG || 0)); }
   }
   // 2) flexible Zuordnung (schwerste zuerst, auf geringste relative Last)
-  const flex = H.items.filter(i => !i.archived && i.container === 'bag' && !i.bagId).sort((a, b) => (b.qty * (b.weightG || 0)) - (a.qty * (a.weightG || 0)));
+  const flex = H.items.filter(i => !i.archived && i.container === 'bag' && !i.bagId && i.role !== 'car').sort((a, b) => (b.qty * (b.weightG || 0)) - (a.qty * (a.weightG || 0)));
   for (const i of flex) {
     // Erwachsene/Jugendliche zuerst; Kinder nur wenn es sonst keinen Traeger gibt
     const cands = bags.filter(b => { const p = byId(H.people, b.owner); return p && (+p.age >= 13 || p.age === '' || p.age === undefined); });
@@ -628,7 +632,6 @@ function buildReminders(H, S, ctx, calc) {
   }
   if (H.people.some(p => (+p.age) < 13)) setReminder(H, 'kids', 'Kinderkleidung aktualisieren', 'Passt die Wechselkleidung noch? Größen und Jahreszeit anpassen.', 180, 120);
   if (H.people.some(p => p.needs && p.needs.meds && p.needs.meds.some(m => m.name))) setReminder(H, 'meds', 'Medikamente prüfen', 'Haltbarkeit, Menge und Medikationsplan prüfen.', 90, 60);
-  setReminder(H, 'missing', 'Fehlende wichtige Gegenstände', 'Einkaufsliste und Empfehlungen durchgehen, offene Notwendig-Punkte besorgen.', 30, 14);
   setReminder(H, 'backup', 'Verschlüsseltes Backup erstellen', 'Einstellungen → Backup erstellen und sicher speichern.', 30, 30);
 }
 
@@ -638,13 +641,6 @@ function buildContacts(H, S, ctx) {
   if (!H.contacts.some(x => x.type === 'official')) {
     for (const [num, name, note] of c.numbers) H.contacts.push({ id: uid(), name, type: 'official', phone: num, address: '', email: '', relation: '', notes: note, priority: 1, alt: '' });
   }
-  const placeholder = (key, name, type, relation, priority, note) => { if (!H.contacts.some(x => x.key === key)) H.contacts.push({ id: uid(), key, name, type, phone: '', address: '', email: '', relation, notes: note, priority, alt: '', todo: true }); };
-  placeholder('ice1', 'Notfallkontakt 1 (bitte ausfüllen)', 'ice', 'Vertrauensperson', 1, 'Am besten außerhalb deines Wohnorts.');
-  placeholder('ice2', 'Notfallkontakt 2 (bitte ausfüllen)', 'ice', 'Vertrauensperson', 2, '');
-  placeholder('doc', 'Hausarzt / Hausärztin (bitte ausfüllen)', 'doctor', 'Arzt', 3, '');
-  if (H.people.some(p => (+p.age) < 13)) placeholder('kidsdoc', 'Kinderarzt / Kinderärztin (bitte ausfüllen)', 'doctor', 'Arzt', 3, '');
-  if (H.pets.length) placeholder('vet', 'Tierarzt (bitte ausfüllen)', 'vet', 'Tierarzt', 3, '');
-  if (c.tox) placeholder('tox', 'Giftnotruf', 'official', 'Giftinformation', 2, c.tox);
 }
 const DOC_TEMPLATES = [
   ['id', 'Personalausweis / Reisepass', 'person'], ['birth', 'Geburtsurkunde', 'person'], ['insurance', 'Krankenversicherungskarte', 'person'], ['vaccine', 'Impfpass', 'person'],
@@ -682,8 +678,9 @@ function createSampleHousehold() {
   const H = newHousehold('Beispielhaushalt (Test)');
   H.sample = true;
   const a1 = { id: uid(), name: 'Erwachsene/r 1', age: 38, needs: emptyNeeds() }, a2 = { id: uid(), name: 'Erwachsene/r 2', age: 36, needs: emptyNeeds() }, k = { id: uid(), name: 'Kind', age: 3, needs: emptyNeeds() };
-  H.people = [a1, a2, k];
-  H.cfg = { goals: ['bag72', 'family', 'stock14', 'blackout', 'flood'], strategies: ['home', 'shelter'], customScenario: '', hhType: 'family', country: 'DE', region: '', zip: '', housing: { type: 'house', cellar: true, shelterPossible: false, fireplace: false, cookNoPower: true, waterL: 0, foodDays: 0, car: true, fallback: false }, durationHours: 336, includeOptional: false };
+  H.people = [a1, a2, k].map(personShape);
+  H.box = { enabled: true, days: 10 };
+  H.cfg = { purpose: 'evac', goals: ['bag72'], strategies: ['shelter'], customScenario: '', hhType: 'family', country: 'DE', region: '', zip: '', housing: { type: 'house', cellar: true, shelterPossible: false, fireplace: false, cookNoPower: true, waterL: 0, foodDays: 0, car: true, fallback: false }, durationHours: 336, includeOptional: false };
   const bag55 = newBag({ name: 'Trekkingrucksack 55 L', type: 'trekking', liters: 55, maker: '', model: '', owner: a1.id, color: 'olive', ownKg: 2.2 });
   const bag40 = newBag({ name: 'Tactical-Rucksack 40 L', type: 'tactical', liters: 40, owner: a2.id, color: 'coyote', ownKg: 1.6 });
   H.bags = [bag55, bag40];
@@ -715,4 +712,29 @@ function itemRemindNext(i) {
   if (!i || !(+i.remindDays > 0)) return null;
   const base = i.lastCheck || i.purchaseDate || (i.created || '').slice(0, 10) || todayISO();
   return addDays(base, +i.remindDays);
+}
+
+/* ---------- Packanleitung: Reihenfolge und Begruendung ---------- */
+const QUICK_TAGS = ['firstaid', 'meds', 'rain', 'water_supply', 'water_container', 'docs', 'doc_pouch', 'space_blanket', 'warm_layer'];
+const SLOT_RANK = { bottom: 1, main: 2, lid: 5, top: 5, front: 6, front2: 6, sideL: 7, sideR: 7, endL: 7, endR: 7, belt: 8 };
+function packReason(it, comp) {
+  const slot = comp ? comp.slot : null; const w = it.qty * (it.weightG || 0);
+  const quick = (it.tags || []).some(t => QUICK_TAGS.includes(t));
+  if (it.lastMinute) return 'Erst bei Abreise';
+  if (slot === 'bottom') return 'Leicht, selten gebraucht – nach unten';
+  if (slot === 'main' || !slot) return w >= 800 ? 'Schwer – nah an den Rücken, mittlere Höhe' : 'Hauptfach';
+  if (slot === 'sideL' || slot === 'sideR' || slot === 'endL' || slot === 'endR') return 'Seitlich – Gewicht links/rechts ausgleichen';
+  return quick ? 'Schnellzugriff' : 'Gut erreichbar';
+}
+function packSteps(H, bag) {
+  const items = bagItems(H, bag).filter(i => i.status === 'owned');
+  const rank = i => { const c = byId(bag.comps, i.compId); const r = c ? (c.slot ? SLOT_RANK[c.slot] || 4 : 3) : 9; return r; };
+  const now = items.filter(i => !i.lastMinute).sort((a, b) => rank(a) - rank(b) || (b.qty * (b.weightG || 0)) - (a.qty * (a.weightG || 0)) || a.name.localeCompare(b.name, 'de'));
+  const later = items.filter(i => i.lastMinute).sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  const mk = i => { const c = byId(bag.comps, i.compId); return { item: i, comp: c || null, reason: packReason(i, c) }; };
+  return { steps: now.map(mk), later: later.map(mk), missing: bagItems(H, bag).filter(i => i.status !== 'owned') };
+}
+function sideBalance(H, S, bag) {
+  const st = bagStats(H, S, bag); const l = st.comps.find(c => c.slot === 'sideL' || c.slot === 'endL'), r = st.comps.find(c => c.slot === 'sideR' || c.slot === 'endR');
+  if (!l || !r) return null; const d = l.weightG - r.weightG; return Math.abs(d) >= 400 ? { heavier: d > 0 ? l.name : r.name, diffG: Math.abs(d) } : null;
 }

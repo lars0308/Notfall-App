@@ -94,7 +94,7 @@ function computeRecs(H, S) {
       const has = owned.some(i => i.tags.includes('meds') && norm(i.name).includes(norm(m.name).slice(0, 6)) && i.personId === p.id);
       if (!has) R('r:med:' + p.id + ':' + norm(m.name), 'must', 'Medizin', `Medikament „${m.name}“ für ${p.name || 'Person'} nicht bestätigt`, 'Regelmäßig benötigte Medikamente sollten in Rucksack und Vorrat für den Zeitraum plus Reserve vorhanden sein. Menge mit Arzt/Apotheke abstimmen.', { action: { type: 'confirmMed', personId: p.id, med: m.name } });
       const dl = daysUntil(m.expiry);
-      if (dl !== null && dl <= 30) R('r:medexp:' + p.id + ':' + norm(m.name), 'must', 'Medizin', `Medikament „${m.name}“ ${dl < 0 ? 'ist abgelaufen' : 'läuft bald ab'}`, `Ablaufdatum ${fmtDate(m.expiry)} (${relDays(m.expiry)}). Rezept/Austausch rechtzeitig klären.`, { action: { type: 'goto', route: '#/people/' + p.id } });
+      if (dl !== null && dl <= 30) R('r:medexp:' + p.id + ':' + norm(m.name), 'must', 'Medizin', `Medikament „${m.name}“ ${dl < 0 ? 'ist abgelaufen' : 'läuft bald ab'}`, `Ablaufdatum ${fmtDate(m.expiry)} (${relDays(m.expiry)}). Rezept/Austausch rechtzeitig klären.`, { action: { type: 'goto', route: '#/pass/' + p.id } });
     }
   }
 
@@ -149,11 +149,9 @@ function computeRecs(H, S) {
   }
 
   /* ---- Kontakte, Plan, Dokumente ---- */
-  const iceOk = H.contacts.filter(c => (c.type === 'ice' || c.type === 'person') && c.phone).length;
-  if (iceOk < 2) R('r:ice', 'must', 'Kontakte', iceOk === 0 ? 'Keine Notfallkontakte mit Telefonnummer' : 'Nur ein Notfallkontakt eingetragen', 'Trage mindestens zwei Personen ein, die im Notfall informiert werden, möglichst eine außerhalb deines Wohnorts.', { action: { type: 'goto', route: '#/contacts' } });
-  if (ctx.bagHours > 0 && !H.meeting.length) R('r:meeting', 'rec', 'Kontakte', 'Kein Treffpunkt festgelegt', 'Falls ihr getrennt werdet: Lege einen nahen und einen weiter entfernten Treffpunkt fest.', { action: { type: 'goto', route: '#/contacts' } });
-  if (ctx.shelterStrategy && !H.shelters.length) R('r:fallback', 'rec', 'Kontakte', 'Keine Ausweichunterkunft eingetragen', 'Deine Strategie sieht eine andere Unterkunft vor. Kläre Adresse, Platz und Haustiere vorab.', { action: { type: 'goto', route: '#/contacts' } });
-  if (H.docs.length && H.docs.filter(d => !d.na && !d.vault && !d.copy).length > 0 && !DB.vaultHint) R('r:docs', 'rec', 'Dokumente', 'Wichtige Dokumente sind noch nicht gesichert', 'Lege Kopien im verschlüsselten Safe ab und eine Kopie im Rucksack ab. Originale nie ausschließlich in der App speichern.', { action: { type: 'goto', route: '#/safe' } });
+  const noContacts = H.people.filter(p => !(p.passContacts || []).some(id => { const c = byId(H.contacts, id); return c && c.phone; }));
+  if (noContacts.length) R('r:ice', 'must', 'Notfallpass', `Notfallkontakt fehlt: ${noContacts.map(p => p.name).join(', ')}`, 'Im Notfallpass ist niemand mit Telefonnummer hinterlegt.', { action: { type: 'goto', route: '#/pass/' + noContacts[0].id } });
+  if (ctx.bagHours > 0 && !H.meeting.length) R('r:meeting', 'rec', 'Treffpunkt', 'Kein Treffpunkt festgelegt', 'Wo trefft ihr euch, wenn ihr getrennt seid?', { action: { type: 'goto', route: '#/places' } });
   const cashHave = sumTag('cash') ? owned.filter(i => i.tags.includes('cash')).reduce((a, i) => a + i.qty, 0) : 0;
   if (ctx.bagHours > 0 && cashHave < 50) R('r:cash', 'opt', 'Dokumente & Geld', 'Wenig Bargeld hinterlegt', 'Bei Ausfall von Strom oder Zahlungssystemen hilft Bargeld in kleinen Scheinen.', { action: tmpl('cash', { qty: 100 }) });
 
@@ -168,24 +166,10 @@ function computeRecs(H, S) {
     if (i.minQty > 0 && i.qty < i.minQty) R('r:min:' + i.id, 'must', i.category, `Mindestbestand unterschritten: ${i.name}`, `Vorhanden ${fmt(i.qty)} ${i.unit}, Mindestbestand ${fmt(i.minQty)}.`, { action: { type: 'restock', itemId: i.id }, itemId: i.id });
   }
 
-  /* ---- Schutzraeume ---- */
-  for (const r of H.rooms) {
-    const flagged = (r.risks || []).filter(x => x.flag).length;
-    if (flagged > 0) R('r:room:' + r.id, 'rec', 'Schutzraum', `Schutzraum „${r.name}“: ${flagged} Risiko${flagged > 1 ? 'en' : ''} zur Prüfung markiert`, 'Die App kann Räume nicht als sicher einstufen. Lass kritische Punkte (Belüftung, Fluchtweg, Überflutung, Statik) fachlich prüfen.', { action: { type: 'goto', route: '#/rooms/' + r.id } });
-  }
-
   /* ---- Kontrollen ---- */
   for (const r of H.reminders) {
     const dl = daysUntil(r.next);
     if (r.enabled && dl !== null && dl < 0) R('r:rem:' + r.id, 'rec', 'Erinnerung', `Überfällig: ${r.title}`, `Fällig seit ${fmtDate(r.next)}. ${r.text || ''}`, { action: { type: 'goto', route: '#/reminders' } });
-  }
-
-  /* ---- Budget ---- */
-  const est = H.shop.filter(s => !s.bought).reduce((a, s) => a + (+s.estPrice || 0) * (+s.qty || 1), 0);
-  const budget = +H.budget || +S.plan.budget || 0;
-  if (budget > 0) {
-    const spent = H.shop.filter(s => s.bought).reduce((a, s) => a + (+s.actualPrice || 0), 0);
-    if (spent + est > budget) R('r:budget', 'rec', 'Einkauf', 'Einkaufsliste übersteigt das Budget', `Ausgegeben ${fmtEUR(spent)} + geschätzt ${fmtEUR(est)} > Budget ${fmtEUR(budget)}. Priorisiere zuerst „Notwendig“.`, { action: { type: 'goto', route: '#/shop' } });
   }
 
   /* ---- Bereits auf der Einkaufsliste -> keine doppelte Empfehlung ---- */

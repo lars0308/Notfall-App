@@ -1,38 +1,26 @@
 'use strict';
 /* ===== Notfall! – Empfehlungen ===== */
-const RECUI = { tab: 'must' };
-const REC_TABS = [['must', 'Notwendig'], ['rec', 'Empfohlen'], ['opt', 'Optional'], ['hidden', 'Ausgeblendet'], ['done', 'Erledigt']];
+const RECUI = { hidden: false };
 route('/recs', H => {
-  const S = DB.settings; const all = computeRecs(H, S);
-  const bucket = k => k === 'hidden' ? all.filter(r => r.state === 'hidden') : k === 'done' ? all.filter(r => r.state === 'have' || r.state === 'accepted') : all.filter(r => r.level === k && !r.state);
-  const list = bucket(RECUI.tab);
+  const all = computeRecs(H, DB.settings); const open = all.filter(r => !r.state && r.level !== 'opt'); const hidden = all.filter(r => r.state === 'hidden');
   return {
-    title: 'Empfehlungen', back: '#/more',
-    html: h`<p class="muted">Die App prüft deine Ausrüstung nach nachvollziehbaren Regeln auf Lücken. Jede Empfehlung erklärt, warum sie erscheint. Sie ersetzt keine amtliche Beratung.</p>
-    <div class="tabs" role="tablist">${REC_TABS.map(([k, l]) => h`<button role="tab" aria-selected="${RECUI.tab === k}" data-act="rec-tab" data-tab="${k}">${l} (${bucket(k).length})</button>`)}</div>
-    ${list.length ? list.map(r => recCard(H, r)) : (RECUI.tab === 'must' ? noticeBox('ok', 'Keine notwendigen Lücken gefunden', 'Aktuell erkennt die App keine fehlende Pflichtausrüstung. Prüfe trotzdem regelmäßig.') : empty('Keine Einträge.'))}`,
+    title: 'Was fehlt?', back: '#/more',
+    html: h`${open.length ? open.map(r => recRow(r)) : noticeBox('ok', 'Keine Lücken erkannt', '')}
+    ${hidden.length ? h`<button class="btn ghost" data-act="rec-toggle-hidden">${RECUI.hidden ? 'Ausgeblendete verbergen' : 'Ausgeblendete zeigen (' + hidden.length + ')'}</button>${RECUI.hidden ? hidden.map(r => recRow(r)) : ''}` : ''}`,
   };
 });
-function recCard(H, r) {
-  const a = r.action || { type: 'none' }; const tpl = a.type === 'template';
-  return h`<div class="card" style="border-left:6px solid var(--${r.level === 'must' ? 'must' : r.level === 'rec' ? 'rec-line' : 'opt-line'})">
-    <div class="row spread" style="align-items:flex-start"><div class="grow"><div class="row" style="margin-bottom:4px">${levelBadge(r.level)}<span class="badge">${r.cat}</span></div><h3>${r.title}</h3></div></div>
-    <p style="margin-top:8px"><b>Warum?</b> ${r.why}</p><p class="small muted">Quelle: ${r.source}</p>
-    ${r.note ? h`<div class="notice info" style="margin:8px 0">${icon('edit')}<div><p class="nt">Deine Notiz</p><p>${r.note}</p></div></div>` : ''}
-    <div class="btns" style="margin-top:12px">
-      ${r.state ? h`<button class="btn" data-act="rec-restore" data-id="${r.id}">Wieder einblenden</button>` : h`
-        ${tpl ? h`<button class="btn primary" data-act="rec-shop" data-id="${r.id}">${icon('cart')} Auf Einkaufsliste</button><button class="btn" data-act="rec-add" data-id="${r.id}">${icon('plus')} Gegenstand hinzufügen</button><button class="btn" data-act="rec-have" data-id="${r.id}">${icon('check')} Habe ich schon</button><button class="btn" data-act="rec-accept" data-id="${r.id}">Akzeptieren</button><button class="btn" data-act="rec-alt" data-id="${r.id}">Alternative wählen</button>` : ''}
-        ${a.type === 'goto' ? h`<a class="btn primary" href="${a.route}">Öffnen</a><button class="btn" data-act="rec-accept" data-id="${r.id}">Akzeptieren</button>` : ''}
-        ${a.type === 'balance' ? h`<button class="btn primary" data-act="bags-balance">${icon('repeat')} Verteilung vorschlagen</button>` : ''}
-        ${a.type === 'confirmMed' ? h`<button class="btn primary" data-act="rec-med" data-id="${r.id}">${icon('plus')} Medikament eintragen</button><button class="btn" data-act="rec-have" data-id="${r.id}">${icon('check')} Habe ich schon</button>` : ''}
-        ${a.type === 'restock' ? h`<button class="btn primary" data-act="rec-restock" data-id="${r.id}">${icon('cart')} Auf Einkaufsliste</button>` : ''}
-        ${a.type === 'none' ? h`<button class="btn" data-act="rec-accept" data-id="${r.id}">Akzeptieren</button>` : ''}
-        <button class="btn" data-act="rec-note" data-id="${r.id}">${icon('edit')} Notiz</button><button class="btn ghost" data-act="rec-hide" data-id="${r.id}">Ausblenden</button>`}
-    </div></div>`;
+function recRow(r) {
+  const a = r.action || { type: 'none' };
+  return h`<div class="card" style="border-left:6px solid var(--${r.level === 'must' ? 'must' : 'rec-line'})"><h3>${r.title}</h3><p class="muted small" style="margin-top:4px">${r.why}</p>
+    <div class="btns" style="margin-top:8px">${r.state ? h`<button class="btn sm" data-act="rec-restore" data-id="${r.id}">Wieder zeigen</button>` : h`
+      ${a.type === 'template' ? h`<button class="btn sm primary" data-act="rec-shop" data-id="${r.id}">${icon('cart')} Auf Liste</button><button class="btn sm ok" data-act="rec-have" data-id="${r.id}">${icon('check')} Habe ich</button>` : ''}
+      ${a.type === 'goto' ? h`<a class="btn sm primary" href="${a.route}">Öffnen</a>` : ''}${a.type === 'balance' ? h`<button class="btn sm primary" data-act="bags-balance">Ausgleichen</button>` : ''}
+      ${a.type === 'confirmMed' ? h`<button class="btn sm primary" data-act="rec-med" data-id="${r.id}">${icon('plus')} Eintragen</button>` : ''}${a.type === 'restock' ? h`<button class="btn sm primary" data-act="rec-restock" data-id="${r.id}">${icon('cart')} Auf Liste</button>` : ''}
+      <button class="btn sm ghost" data-act="rec-hide" data-id="${r.id}" aria-label="Ausblenden">${icon('close')}</button>`}</div></div>`;
 }
+ACT['rec-toggle-hidden'] = () => { RECUI.hidden = !RECUI.hidden; rerender(true); };
 const recById = (H, id) => computeRecs(H, DB.settings).find(r => r.id === id);
 function recSetState(H, id, state) { H.recs[id] = Object.assign(H.recs[id] || {}, { state, at: new Date().toISOString() }); if (!state) delete H.recs[id].state; persist(); rerender(true); }
-ACT['rec-tab'] = d => { RECUI.tab = d.tab; rerender(true); };
 ACT['rec-hide'] = d => recSetState(HH(), d.id, 'hidden');
 ACT['rec-restore'] = d => { const H = HH(); if (H.recs[d.id]) { delete H.recs[d.id].state; if (!H.recs[d.id].note) delete H.recs[d.id]; } persist(); rerender(true); };
 ACT['rec-note'] = async d => { const H = HH(); const cur = (H.recs[d.id] || {}).note || ''; const v = await promptDlg('Eigene Notiz', 'Notiz zu dieser Empfehlung', cur); if (v === null) return; H.recs[d.id] = Object.assign(H.recs[d.id] || {}, { note: v.trim() }); if (!v.trim() && !H.recs[d.id].state) delete H.recs[d.id]; persist(); rerender(true); };

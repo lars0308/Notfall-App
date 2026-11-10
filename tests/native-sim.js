@@ -24,10 +24,10 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
     };
   });
   const click = s => p.locator(s).first().click(); const calls = () => p.evaluate(() => window.__calls);
-  await p.goto('http://localhost:8123/'); await p.waitForSelector('[data-act=load-sample]');
+  await p.goto('http://localhost:8123/'); await p.waitForSelector('.q');
   ok('Native erkannt (kein Browser-Hinweis)', await p.evaluate(() => IS_NATIVE === true && KV.native === true));
   ok('setBars beim Start (ARGB Int32, Icons)', (await calls()).some(c => c[0] === 'setBars' && typeof c[1] === 'number' && c[1] < 0));
-  await click('[data-act=load-sample]'); await click('[data-act=dlg-yes]'); await p.waitForTimeout(900);
+  await p.evaluate(() => { loadSampleHousehold(); go('#/home'); }); await p.waitForTimeout(900);
   ok('Datenbank liegt im nativen (Keystore-)Speicher unter „db“', await p.evaluate(() => typeof window.__store.db === 'string' && window.__store.db.includes('households')));
   ok('Keine Daten im WebView-localStorage/IndexedDB', await p.evaluate(async () => { const dbs = indexedDB.databases ? await indexedDB.databases() : []; return localStorage.length === 0 && !dbs.some(d => d.name === 'notfall_kv'); }));
   // Benachrichtigungen
@@ -43,7 +43,7 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
   const id = await p.evaluate(() => HH().items.find(i => i.status === 'owned').id); await p.goto('http://localhost:8123/#/item/' + id); await p.waitForSelector('[data-act=item-ph-add]'); await click('[data-act=item-ph-add][data-kind=photos]'); await click('[data-act=ph-cam]'); await p.waitForTimeout(500);
   ok('Kamera-Foto landet als Foto am Gegenstand (verschlüsselter Speicher)', await p.evaluate(id => { const it = HH().items.find(i => i.id === id); return it.photos.length === 1 && typeof window.__store['photo_' + it.photos[0]] === 'string' && !!window.__store['thumb_' + it.photos[0]]; }, id));
   // Safe + Biometrie
-  await p.goto('http://localhost:8123/#/safe'); await p.waitForSelector('[data-form=safe-create]'); await p.fill('[data-form=safe-create] [name=p1]', 'Safe-Passwort-1234'); await p.fill('[data-form=safe-create] [name=p2]', 'Safe-Passwort-1234'); await p.locator('[data-form=safe-create] button[type=submit]').click(); await p.waitForSelector('[data-act=safe-bio-on]', { timeout: 15000 });
+  await p.goto('http://localhost:8123/#/safe'); await p.waitForSelector('[data-form=safe-create]'); await p.fill('[data-form=safe-create] [name=p1]', 'Safe-Passwort-1234'); await p.fill('[data-form=safe-create] [name=p2]', 'Safe-Passwort-1234'); await p.locator('[data-form=safe-create] button[type=submit]').click(); await p.waitForSelector('[data-act=safe-bio-on]', { timeout: 20000 });
   await click('[data-act=safe-bio-on]'); await p.waitForTimeout(400); c = await calls(); const be = c.find(x => x[0] === 'bioEnroll'); ok('Biometrie: bioEnroll(alias=vault)', !!be && be[2] === 'vault');
   await click('[data-act=safe-lock]'); await p.waitForSelector('[data-act=safe-bio]'); await click('[data-act=safe-bio]'); await p.waitForSelector('[data-act=safe-import]', { timeout: 15000 }); ok('Safe lässt sich per Biometrie entsperren', await p.evaluate(() => Vault.unlocked));
   ok('Safe-Datenbestand im nativen Speicher nur verschlüsselt (vault_*)', await p.evaluate(() => Object.keys(window.__store).filter(k => k.startsWith('vault_')).length >= 2 && !/Safe-Passwort/.test(JSON.stringify(window.__store).replace(/__bio_vault":"[^"]*"/, ''))));
@@ -57,7 +57,8 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
   await p.goto('http://localhost:8123/#/settings'); await click('[data-act=backup-make]'); await p.fill('.modal [name=p1]', 'Backup-Pass-99'); await p.fill('.modal [name=p2]', 'Backup-Pass-99'); await p.locator('.modal button[type=submit]').click(); await p.waitForTimeout(2500);
   c = await calls(); const sd = c.find(x => x[0] === 'saveDownload'); ok('Backup nutzt saveDownload(.nfbak)', !!sd && /\.nfbak$/.test(sd[1]) && sd[3] > 1000, sd && sd[1]);
   // Drucken + Notruf
-  await p.goto('http://localhost:8123/#/contacts'); await click('[data-act=ct-tab][data-tab=cards]'); await click('[data-act=cards-print]'); await p.waitForTimeout(200); ok('Kontaktkarte nutzt printHtml', (await calls()).some(x => x[0] === 'printHtml'));
+  const pid = await p.evaluate(() => HH().people[0].id); await p.goto('http://localhost:8123/#/ice/' + pid); await p.waitForSelector('[data-act=pass-print]'); await click('[data-act=pass-print]'); await p.waitForTimeout(400); ok('Notfallkarte nutzt printHtml (mit QR als SVG)', (await calls()).some(x => x[0] === 'printHtml' && x[2] > 2000));
+  await p.evaluate(id => { const H = HH(); H.contacts.push({ id: 'kx', name: 'Ben', phone: '0171 5', type: 'ice' }); H.people[0].passContacts = ['kx']; persist(); rerender(); }, pid); await click('[data-act=call]'); ok('Kontakt-Schnellwahl öffnet Wählansicht', (await calls()).some(x => x[0] === 'dial' && x[1] === '0171 5'));
   await p.goto('http://localhost:8123/#/sos'); await p.waitForSelector('.callbtn'); await click('.callbtn'); ok('Notruf-Button öffnet nur die Wählansicht (dial("112"))', (await calls()).some(x => x[0] === 'dial' && x[1] === '112'));
   console.log(results.map(r => r.join(' ')).join('\n')); console.log('Konsolenfehler:', errs.length ? errs : 'keine'); if (errs.length) process.exitCode = 1;
   await b.close(); srv.close();

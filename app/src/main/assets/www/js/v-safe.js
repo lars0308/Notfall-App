@@ -3,7 +3,7 @@
 const SAFE = { q: '', folder: '', sel: new Set(), busy: false };
 route('/safe', H => {
   if (!can('vault')) return { title: 'Safe', back: '#/more', html: noticeBox('info', 'Kein Zugriff', 'Für dein Benutzerprofil ist der Dokumenten-Safe nicht freigegeben.') };
-  const head = h`<div class="btns"><a class="btn" href="#/docs">${icon('list')} Dokumenten-Checkliste</a></div>`;
+  const head = '';
   const noticeAll = noticeBox('rec', 'Wichtig', 'Dateien werden mit deinem Safe-Passwort verschlüsselt (AES-256, PBKDF2) auf diesem Gerät gespeichert. Das Passwort lässt sich nicht zurücksetzen. Originale nie ausschließlich in der App aufbewahren.');
   if (!Vault.unlocked) return { title: 'Safe & Dokumente', back: '#/more', html: h`${head}<div id="safebox">${h`<div class="card"><p class="muted">Safe wird geprüft …</p></div>`}</div>`, after: async () => { const ex = await Vault.exists(); const box = $('#safebox'); if (!box) return; box.innerHTML = (ex ? safeUnlockHtml() : safeCreateHtml(noticeAll)).s; } };
   const docs = Vault.search(SAFE.q, SAFE.folder);

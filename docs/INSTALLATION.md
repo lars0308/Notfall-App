@@ -1,14 +1,14 @@
 # Installationsanleitung
 
-## A) Fertige Test-APK installieren
-1. Datei `dist/Notfall-2.0.0-debug.apk` auf das Android-Handy kopieren (USB, Cloud, E-Mail …).
-2. Datei antippen. Android fragt, ob die Installation aus dieser Quelle erlaubt ist → „Einstellungen“ → für diese App „Installation erlauben“ → zurück → „Installieren“.
-3. „Notfall!“ öffnen. Der Einrichtungsassistent führt dich in 7 Schritten zu deinem Plan (oder „Überspringen“ / „Später“).
-4. Beim Einschalten der Erinnerungen fragt Android nach der Benachrichtigungs-Erlaubnis. Die Kamera-Erlaubnis wird erst beim ersten Foto/Scan abgefragt.
+## A) Test-APK direkt am Handy installieren
+1. `dist/Notfall-2.1.0-debug.apk` aufs Handy laden: über die Dateikarte im Claude-Chat oder im Browser bei GitHub (Branch wählen → Datei öffnen → „Download raw file“).
+2. Datei in der Download-Benachrichtigung oder in der App „Dateien“ antippen.
+3. Android fragt, ob diese App installieren darf → „Einstellungen“ → „Dieser Quelle vertrauen“ → zurück → „Installieren“.
+4. Meldet Play Protect eine unbekannte App: „Trotzdem installieren“.
+5. Erscheint „App nicht installiert“, ist eine Version mit anderer Signatur vorhanden – siehe [Einschränkungen](EINSCHRAENKUNGEN.md), Abschnitt Installation.
 
-Mindestens Android 10 (API 29). Die Prüfsumme der APK steht in `dist/SHA256.txt`.
-
-> **Hast du schon eine ältere Notfall!-Version?** Siehe „Installation“ in [Einschränkungen](EINSCHRAENKUNGEN.md): Wegen unterschiedlicher Debug-Signatur ist unter Umständen vorher ein Deinstallieren nötig.
+Ein Update von 2.0.0 (gleiche Signatur) auf 2.1.0 behält die Daten; der alte Stand wird vor der Umstellung zusätzlich gesichert.
+Mindestens Android 10. Prüfsumme in `dist/SHA256.txt`.
 
 ## B) Selbst bauen (Android Studio)
 1. Ordner dieses Repositories als Projekt öffnen (JDK 17, Android SDK Platform 35).
@@ -23,22 +23,18 @@ gradlew.bat assembleDebug        # Windows
 ```
 `local.properties` mit `sdk.dir=<Pfad zum Android SDK>` anlegen, falls Gradle das SDK nicht findet.
 
-## C) Tests ausführen (optional, Entwickler)
-Voraussetzung: Node.js ≥ 20 und `playwright` (mit Chromium).
+## C) Tests ausführen (optional)
+Node.js ≥ 20 und `playwright` mit Chromium; für die QR-Prüfung zusätzlich `jsqr` und `pngjs` (Pfad in `tests/flow.js`).
 ```
-node tests/unit.js        # Planungs- und Empfehlungslogik
-node tests/e2e.js         # Assistent bis Persistenz (Chromium)
-node tests/e2e2.js        # Formulare, 3D, Einkauf, Safe, Backup/Restore, PIN
-node tests/e2e3.js        # Assistent: später/überspringen/neu starten
-node tests/e2e4.js        # Benutzer/Rechte/gesperrter Notfallmodus
+tests/run-all.sh          # alles
+node tests/unit.js        # Planer, Packreihenfolge, Migration
+node tests/flow.js        # Abnahme-Ablauf v1
+node tests/data.js        # Migration, Backup, Sperre
 node tests/native-sim.js  # Android-Schnittstelle (Attrappe)
-node tests/monkey.js 1    # Zufallstest
 ```
 
 ## Erste Schritte
-1. Assistent beantworten → Plan wird erstellt.
-2. **Ausrüstung prüfen**: bei jeder Position „Habe ich“ oder „Fehlt“. Fehlendes landet in der Einkaufsliste.
-3. **Empfehlungen** lesen (Notwendig / Empfohlen / Optional).
-4. Einkaufen → „Gekauft“ → Gegenstand kommt ins Inventar.
-5. Rucksack packen: Rucksack öffnen, Fächer antippen, Gegenstände abhaken.
-6. Einstellungen: App-Sperre, Benachrichtigungen, Backup einrichten.
+1. Fragen des Packassistenten beantworten.
+2. Packliste: „Habe ich“ oder „Fehlt“.
+3. Tasche öffnen → „Packen starten“.
+4. Notfallpass: Kontakte wählen, Angaben freigeben, Karte drucken.
