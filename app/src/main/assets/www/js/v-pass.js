@@ -8,23 +8,34 @@ const avatar = (photo, name, cls = '') => h`<span class="avatar ${cls}">${photo 
 function personAge(p) { const a = ageFromBirth(p.birth); return a === null ? p.age : a; }
 function passContacts(H, p) { return (p.passContacts || []).map(id => byId(H.contacts, id)).filter(Boolean).slice(0, 3); }
 
-/* Nur ausdruecklich freigegebene Angaben – das sehen Helfer und Fremde */
-function passShared(H, p) {
-  const s = p.share || {}, n = p.needs || {}; const out = [];
-  if (s.birth && p.birth) out.push(['Geboren', fmtDate(p.birth)]);
-  if (s.allergies && n.allergies) out.push(['Allergien', n.allergies]);
-  if (s.conditions && n.conditions) out.push(['Krankheiten', n.conditions]);
-  if (s.meds && (n.meds || []).length) out.push(['Medikamente', n.meds.map(m => m.name + (m.dose ? ' ' + m.dose : '')).join(', ')]);
-  if (s.aids && (n.aids || n.devices)) out.push(['Hilfsmittel', [n.aids, n.devices].filter(Boolean).join(', ')]);
-  if (s.blood && n.blood) out.push(['Blutgruppe', n.blood]);
-  if (s.organ && p.organ.status) out.push(['Organspende', organLabel(p.organ.status) + (p.organ.place ? ' – Dokument: ' + p.organ.place : '')]);
-  if (s.notes && n.notes) out.push(['Hinweise', n.notes]);
+/* Beschriftungen fuer Pass, Karte und QR (Deutsch/Englisch) */
+const PL = {
+  de: { title: 'NOTFALLPASS', call: 'Im Notfall bitte anrufen', born: 'Geboren', allergies: 'Allergien', conditions: 'Krankheiten', meds: 'Medikamente', aids: 'Hilfsmittel', blood: 'Blutgruppe', organ: 'Organspende', notes: 'Hinweise', pickup: 'Abholberechtigt', doctor: 'Arzt/Ärztin', contact: 'Kontakt', emerg: 'Notfallmedikament', doc: 'Dokument', stand: 'Stand', qrnote: 'Der QR-Code enthält dieselben Angaben als Text.', years: 'Jahre' },
+  en: { title: 'EMERGENCY CARD', call: 'In an emergency please call', born: 'Born', allergies: 'Allergies', conditions: 'Conditions', meds: 'Medication', aids: 'Medical aids', blood: 'Blood type', organ: 'Organ donation', notes: 'Notes', pickup: 'Authorised to pick up', doctor: 'Doctor', contact: 'Contact', emerg: 'emergency medication', doc: 'document', stand: 'As of', qrnote: 'The QR code contains the same information as text.', years: 'years' },
+};
+const ORGAN_EN = { erklaerung: 'Declaration exists', ja: 'Yes', nein: 'No', eingeschraenkt: 'Restricted', unbekannt: 'Unknown' };
+/* Nur ausdruecklich freigegebene (und nicht ausgeblendete) Angaben – das sehen Helfer und Fremde */
+function passShared(H, p, lang = 'de') {
+  const s = p.share || {}, n = p.needs || {}, hd = p.hide || {}, L = PL[lang] || PL.de; const out = [];
+  const on = k => s[k] && !hd[k];
+  if (on('birth') && p.birth) out.push([L.born, lang === 'en' ? p.birth : fmtDate(p.birth)]);
+  if (on('allergies') && n.allergies) out.push([L.allergies, n.allergies]);
+  if (on('conditions') && n.conditions) out.push([L.conditions, n.conditions]);
+  if (on('meds') && (n.meds || []).length) out.push([L.meds, n.meds.map(m => m.name + (m.dose ? ' ' + m.dose : '') + (m.emergency ? ' (' + L.emerg + ')' : '') + (m.purpose ? ' – ' + m.purpose : '')).join('; ')]);
+  if (on('aids') && (n.aids || n.devices)) out.push([L.aids, [n.aids, n.devices].filter(Boolean).join(', ')]);
+  if (on('blood') && n.blood) out.push([L.blood, n.blood]);
+  if (on('doctor') && p.doctor) out.push([L.doctor, p.doctor]);
+  if (on('pickup') && p.pickup) out.push([L.pickup, p.pickup]);
+  if (on('organ') && p.organ.status) out.push([L.organ, (lang === 'en' ? ORGAN_EN[p.organ.status] : organLabel(p.organ.status)) + (p.organ.place ? ' – ' + L.doc + ': ' + p.organ.place : '')]);
+  if (on('notes') && n.notes) out.push([L.notes, n.notes]);
+  for (const c of (p.custom || [])) if (c.share && c.label && c.value) out.push([c.label, c.value]);
   return out;
 }
-function passQrText(H, p) {
-  const lines = ['NOTFALLPASS', p.name + (p.role ? ' (' + p.role + ')' : '')];
-  passContacts(H, p).forEach((c, i) => lines.push(`Kontakt ${i + 1}: ${c.name}${c.relation ? ' (' + c.relation + ')' : ''} ${c.phone || ''}`.trim()));
-  for (const [k, v] of passShared(H, p)) lines.push(k + ': ' + v);
+function passQrText(H, p, lang = (p.card && p.card.lang) || 'de') {
+  const L = PL[lang] || PL.de;
+  const lines = [L.title, p.name + (p.role ? ' (' + p.role + ')' : '')];
+  passContacts(H, p).forEach((c, i) => lines.push(`${L.contact} ${i + 1}: ${c.name}${c.relation ? ' (' + c.relation + ')' : ''} ${c.phone || ''}`.trim()));
+  for (const [k, v] of passShared(H, p, lang)) lines.push(k + ': ' + v);
   let t = lines.join('\n'); let cut = false;
   while (enc(t).length > 700) { t = t.slice(0, -20); cut = true; }
   return { text: cut ? t + '…' : t, cut };
@@ -36,6 +47,7 @@ function iceCard(H, p, opts = {}) {
   return h`<div class="card"><div class="row nowrap">${avatar(p.share.photo ? p.photo : null, p.name, 'xl')}<div class="grow"><h2>${p.name}</h2><p class="muted">${[p.role, p.share.birth && p.birth ? personAge(p) + ' Jahre' : ''].filter(Boolean).join(' · ')}</p></div></div>
     ${rows.length ? h`<table class="tbl" style="margin-top:8px"><tbody>${rows.map(([k, v]) => h`<tr><th>${k}</th><td class="bold">${v}</td></tr>`)}</tbody></table>` : ''}
     ${cs.length ? h`<div class="stack-s" style="margin-top:12px">${cs.map((c, i) => h`<div class="row nowrap">${avatar(c.photo, c.name)}<span class="grow"><span class="bold">${i + 1}. ${c.name}</span><br><span class="muted small">${c.relation || ''}${c.alt ? ' · ' + c.alt : ''}</span></span>${c.phone ? h`<button class="btn primary" data-act="call" data-n="${c.phone}" aria-label="${c.name} anrufen">${icon('phone')}<span>${c.phone}</span></button>` : ''}</div>`)}</div>` : (opts.hint ? h`<p class="muted small" style="margin-top:8px">Noch keine Kontakte gewählt.</p>` : '')}
+    ${p.passUpdated || p.confirmedBy ? h`<p class="muted small" style="margin-top:8px">${[p.passUpdated ? 'Stand ' + fmtDate(p.passUpdated) : '', p.confirmedBy ? 'bestätigt von ' + p.confirmedBy : ''].filter(Boolean).join(' · ')}</p>` : ''}
     ${opts.link ? h`<div class="btns" style="margin-top:12px"><a class="btn" href="#/ice/${p.id}">${icon('scan')} Karte & QR</a><a class="btn" href="#/pass/${p.id}">${icon('edit')} Bearbeiten</a></div>` : ''}</div>`;
 }
 
@@ -81,14 +93,21 @@ route('/pass/:id', (id, H) => {
       <div class="stack-s">${cs.map((c, i) => h`<div class="row nowrap">${avatar(c.photo, c.name)}<button class="grow" style="background:none;border:0;text-align:left;cursor:pointer;color:inherit;padding:0" data-act="contact-edit" data-id="${c.id}"><span class="bold">${i + 1}. ${c.name}</span><br><span class="muted small">${[c.relation, c.phone || 'Nummer fehlt'].filter(Boolean).join(' · ')}</span></button>${i > 0 ? h`<button class="btn icon sm" data-act="pc-up" data-p="${p.id}" data-i="${i}" aria-label="Nach oben">↑</button>` : ''}<button class="btn icon sm danger" data-act="pc-del" data-p="${p.id}" data-i="${i}" aria-label="Entfernen">${icon('close')}</button></div>`)}</div>
       ${cs.length < 3 ? h`<button class="btn block" style="margin-top:12px" data-act="pc-add" data-p="${p.id}">${icon('plus')} Kontakt wählen</button>` : ''}</div>
     <div class="card"><h2>Gesundheit</h2><p class="muted small">Privat, bis du es freigibst.</p><div class="stack" style="margin-top:8px">
-      ${passField(p, 'allergies', 'Allergien', n.allergies)}${passField(p, 'conditions', 'Krankheiten', n.conditions, { ph: 'z. B. Asthma' })}
+      ${passField(p, 'allergies', 'Allergien und Reaktion', n.allergies)}${passField(p, 'conditions', 'Krankheiten', n.conditions)}
       <div class="field"><div class="sharerow"><span class="label">Medikamente</span>${shareBox(p, 'meds')}</div>
-        <div class="stack-s">${(n.meds || []).map(m => h`<button class="btn block" style="justify-content:flex-start" data-act="med-edit" data-p="${p.id}" data-id="${m.id}">${icon('pill')} ${m.name}${m.dose ? ' · ' + m.dose : ''}${m.expiry && daysUntil(m.expiry) <= 30 ? h` <span class="badge ${daysUntil(m.expiry) < 0 ? 'must' : 'rec'}">${daysUntil(m.expiry) < 0 ? 'abgelaufen' : 'läuft ab'}</span>` : ''}</button>`)}<button class="btn sm" data-act="med-edit" data-p="${p.id}" data-id="">${icon('plus')} Medikament</button></div></div>
-      ${passField(p, 'aids', 'Hilfsmittel', n.aids)}${passField(p, 'blood', 'Blutgruppe', n.blood)}${passField(p, 'notes', 'Besondere Hinweise', n.notes, { area: true })}
-      <div class="field"><div class="sharerow"><label for="pf_organ" style="color:var(--text);font-size:.9375rem">Organspende</label>${shareBox(p, 'organ')}</div>
+        <div class="stack-s">${(n.meds || []).map(m => h`<button class="btn block" style="justify-content:flex-start" data-act="med-edit" data-p="${p.id}" data-id="${m.id}">${icon('pill')} ${m.name}${m.dose ? ' · ' + m.dose : ''}${m.emergency ? h` <span class="badge must">Notfall</span>` : ''}${m.expiry && daysUntil(m.expiry) <= 30 ? h` <span class="badge ${daysUntil(m.expiry) < 0 ? 'must' : 'rec'}">${daysUntil(m.expiry) < 0 ? 'abgelaufen' : 'läuft ab'}</span>` : ''}</button>`)}<button class="btn sm" data-act="med-edit" data-p="${p.id}" data-id="">${icon('plus')} Medikament</button></div></div>
+      ${p.hide.aids ? '' : passField(p, 'aids', 'Hilfsmittel', n.aids)}${p.hide.blood ? '' : passField(p, 'blood', 'Blutgruppe (nur wenn sicher bekannt)', n.blood)}
+      ${p.hide.doctor ? '' : passField(p, 'doctor', 'Arzt/Ärztin', p.doctor, { path: 'doctor', share: 'doctor' })}
+      ${p.hide.pickup ? '' : passField(p, 'pickup', +personAge(p) < 18 ? 'Abholberechtigt / Betreuung' : 'Betreuung', p.pickup, { path: 'pickup', share: 'pickup' })}
+      ${passField(p, 'notes', 'Besondere Hinweise', n.notes, { area: true })}
+      ${p.hide.organ ? '' : h`<div class="field"><div class="sharerow"><label for="pf_organ" style="color:var(--text);font-size:.9375rem">Organspende</label>${shareBox(p, 'organ')}</div>
         <select id="pf_organ" data-change="pass-set" data-id="${p.id}" data-path="organ.status">${ORGAN.map(([v, l]) => h`<option value="${v}" ${p.organ.status === v ? raw('selected') : ''}>${l}</option>`)}</select>
         <input type="text" value="${p.organ.place}" placeholder="Wo liegt der Ausweis?" data-change="pass-set" data-id="${p.id}" data-path="organ.place" aria-label="Ablageort des Organspendeausweises">
-        <div class="hint">Ersetzt keinen Organspendeausweis und keinen Registereintrag.</div></div></div></div>
+        <div class="hint">Ersetzt keinen Organspendeausweis und keinen Registereintrag.</div></div>`}
+      ${(p.custom || []).map((c, i) => h`<div class="field"><div class="sharerow"><input type="text" value="${c.label}" placeholder="Bezeichnung" data-change="pc-custom" data-id="${p.id}" data-i="${i}" data-f="label" aria-label="Bezeichnung" style="min-height:40px;max-width:60%"><label><input type="checkbox" data-change="pc-custom" data-id="${p.id}" data-i="${i}" data-f="share" ${c.share ? raw('checked') : ''}>Im Notfallpass zeigen</label></div>
+        <div class="row nowrap"><input type="text" value="${c.value}" data-change="pc-custom" data-id="${p.id}" data-i="${i}" data-f="value" aria-label="${c.label || 'Eigenes Feld'}"><button class="btn icon danger" data-act="pc-custom-del" data-id="${p.id}" data-i="${i}" aria-label="Feld entfernen">${icon('trash')}</button></div></div>`)}
+      <div class="btns"><button class="btn sm" data-act="pc-custom-add" data-id="${p.id}">${icon('plus')} Eigenes Feld</button><button class="btn sm" data-act="pass-modules" data-id="${p.id}">${icon('sliders')} Felder ein-/ausblenden</button></div>
+      ${passField(p, 'confirmedBy', 'Angaben bestätigt von', p.confirmedBy, { path: 'confirmedBy', noShare: true })}</div></div>
     <div class="card"><h3>Für den Rucksack</h3><div class="stack" style="margin-top:8px">${passField(p, 'carryKg', 'Tragfähigkeit (kg)', p.carryKg ?? '', { path: 'carryKg', type: 'number', noShare: true })}${passField(p, 'hygiene', 'Besondere Hygieneprodukte', n.hygiene, { noShare: true })}</div></div>
     <button class="btn danger" data-act="person-del" data-id="${p.id}">${icon('trash')} Person löschen</button>
     <div class="actionbar"><a class="btn primary lg" href="#/ice/${p.id}">${icon('shield')} Notfallpass ansehen</a></div>`,
@@ -102,6 +121,15 @@ INPUT['pass-set'] = el => {
   if (path === 'birth') { const a = ageFromBirth(v); if (a !== null) p.age = a; rerender(true); }
   p.passUpdated = todayISO(); persist();
 };
+INPUT['pc-custom'] = el => { const p = byId(HH().people, el.dataset.id); const c = p.custom[+el.dataset.i]; if (!c) return; c[el.dataset.f] = el.type === 'checkbox' ? el.checked : el.value.trim(); p.passUpdated = todayISO(); persist(); };
+ACT['pc-custom-add'] = d => { const p = byId(HH().people, d.id); p.custom.push({ id: uid(), label: '', value: '', share: false }); persist(); rerender(true); };
+ACT['pc-custom-del'] = d => { const p = byId(HH().people, d.id); p.custom.splice(+d.i, 1); persist(); rerender(true); };
+const HIDEABLE = [['aids', 'Hilfsmittel'], ['blood', 'Blutgruppe'], ['doctor', 'Arzt/Ärztin'], ['pickup', 'Abholberechtigt / Betreuung'], ['organ', 'Organspende']];
+ACT['pass-modules'] = d => {
+  const p = byId(HH().people, d.id);
+  formDlg({ title: 'Felder anzeigen', body: h`<div class="stack-s">${HIDEABLE.map(([k, l]) => F.check('m_' + k, l, !p.hide[k]))}</div><p class="small muted">Ausgeblendete Felder werden auch nicht im Notfallpass gezeigt.</p>`,
+    onSubmit: fd => { for (const [k] of HIDEABLE) p.hide[k] = !fdBool(fd, 'm_' + k); persist(); rerender(true); } });
+};
 INPUT['pass-share'] = el => { const p = byId(HH().people, el.dataset.id); p.share[el.dataset.k] = el.checked; persist(); };
 ACT['person-photo'] = async d => { const p = byId(HH().people, d.id); const pid = await addPhotoTo(null); if (!pid) return; p.photo = pid; persist(); setTimeout(sweepPhotos, 800); rerender(true); };
 ACT['person-photo-del'] = d => { const p = byId(HH().people, d.id); p.photo = null; p.share.photo = false; persist(); setTimeout(sweepPhotos, 800); rerender(true); };
@@ -112,8 +140,8 @@ ACT['person-del'] = async d => {
 };
 ACT['med-edit'] = d => {
   const p = byId(HH().people, d.p); const m = d.id ? (p.needs.meds || []).find(x => x.id === d.id) : { name: '', dose: '', expiry: '' };
-  formDlg({ title: d.id ? 'Medikament' : 'Medikament hinzufügen', body: h`${F.text('name', 'Name', m.name, { req: true })}${F.text('dose', 'Dosierung / Hinweis', m.dose || '')}${F.date('expiry', 'Haltbar bis', m.expiry || '')}`, extraFoot: d.id ? [{ label: 'Löschen', cls: 'danger', act: 'med-del', data: { p: p.id, id: d.id } }] : [],
-    onSubmit: fd => { const nm = fd.get('name').trim(); if (!nm) throw new Error('Name fehlt.'); if (d.id) Object.assign(m, { name: nm, dose: fd.get('dose'), expiry: fd.get('expiry') }); else { p.needs.meds = p.needs.meds || []; p.needs.meds.push({ id: uid(), name: nm, dose: fd.get('dose'), expiry: fd.get('expiry') }); } persist(); rerender(true); } });
+  formDlg({ title: d.id ? 'Medikament' : 'Medikament hinzufügen', body: h`${F.text('name', 'Name', m.name, { req: true })}<div class="form-grid">${F.text('dose', 'Dosierung', m.dose || '')}${F.text('purpose', 'Wofür', m.purpose || '')}${F.text('howto', 'Einnahme', m.howto || '', { ph: 'z. B. morgens zum Essen' })}${F.text('place', 'Aufbewahrt', m.place || '', { ph: 'z. B. Kühlschrank' })}${F.date('expiry', 'Haltbar bis', m.expiry || '')}</div>${F.check('emergency', 'Notfallmedikament (z. B. Spray, Pen)', !!m.emergency)}`, extraFoot: d.id ? [{ label: 'Löschen', cls: 'danger', act: 'med-del', data: { p: p.id, id: d.id } }] : [],
+    onSubmit: fd => { const o = { name: fd.get('name').trim(), dose: fd.get('dose').trim(), purpose: fd.get('purpose').trim(), howto: fd.get('howto').trim(), place: fd.get('place').trim(), expiry: fd.get('expiry'), emergency: fdBool(fd, 'emergency') }; if (!o.name) throw new Error('Name fehlt.'); if (d.id) Object.assign(m, o); else { p.needs.meds = p.needs.meds || []; p.needs.meds.push(Object.assign({ id: uid() }, o)); } p.passUpdated = todayISO(); persist(); rerender(true); } });
 };
 ACT['med-del'] = d => { const p = byId(HH().people, d.p); p.needs.meds = p.needs.meds.filter(m => m.id !== d.id); closeAllModals(); persist(); rerender(true); };
 
@@ -160,18 +188,63 @@ route('/ice/:id', (id, H) => {
       <div class="center" style="margin-top:12px"><span class="qrbox" id="qrbox">${qrSvg(q.text)}</span></div>
       <p class="muted small" style="margin-top:8px">Funktioniert ohne Internet und ohne App. Fotos passen nicht in den Code – sie stehen auf der gedruckten Karte.</p></div>
     <p class="muted small">Tipp: Zusätzlich die Android-Notfallinfos einrichten (Einstellungen → Sicherheit & Notfall). Ein gesperrtes Handy zeigt diese App nicht.</p>
-    <div class="actionbar"><button class="btn primary lg" data-act="pass-print" data-id="${p.id}">${icon('print')} Karte drucken / PDF</button></div>`,
+    <div class="actionbar"><a class="btn primary lg" href="#/card/${p.id}">${icon('print')} Karte gestalten & drucken</a></div>`,
   };
 });
+
+/* ---------- Kartendesigner ---------- */
+const MOD_LABEL = Object.fromEntries(CARD_MODS.map(([k, l]) => [k, l]));
+const CARD_SIZE = { card: ['85.6mm', '54mm', 'Scheckkarte'], a6: ['105mm', '148mm', 'Postkarte (A6)'] };
 async function passCardHtml(H, p) {
-  const img = async (pid, size) => { if (!pid) return ''; const u = await Photos.get(pid, true); return u ? `<img src="${u}" style="width:${size}px;height:${size}px;object-fit:cover;border-radius:8px;border:1px solid #888">` : ''; };
-  const q = passQrText(H, p); const qr = qrSvg(q.text).s.replace('<svg ', '<svg style="width:150px;height:150px" ');
-  const rows = passShared(H, p).map(([k, v]) => `<tr><th style="width:30%">${esc(k)}</th><td>${esc(v)}</td></tr>`).join('');
-  let cs = ''; for (const [i, c] of passContacts(H, p).entries()) cs += `<tr><td style="width:60px">${await img(c.photo, 52)}</td><td><b>${i + 1}. ${esc(c.name)}</b><br><small>${esc(c.relation || '')}</small></td><td style="font-size:16px"><b>${esc(c.phone || '')}</b>${c.alt ? '<br><small>' + esc(c.alt) + '</small>' : ''}</td></tr>`;
-  return `<div class="card"><table style="border:0"><tr><td style="border:0;width:110px">${p.share.photo ? await img(p.photo, 96) : ''}</td><td style="border:0"><h1 style="margin:0">${esc(p.name)}</h1><div>${esc([p.role, p.share.birth && p.birth ? 'geb. ' + fmtDate(p.birth) : ''].filter(Boolean).join(' · '))}</div><div style="margin-top:6px;font-weight:bold;color:#b00">NOTFALLPASS</div></td><td style="border:0;width:160px;text-align:right">${qr}</td></tr></table>
-    ${cs ? '<h2>Im Notfall anrufen</h2><table>' + cs + '</table>' : ''}${rows ? '<h2>Wichtig</h2><table>' + rows + '</table>' : ''}<p><small>Stand ${fmtDate(todayISO())} · Der QR-Code enthält dieselben Angaben als Text.</small></p></div>`;
+  const cfg = p.card; const L = PL[cfg.lang] || PL.de; const [W, Hh] = CARD_SIZE[cfg.size] || CARD_SIZE.card; const small = cfg.size === 'card';
+  const img = async (pid, mm) => { if (!pid) return ''; const u = await Photos.get(pid, true); return u ? `<img src="${u}" style="width:${mm}mm;height:${mm}mm;object-fit:cover;border-radius:2mm;border:.3mm solid #888;flex:none">` : ''; };
+  const cs = passContacts(H, p); const rows = passShared(H, p, cfg.lang); const q = passQrText(H, p, cfg.lang);
+  const mods = cfg.mods.filter(m => m.on);
+  const block = async m => {
+    if (m.k === 'photo') return p.share.photo && p.photo ? `<div class="nfc-row">${await img(p.photo, small ? 13 : 22)}</div>` : '';
+    if (m.k === 'callnote') return cs.length ? `<div class="nfc-call">${esc(L.call)}:</div>` : '';
+    if (m.k === 'contacts') { let o = ''; for (const [i, c] of cs.entries()) o += `<div class="nfc-c">${mods.some(x => x.k === 'cphotos') ? await img(c.photo, small ? 8 : 14) : ''}<div><b>${i + 1}. ${esc(c.name)}</b>${c.relation ? ' (' + esc(c.relation) + ')' : ''}<br><span class="nfc-tel">${esc(c.phone || '')}</span>${c.alt ? ' · ' + esc(c.alt) : ''}</div></div>`; return o; }
+    if (m.k === 'info') return rows.length ? `<table class="nfc-t">${rows.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join('')}</table>` : '';
+    if (m.k === 'qr') return `<div class="nfc-qr">${qrSvg(q.text).s.replace('<svg ', `<svg style="width:${small ? 26 : 45}mm;height:${small ? 26 : 45}mm" `)}</div>`;
+    return '';
+  };
+  const head = `<div class="nfc-h"><div><div class="nfc-n">${esc(p.name)}</div><div class="nfc-s">${esc([p.role, p.share.birth && p.birth && !p.hide.birth ? L.born + ' ' + (cfg.lang === 'en' ? p.birth : fmtDate(p.birth)) : ''].filter(Boolean).join(' · '))}</div></div><div class="nfc-title">${L.title}</div></div>`;
+  const face = async (side, withHead) => { let o = withHead ? head : ''; for (const m of mods) if (!cfg.twoSided || m.side === side) o += await block(m); return `<div class="nfc">${o}</div>`; };
+  const css = `<style>.nfc-wrap{display:flex;flex-wrap:wrap;gap:4mm;font-family:system-ui,sans-serif;color:#000}.nfc{width:${W};height:${Hh};box-sizing:border-box;padding:${small ? 2.5 : 5}mm;border:.4mm dashed #666;border-radius:3mm;overflow:hidden;font-size:${small ? 6.6 : 10}pt;line-height:1.25;display:flex;flex-direction:column;gap:${small ? 1 : 2}mm;background:#fff}
+    .nfc-h{display:flex;justify-content:space-between;gap:2mm;align-items:flex-start}.nfc-n{font-weight:800;font-size:${small ? 9.5 : 15}pt}.nfc-s{color:#333}.nfc-title{font-weight:900;color:#b00000;font-size:${small ? 6.5 : 10}pt;letter-spacing:.03em}
+    .nfc-call{font-weight:700}.nfc-c{display:flex;gap:1.5mm;align-items:center}.nfc-tel{font-weight:800;font-size:${small ? 8 : 12}pt}.nfc-t{border-collapse:collapse;width:100%}.nfc-t th{text-align:left;padding:0 1.5mm 0 0;vertical-align:top;white-space:nowrap;border:0;color:#333}.nfc-t td{border:0;padding:0;font-weight:700}.nfc-qr{text-align:center}.nfc-row{display:flex}</style>`;
+  const faces = cfg.twoSided ? (await face('f', true)) + (await face('b', false)) : await face('f', true);
+  return `${css}<div class="nfc-wrap">${faces}</div><p style="font:9pt system-ui;color:#333">${L.stand} ${cfg.lang === 'en' ? todayISO() : fmtDate(todayISO())}${cfg.twoSided ? ' · Entlang der Linie ausschneiden, Vorder- und Rückseite zusammenfalten oder -kleben.' : ''}</p>`;
 }
-ACT['pass-print'] = async d => { const H = HH(); const p = byId(H.people, d.id); printDoc('Notfallpass ' + p.name, await passCardHtml(H, p)); };
+route('/card/:id', (id, H) => {
+  const p = byId(H.people, id); if (!p) return { title: 'Karte', back: '#/pass', html: empty('Nicht gefunden.') };
+  const cfg = p.card;
+  return {
+    title: 'Karte gestalten', back: '#/ice/' + p.id,
+    html: h`<div class="cardprev" id="cardprev" aria-label="Vorschau"></div>
+    <div class="card"><div class="form-grid">${F.select('size', 'Format', Object.entries(CARD_SIZE).map(([k, v]) => [k, v[2]]), cfg.size, { attrs: { 'data-change': 'card-set', 'data-id': p.id } })}${F.select('lang', 'Sprache', [['de', 'Deutsch'], ['en', 'English']], cfg.lang, { attrs: { 'data-change': 'card-set', 'data-id': p.id } })}${F.select('twoSided', 'Seiten', [['1', 'Vorder- und Rückseite'], ['0', 'Eine Seite']], cfg.twoSided ? '1' : '0', { attrs: { 'data-change': 'card-set', 'data-id': p.id } })}</div></div>
+    <div class="card flush"><div class="list">${cfg.mods.map((m, i) => h`<div class="li"><input type="checkbox" style="width:1.6rem;height:1.6rem;accent-color:var(--primary);flex:none" data-change="card-mod" data-id="${p.id}" data-i="${i}" ${m.on ? raw('checked') : ''} aria-label="${MOD_LABEL[m.k]}"><span class="grow t">${MOD_LABEL[m.k]}</span>
+      ${cfg.twoSided ? h`<button class="btn sm" data-act="card-side" data-id="${p.id}" data-i="${i}">${m.side === 'f' ? 'Vorne' : 'Hinten'}</button>` : ''}<button class="btn icon sm" data-act="card-up" data-id="${p.id}" data-i="${i}" ${i ? '' : raw('disabled')} aria-label="Nach oben">↑</button></div>`)}</div></div>
+    ${!passContacts(H, p).length ? noticeBox('rec', 'Kein Notfallkontakt gewählt', '') : ''}
+    <div class="actionbar"><button class="btn primary lg" data-act="card-print" data-id="${p.id}">${icon('print')} Drucken / PDF</button></div>`,
+    after: async () => { const box = $('#cardprev'); if (box) box.innerHTML = await passCardHtml(H, p); },
+  };
+});
+INPUT['card-set'] = el => { const p = byId(HH().people, el.dataset.id); p.card[el.name] = el.name === 'twoSided' ? el.value === '1' : el.value; persist(); rerender(true); };
+INPUT['card-mod'] = el => { const p = byId(HH().people, el.dataset.id); p.card.mods[+el.dataset.i].on = el.checked; persist(); rerender(true); };
+ACT['card-side'] = d => { const p = byId(HH().people, d.id); const m = p.card.mods[+d.i]; m.side = m.side === 'f' ? 'b' : 'f'; persist(); rerender(true); };
+ACT['card-up'] = d => { const p = byId(HH().people, d.id); const i = +d.i, a = p.card.mods; if (i > 0) [a[i - 1], a[i]] = [a[i], a[i - 1]]; persist(); rerender(true); };
+/* Vor dem Export bestaetigen, was sichtbar wird */
+ACT['card-print'] = async d => {
+  const H = HH(); const p = byId(H.people, d.id); const cfg = p.card; const on = k => cfg.mods.some(m => m.k === k && m.on);
+  const cs = passContacts(H, p); const rows = passShared(H, p, cfg.lang);
+  const photos = [on('photo') && p.share.photo && p.photo ? 'Foto von ' + p.name : '', on('cphotos') ? cs.filter(c => c.photo).map(c => 'Foto von ' + c.name).join(', ') : ''].filter(Boolean);
+  const ok = await confirmDlg('Das steht auf der Karte', h`<ul class="stack-s" style="padding-left:20px;margin:0"><li>${p.name}${p.role ? ' (' + p.role + ')' : ''}</li>
+      ${on('contacts') ? cs.map(c => h`<li>${c.name} ${c.phone || ''}</li>`) : ''}${on('info') ? rows.map(([k, v]) => h`<li>${k}: ${v}</li>`) : ''}${photos.map(x => h`<li>${x}</li>`)}${on('qr') ? h`<li>QR-Code mit diesem Text (für jeden lesbar)</li>` : ''}</ul>`, { ok: 'Stimmt – drucken' });
+  if (!ok) return;
+  printDoc('Notfallpass ' + p.name, await passCardHtml(H, p));
+};
+ACT['pass-print'] = d => go('#/card/' + d.id);
 
 /* ---------- Haushalte ---------- */
 route('/households', H => ({

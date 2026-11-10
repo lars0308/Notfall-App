@@ -29,7 +29,8 @@ ACT['rem-del'] = async d => { const ok = await confirmDlg('Erinnerung löschen?'
 /* ---- Benachrichtigungsereignisse ---- */
 function notifAt(iso, hour) { const d = parseISO(iso); if (!d) return 0; d.setHours(hour, 0, 0, 0); return d.getTime(); }
 function buildNotifEvents() {
-  const S = DB.settings; const evs = []; if (!S.notif.on) return evs;
+  const S = DB.settings; const evs = []; const alarms = DB.households.flatMap(H => alarmEvents(H));
+  if (!S.notif.on) return alarms;
   const now = Date.now(); const hr = S.notif.hour; const lead = S.notif.leadDays || 30;
   const push = (id, at, title, text) => { if (at && at > now - 30 * 86400000 && at < now + 130 * 86400000) evs.push({ id, at, title, text }); };
   for (const H of DB.households) {
@@ -49,7 +50,7 @@ function buildNotifEvents() {
   }
   if (UI.testNotifAt) evs.push({ id: 'test', at: UI.testNotifAt, title: 'Notfall!: Test', text: 'Benachrichtigungen funktionieren.' });
   evs.sort((a, b) => a.at - b.at);
-  return evs.slice(0, 140);
+  return alarms.concat(evs.slice(0, 140 - alarms.length));
 }
 function syncNotifications() {
   if (!IS_NATIVE || !NATIVE.scheduleReminders) return 0;

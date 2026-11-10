@@ -275,3 +275,19 @@ select option{background:var(--solid);color:var(--text)}
 @media (prefers-reduced-motion:no-preference){.tile,.ans,.btn{transition:transform .08s,border-color .12s,background .12s}}
 .actionbar{background:linear-gradient(to bottom,transparent,var(--bg) 38%)}
 .bag2d text.sm{font-size:9px}
+
+/* Karte */
+.mapbox{position:relative;border-radius:var(--radius);overflow:hidden;border:1px solid var(--line)}
+.mapbox canvas{display:block;width:100%;height:min(55vh,28rem);touch-action:none;cursor:grab}
+.mapctl{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px}
+.mapctl .btn{background:var(--solid)}
+.mapattr{position:absolute;left:0;right:0;bottom:0;font-size:10px;line-height:1.4;padding:2px 6px;background:rgba(0,0,0,.5);color:#fff;text-align:right;min-height:0}
+.mapattr:empty{display:none}
+/* Test-Alarm */
+.testbanner{background:repeating-linear-gradient(45deg,#ffd24a 0 18px,#1b1b1b 18px 36px);padding:6px;border-radius:16px}
+.testbanner>div{background:#1b1b1b;color:#ffd24a;border-radius:12px;padding:12px 16px;font-weight:900;font-size:1.25rem;text-align:center;letter-spacing:.02em}
+.own{border:2px dashed var(--line-strong)}
+/* Kartenvorschau (Notfallkarte) */
+.cardprev{background:#fff;color:#000;border-radius:12px;padding:12px;overflow:auto}
+a.chip{text-decoration:none;color:var(--text)}
+a.chip[aria-pressed="true"]{color:var(--on-primary)}

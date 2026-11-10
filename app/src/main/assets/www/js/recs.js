@@ -160,7 +160,10 @@ function computeRecs(H, S) {
   for (const i of owned) {
     if (i.expiry) {
       const dl = daysUntil(i.expiry);
-      if (dl !== null && dl < 0) R('r:exp:' + i.id, 'must', i.category, `${i.name} ist abgelaufen`, `Ablaufdatum ${fmtDate(i.expiry)}. Ersetzen oder prüfen.`, { action: { type: 'goto', route: '#/item/' + i.id }, itemId: i.id });
+      if (dl !== null && dl < 0) {
+        if (i.expiryType === 'mhd') R('r:exp:' + i.id, 'rec', i.category, `MHD überschritten: ${i.name}`, `MHD ${fmtDate(i.expiry)}. Das MHD ist kein Verfallsdatum – prüfen und zuerst verbrauchen.`, { action: { type: 'goto', route: '#/item/' + i.id }, itemId: i.id });
+        else R('r:exp:' + i.id, 'must', i.category, `${i.name} ist abgelaufen`, `${i.expiryType === 'use' ? 'Verbrauchsdatum' : 'Ablaufdatum'} ${fmtDate(i.expiry)}. ${i.expiryType === 'use' ? 'Nicht mehr verwenden, ersetzen.' : 'Ersetzen oder prüfen.'}`, { action: { type: 'goto', route: '#/item/' + i.id }, itemId: i.id });
+      }
       else if (dl !== null && dl <= lead) R('r:exp:' + i.id, 'rec', i.category, `${i.name} läuft bald ab`, `Ablaufdatum ${fmtDate(i.expiry)} (${relDays(i.expiry)}).`, { action: { type: 'goto', route: '#/item/' + i.id }, itemId: i.id });
     }
     if (i.minQty > 0 && i.qty < i.minQty) R('r:min:' + i.id, 'must', i.category, `Mindestbestand unterschritten: ${i.name}`, `Vorhanden ${fmt(i.qty)} ${i.unit}, Mindestbestand ${fmt(i.minQty)}.`, { action: { type: 'restock', itemId: i.id }, itemId: i.id });

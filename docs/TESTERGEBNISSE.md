@@ -1,19 +1,22 @@
-# Testergebnisse (Version 2.1.0, Fokus-Update)
+# Testergebnisse (Version 2.2.0)
 
-Stand: 2026-11-10 07:35 UTC. Echte Ausgaben aus der Build-Umgebung (Node 22, Chromium/Playwright, Android SDK 35, Gradle 8.14.3). Wiederholbar mit `tests/run-all.sh`.
+Stand: 2026-11-10 08:21 UTC. Echte Ausgaben aus der Build-Umgebung (Node 22, Chromium/Playwright, Android SDK 35, Gradle 8.14.3). Wiederholbar mit `tests/run-all.sh`. Gesamt: **37 Unit-Prüfungen, 115 End-to-End-Prüfungen, 19 Schnittstellen-Prüfungen – 0 fehlgeschlagen.**
 
 | Ebene | Wie getestet | Ergebnis |
 |---|---|---|
 | Planer, Packreihenfolge, Regeln, Migration | 37 Unit-Tests (`tests/unit.js`) | alle bestanden |
-| Abnahme-Ablauf v1: Assistent → Packliste → Fach → Packen → Notfallpass/QR | 47 Prüfungen in Chromium, Handyformat 400×860 (`tests/flow.js`) | alle bestanden |
-| Daten: Migration von 2.0, Backup/Restore, PIN, Notfallpass ohne Entsperren | 29 Prüfungen (`tests/data.js`) | alle bestanden |
-| Schnittstelle zu Android | 19 Prüfungen gegen eine **Attrappe** (`tests/native-sim.js`) | alle bestanden |
-| Zufallstest | 3 Läufe × ca. 330 Aktionen | keine JS-Fehler |
-| Java-Teil (Keystore, Biometrie, Benachrichtigungen, Kamera, Drucken) | **nur kompiliert**, APK signiert | **nicht auf einem Gerät ausgeführt** |
+| Abnahme-Ablauf v1 | 47 Prüfungen (`tests/flow.js`) | alle bestanden |
+| Migration, Backup/Restore, PIN | 29 Prüfungen (`tests/data.js`) | alle bestanden |
+| Neu in 2.2: Pass-Baukasten, Kartendesigner, Lagen, Probealarm, Karten, Kiste, QR-Etikett | 39 Prüfungen (`tests/extra.js`), Karten/Probealarm gegen eine **Attrappe** der Android-Schnittstelle | alle bestanden |
+| Schnittstelle zu Android | 19 Prüfungen gegen die Attrappe (`tests/native-sim.js`) | alle bestanden |
+| Zufallstest inkl. neuer Seiten | 3 Läufe × ca. 335 Aktionen | keine JS-Fehler |
+| Java-Teil (Keystore, Biometrie, Benachrichtigungen, **Probealarm, Kartendownload, MBTiles-Import**, Kamera, Drucken) | **nur kompiliert**, APK signiert, Berechtigungen mit `aapt2` geprüft | **nicht auf einem Gerät ausgeführt** |
 
-**QR-Code:** Der erzeugte Code wurde im Test als Bild aufgenommen und mit einem unabhängigen Standard-Decoder (jsQR) gelesen; der Inhalt stimmt mit der Vorschau überein, Umlaute eingeschlossen. Ein Scan mit einer echten Handykamera und der Ausdruck als PDF stehen noch aus (siehe [Geräte-Checkliste](GERAETETEST-CHECKLISTE.md)). Die Online-Variante (Webseite) gibt es nicht, es gibt also keinen Online-Fall zu testen.
+**Wichtig:** Kein Android-Gerät und kein Emulator in dieser Umgebung (kein `/dev/kvm`). Zustellung des Probealarms bei geschlossener App, nach Neustart, nach „Beenden erzwingen“ und unter Energiesparen ist damit **nicht geprüft** – siehe [Geräte-Checkliste](GERAETETEST-CHECKLISTE.md). Der QR-Code wurde mit einem unabhängigen Decoder (jsQR) gelesen, nicht mit einer echten Kamera.
 
-**Tablet-Layout (1100×820)** und **helles Farbschema** wurden per Screenshot gesichtet (`tests/shots.js`); dabei wurde die im hellen Schema unleserliche Fachbeschriftung behoben. Automatische Prüfungen laufen nur im Handyformat, dunkel.
+## Bei den Tests gefunden und behoben
+- Notfallansicht nannte unter „Bei Abreise mitnehmen“ Medikamentennamen, obwohl Medikamente nicht freigegeben waren – jetzt nur „Medikamente & Hilfsmittel (n)“.
+- Nach einem Kartendownload blieb die Karte leer, wenn die Kartenmitte außerhalb des neuen Gebiets lag.
 
 ## 1. Unit-Tests
 ```
@@ -90,7 +93,7 @@ OK   Warnhinweis „jeder kann das lesen“ + Hinweis Android-Notfallinfos
 OK   QR-Code ist mit Standard-Decoder lesbar und enthält genau den Vorschautext (Umlaute korrekt) Mia (Kind)
 OK   Druckkarte: Name, 3 Kontakte, QR, freigegebene Angabe – keine privaten Daten 
 OK   Notfall: kein Fehler/Markup im Text 
-OK   Notfallmodus: 112, Pässe mit Kontakten, Lagerort der Tasche, keine privaten Daten 
+OK   Notfallmodus: 112, Pässe mit Kontakten, Lagerort der Tasche, keine privaten Daten true,true,true,true,false,false
 OK   #/bags: kein Fehler/Markup im Text 
 OK   #/review: kein Fehler/Markup im Text 
 OK   #/more: kein Fehler/Markup im Text 
@@ -125,9 +128,9 @@ OK   Zweiter Durchlauf „Auto“ ergänzt eine Auto-Notfalltasche, die erste Pa
 OK   Eigener Gegenstand: Tasche vorbelegt, Fach automatisch, Notiz, „erst bei Abreise“ 
 OK   Notiz auf der Detailseite änderbar 
 OK   „Fehlt“ → Einkaufsliste → „Gekauft“ übernimmt als vorhanden 
-OK   Tasche kopieren: eigene Fächer und Inhalte, Original unverändert {"bags":3,"name":"Notfallrucksack Erwachsene/r 1 (Kopie)","items":43,"src":43,"compsDistinct":true,"newId":"94440776c8904d96"}
+OK   Tasche kopieren: eigene Fächer und Inhalte, Original unverändert {"bags":3,"name":"Notfallrucksack Erwachsene/r 1 (Kopie)","items":43,"src":43,"compsDistinct":true,"newId":"3fcee6fcb3e24231"}
 OK   Tasche löschen behält die Gegenstände (kein Datenverlust) 
-OK   Backup ist verschlüsselt (kein Klartext von Namen/Gesundheit/Kontakten) 16830 Bytes
+OK   Backup ist verschlüsselt (kein Klartext von Namen/Gesundheit/Kontakten) 17014 Bytes
 OK   „Alle Daten löschen“ leert alles 
 OK   Falsches Backup-Passwort ändert nichts 
 OK   Wiederherstellung bringt alles zurück (Taschen, Gegenstände, Pass, Freigaben, Kontakte) {"i":97,"b":2,"s":1} / {"i":97,"b":2,"s":1}
@@ -141,7 +144,50 @@ OK   Richtige PIN entsperrt
 OK   Sperre lässt sich wieder ausschalten 
 Konsolenfehler: keine
 ```
-## 4. Schnittstelle mit Attrappe (`tests/native-sim.js`)
+## 4. Erweiterungen 2.2 (`tests/extra.js`)
+```
+OK   Eigenes Feld, Abholberechtigte, Notfallmedikament (mit Zweck) erscheinen nur, wenn freigegeben Medikamente: Salbutamol-Spray (Notfallmedikament) – Asthmaanfall | Abholberechtigt: Oma Erna, Onkel Tom | Organspende: Unbekannt | Kita: Sonnenschein, Tel. 030 9
+OK   Ausgeblendetes Modul (Organspende) wird trotz Freigabe nicht gezeigt und verschwindet aus dem Editor 
+OK   „Stand“ und „bestätigt von“ im Notfallpass 
+OK   Kartendesigner: Vorschau mit Vorder- und Rückseite, QR auf der Rückseite 
+OK   Sprache Englisch: Kartentitel und Beschriftungen übersetzt, QR-Text englisch 
+OK   Eine Seite: alles auf einer Fläche 
+OK   Modul abwählbar (QR-Code aus) 
+OK   Reihenfolge änderbar, Format A6 gespeichert 
+OK   Vor dem Drucken: Bestätigung „Das steht auf der Karte“ mit allen sichtbaren Angaben 
+OK   Druck-HTML enthält Karte mit QR, ohne private Angaben 
+OK   Lage „Brand im Gebäude“: eigene Checkliste klar getrennt, Taschen „Nicht danach suchen“ 
+OK   Lage „Evakuierung“: Lagerort, „Bei sicherer Evakuierung mitnehmen“, „Bei Abreise mitnehmen“ 
+OK   Medikamentenname bleibt privat (nur „Medikamente & Hilfsmittel“) 
+OK   Keine amtliche Warnung vorgetäuscht, keine 1–10-Skala 
+OK   Probealarm: einmalig vergangen → kein Termin; wiederkehrend → nächster in ≤ 90 Tagen 
+OK   Probealarm wird auch bei ausgeschalteten Erinnerungen geplant: TEST-Titel, genaue Uhrzeit, öffnet Notfallansicht {"id":"a:8e9d4611fbad:1794424500000","at":1794424500000,"title":"TESTALARM – KEINE ECHTE GEFAHR","text":"Probealarm: Hochwasser. Antippen zum Üben.","kind":"test","route":"#/sos?test=8e9d4611fbad&t=1794424500000&s=flood","exact":true}
+OK   MHD überschritten wird als „prüfen“ gezeigt, Verbrauchsdatum als überschritten (nicht gleichgesetzt) 
+OK   Gleiche Vorräte: älteste Charge steht oben und ist „zuerst verbrauchen“ [true,false]
+OK   Empfehlungen: MHD → „Empfohlen“, Verbrauchsdatum → „Notwendig“ must:H-Milch ist abgelaufen | rec:MHD überschritten: Nudeln
+OK   QR-Etikett der Tasche: Name, Ort, Inhalt, ohne Medikamente, kurz genug 
+OK   Hinweis, wenn genaue Alarme nicht erlaubt sind, mit Knopf zu den Einstellungen 
+OK   Geplanter Probealarm wird an Android übergeben (Datum, 07:45, TEST) 
+OK   Antippen der Testbenachrichtigung öffnet dieselbe Notfallansicht mit TEST-Kennzeichnung und Lage 
+OK   Auswertung sichtbar: ausgelöst mit Uhrzeit, geöffnet, Ungeprüftes als „nicht geprüft“ Auswertung (1) |  | 10.11.2026, 07:17 |  | Ausgelöst	ja, 07:17 | Geöffnet	ja | Ton/Vibration	ja | Taschen am Lagerort gefunden	ja | Notfallkontakte aktuell	nicht geprüft | Wichtiges vollständig (Medikamente, Kinderbedarf)	nicht geprüft
+OK   Auswertung gespeichert: ausgelöst laut Android-Protokoll, geöffnet, gehört, Taschen geprüft, Kontakte nicht geprüft {"opened":true,"heard":"yes","bags":true,"contacts":false,"fired":true}
+OK   Bei gesperrter App: Testalarm zeigt eingeschränkte Notfallansicht ohne Navigation 
+OK   Kartenserver ohne HTTPS wird abgelehnt 
+OK   Schätzung der Kachelanzahl vor dem Download ca. 16 Kacheln · ca. 320 KB / 16
+OK   Download nur nach Bestätigung der Anbieter-Bedingungen 
+OK   Gebiet geladen: alle Kacheln gespeichert, Quelle und Grenzen gemerkt {"stored":16,"expect":16}
+OK   Offline-Anzeige: Kacheln kommen aus dem Speicher, keine Netzabfrage {"shown":2,"http":0}
+OK   Quellenangabe der Karte wird angezeigt 
+OK   Treffpunkt per Tippen auf die Karte positioniert [52.52,13.405,{"lat":52.52,"lon":13.404999999999973}]
+OK   Treffpunkt erscheint als Markierung 
+OK   Verweigerter Download: klare Meldung, kein halbes Kartenpaket 
+OK   Zu großes Gebiet wird vor dem Download erkannt 
+OK   MBTiles-Import legt Kartenpaket an (Quellenangabe ohne HTML) 
+OK   Kartenpaket ohne Kacheln auf dem Gerät wird bereinigt 
+OK   Karte löschen entfernt Paket und Kacheln 
+Konsolenfehler: keine
+```
+## 5. Schnittstelle mit Attrappe (`tests/native-sim.js`)
 ```
 OK   Native erkannt (kein Browser-Hinweis) 
 OK   setBars beim Start (ARGB Int32, Icons) 
@@ -158,15 +204,15 @@ OK   Safe lässt sich per Biometrie entsperren
 OK   Safe-Datenbestand im nativen Speicher nur verschlüsselt (vault_*) 
 OK   Safe bleibt entsperrt, während Kamera/Dateiauswahl geöffnet ist 
 OK   Safe sperrt beim Verlassen der App 
-OK   Backup nutzt saveDownload(.nfbak) Notfall-Backup-20261110-0732.nfbak
+OK   Backup nutzt saveDownload(.nfbak) Notfall-Backup-20261110-0817.nfbak
 OK   Notfallkarte nutzt printHtml (mit QR als SVG) 
 OK   Kontakt-Schnellwahl öffnet Wählansicht 
 OK   Notruf-Button öffnet nur die Wählansicht (dial("112")) 
 Konsolenfehler: keine
 ```
-## 5. Zufallstest
+## 6. Zufallstest
 ```
-Seed 31: 327 Aktionen, Konsolenfehler: 0, Fehlerseite: false
-Seed 32: 328 Aktionen, Konsolenfehler: 0, Fehlerseite: false
-Seed 33: 334 Aktionen, Konsolenfehler: 0, Fehlerseite: false
+Seed 41: 339 Aktionen, Konsolenfehler: 0, Fehlerseite: false
+Seed 42: 335 Aktionen, Konsolenfehler: 0, Fehlerseite: false
+Seed 43: 334 Aktionen, Konsolenfehler: 0, Fehlerseite: false
 ```

@@ -5,6 +5,10 @@
   <uses-permission android:name="android.permission.CAMERA"/>
   <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
   <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+  <!-- Nur fuer den ausdruecklich gestarteten Download von Kartenkacheln -->
+  <uses-permission android:name="android.permission.INTERNET"/>
+  <!-- Probealarm zur gewaehlten Minute (Nutzer muss es ab Android 14 selbst erlauben) -->
+  <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
   <uses-feature android:name="android.hardware.camera" android:required="false"/>
   <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
 

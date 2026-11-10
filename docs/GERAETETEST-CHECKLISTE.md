@@ -42,3 +42,15 @@ Diese Punkte konnten in der Entwicklungsumgebung **nicht** geprüft werden. Bitt
 - [ ] Tasche: Fach in der 2D-Ansicht antippen; 3D umschalten, drehen.
 - [ ] Update von 2.0.0: alte Taschen, Gegenstände, Fotos und Kontakte sind noch da.
 - [ ] Zurück-Taste schließt zuerst Dialoge, dann geht sie eine Seite zurück.
+
+## Neu in 2.2
+- [ ] Probealarm „In 1 Minute“ → App schließen → Benachrichtigung „TESTALARM – KEINE ECHTE GEFAHR“ mit Ton/Vibration kommt.
+- [ ] Antippen öffnet die Notfallansicht mit Übung; Auswertung zeigt „Ausgelöst: ja, Uhrzeit“.
+- [ ] Probealarm für morgen planen, Handy neu starten → Alarm kommt trotzdem.
+- [ ] Android 14+: Hinweis „Genaue Uhrzeit erlauben“ → Einstellungen öffnen sich; danach pünktlich.
+- [ ] Mit gesperrter App: Testbenachrichtigung antippen → eingeschränkte Notfallansicht ohne Navigation.
+- [ ] Karte: Kartenserver eintragen, kleines Gebiet laden (Fortschritt, Abbrechen), danach im Flugmodus anzeigen.
+- [ ] Raster-MBTiles-Datei importieren (z. B. aus einem Kartentool exportiert).
+- [ ] Treffpunkt auf der Karte setzen; Markierung erscheint; „Karte“-Knopf in der Notfallansicht springt dorthin.
+- [ ] Kartendesigner: Scheckkarte zweiseitig drucken/als PDF speichern, ausschneiden, QR mit fremdem Handy scannen.
+- [ ] QR-Etikett einer Tasche drucken und scannen.

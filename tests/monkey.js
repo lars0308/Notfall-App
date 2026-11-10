@@ -3,7 +3,7 @@
 const { chromium } = require('playwright');
 const { start } = require('./serve');
 
-const SKIP = /wipe|lock-disable|person-del|bag-del|box-off|hh-del|safe-reset|lock-enable|user-del|lock-now|legacy-import|backup-restore|safe-import|safe-scan|ph-add|ph-cam|ph-gal|hh-new|load-sample|wz-skip|scan|notif-/;
+const SKIP = /map-import|map-dl-cancel|wipe|lock-disable|person-del|bag-del|box-off|hh-del|safe-reset|lock-enable|user-del|lock-now|legacy-import|backup-restore|safe-import|safe-scan|ph-add|ph-cam|ph-gal|hh-new|load-sample|wz-skip|scan|notif-/;
 
 (async () => {
   const srv = await start(8123);
@@ -20,7 +20,7 @@ const SKIP = /wipe|lock-disable|person-del|bag-del|box-off|hh-del|safe-reset|loc
   await p.evaluate(() => { loadSampleHousehold(); const H = HH(); H.items.slice(0, 40).forEach(i => { i.status = 'owned'; }); persist(); go('#/home'); });
   await p.waitForTimeout(500);
   const bid = await p.evaluate(() => HH().bags[0].id); const pid = await p.evaluate(() => HH().people[0].id);
-  const routes = ['home', 'bags', 'bags/' + bid, 'bags/' + bid + '/pack', 'bags/' + bid + '/missing', 'items', 'stock', 'shop', 'recs', 'pass', 'pass/' + pid, 'ice/' + pid, 'places', 'remind', 'sos', 'settings', 'more', 'review', 'households', 'wizard'];
+  const routes = ['home', 'bags', 'bags/' + bid, 'bags/' + bid + '/pack', 'bags/' + bid + '/missing', 'items', 'stock', 'shop', 'recs', 'pass', 'pass/' + pid, 'ice/' + pid, 'places', 'remind', 'sos', 'settings', 'more', 'review', 'households', 'wizard', 'map', 'alarm', 'card/' + pid, 'sos?s=evac', 'sos?s=fire_house'];
   let clicks = 0;
   for (let i = 0; i < 350; i++) {
     if (i % 12 === 0) {

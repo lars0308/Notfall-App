@@ -33,7 +33,8 @@ route('/more', H => {
     html: h`${tile('#/shop', 'cart', '', 'Einkaufsliste', shopN ? shopN + ' zu besorgen' : '')}
     ${tile('#/recs', 'alert', '', 'Was fehlt?', '')}
     ${tile('#/remind', 'bell', '', 'Erinnerungen', '')}
-    ${tile('#/places', 'map', '', 'Treffpunkte', H.meeting.length ? H.meeting.length + ' gespeichert' : '')}
+    ${tile('#/map', 'map', '', 'Karte & Treffpunkte', [H.meeting.length ? H.meeting.length + ' Treffpunkte' : '', (DB.maps || []).length ? DB.maps.length + ' Karten' : ''].filter(Boolean).join(' · '))}
+    ${tile('#/alarm', 'bell', '', 'Probealarm', (H.alarms || []).filter(a => a.enabled && alarmNext(a)).length ? 'geplant' : '')}
     ${tile('#/items', 'search', '', 'Alle Gegenstände', '')}
     ${tile('#/stock', 'box', '', 'Notfallkiste zu Hause', H.box.enabled ? H.items.filter(i => !i.archived && i.container === 'home').length + ' Positionen' : 'Optional')}
     ${DB.vaultHint ? tile('#/safe', 'lock', '', 'Dokumenten-Safe', '') : ''}

@@ -40,7 +40,7 @@ Wichtig: Der **Plan** erzeugt Gegenstände mit Status `planned` („zu prüfen�
 - `ui-core.js`: Router (`#/…`), Shell, Dialoge, Formularbausteine, Sperrbildschirm; `h`-Template-Funktion escaped alle Variablen automatisch.
 
 ## Sicherheit
-- Keine INTERNET-Berechtigung; `allowBackup=false`; CSP; WebView lädt nur die eigene Herkunft; `JavascriptInterface` nur dafür erreichbar.
+- INTERNET-Berechtigung nur für den vom Nutzer gestarteten Kartendownload (nativer HTTPS-Abruf); die WebView lädt weiterhin nur die eigene Herkunft, fremde Adressen werden blockiert. `allowBackup=false`; CSP; `JavascriptInterface` nur für die eigene Herkunft erreichbar.
 - PIN: PBKDF2 (150.000 Iterationen, Salt), 5 Fehlversuche → wachsende Wartezeit.
 - Safe-Passwort/Backup-Passwort: PBKDF2-SHA256 310.000 Iterationen, AES-256-GCM.
 - Benachrichtigungstexte enthalten keine Gesundheitsdaten; Sperrbildschirm-Sichtbarkeit „privat“.
@@ -50,3 +50,10 @@ Wichtig: Der **Plan** erzeugt Gegenstände mit Status `planned` („zu prüfen�
 - Neue Module: `v-pass.js` (Notfallpass, Kontakte, QR, Druckkarte), Packanleitung (`packSteps` in `planner.js`), 2D-Fachansicht (`bag2d` in `v-bags.js`).
 - QR-Code: mitgelieferte Bibliothek `js/vendor/qrcode.js` (qrcode-generator 1.4.4, MIT, Kazuhiko Arase), keine Netzabfrage.
 - Entfallen: `v-people.js`, `v-rooms.js`; Navigation auf Start, Taschen, Packliste, Notfallpass, Mehr reduziert.
+
+## Änderungen in 2.2 (Gesamtauftrag)
+- **Offline-Karten:** `map.js` (Web-Mercator-Kachelmathematik, eigener Canvas-Kartenrenderer ohne Fremdbibliothek, Download-Manager mit 4 parallelen Abrufen, Grenze 15.000 Kacheln/Zoom 17). Android: `MapStore.java` speichert Kacheln als Dateien unter `files/maps/<paket>/` (öffentliche Daten, unverschlüsselt), `httpGet` nur HTTPS, `importMbtiles` liest Raster-MBTiles (TMS-Zeilen werden umgerechnet). Paket-Metadaten in `DB.maps`. Kacheln sind **nicht** im Backup; Pakete ohne Kacheln werden beim Start entfernt.
+- **Probealarm:** Daten `H.alarms[]` und `H.alarmResults[]`. Termine werden als Ereignis `kind:'test'`, `exact:true`, `route:'#/sos?test=…'` an `Reminders.java` übergeben; eigener Kanal „Probealarm“ (hohe Priorität, Alarmton, Vibration); `setExactAndAllowWhileIdle`, wenn erlaubt, sonst ungefähr. `ReminderReceiver` protokolliert die Auslösung (`alarmLog`), das Antippen öffnet über `onNewIntent` die Route in der WebView.
+- **Notfall-Schnellübersicht:** eine Seite für manuellen Aufruf und Probealarm, mit Lage-Auswahl (eigene Checkliste, klar getrennt von amtlichen Anweisungen) und Taschen-Hinweisen.
+- **Notfallpass:** neue Felder `pickup`, `doctor`, `confirmedBy`, `custom[]`, `hide{}`, `card{size,lang,twoSided,mods[]}`; Medikamente mit Zweck, Einnahme, Aufbewahrung, Notfallmedikament.
+- **Gegenstände:** `expiryType` (`mhd` / `use`).

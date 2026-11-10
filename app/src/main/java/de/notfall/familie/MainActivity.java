@@ -46,7 +46,7 @@ import java.util.HashMap;
 public class MainActivity extends Activity {
   static final String HOST = "app.notfall.invalid";
   private static final String BASE = "https://" + HOST + "/";
-  private static final int REQ_PICK = 4242, REQ_PHOTO = 4243;
+  private static final int REQ_PICK = 4242, REQ_PHOTO = 4243, REQ_MAP = 4244;
   private static final int PERM_CAMERA = 11, PERM_WEBCAM = 12, PERM_NOTIF = 13;
 
   private WebView webView;
@@ -56,6 +56,11 @@ public class MainActivity extends Activity {
   private int camCb = -1, pendingCamCb = -1, pendingNotifCb = -1;
   private PermissionRequest pendingWebPerm;
   private WebView printView;
+  private NativeBridge bridge;
+  private boolean pageReady = false;
+  private String pendingRoute;
+  private int mapCb = -1;
+  private String mapPack;
 
   @Override public void onCreate(Bundle state) {
     super.onCreate(state);
@@ -77,12 +82,19 @@ public class MainActivity extends Activity {
     s.setMediaPlaybackRequiresUserGesture(false);
     s.setSaveFormData(false);
     webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
-    webView.addJavascriptInterface(new NativeBridge(this), "NotfallAndroid");
+    bridge = new NativeBridge(this);
+    webView.addJavascriptInterface(bridge, "NotfallAndroid");
+    pendingRoute = routeFrom(getIntent());
 
     webView.setWebViewClient(new WebViewClient() {
       @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest request) {
         Uri uri = request.getUrl();
         return !("https".equals(uri.getScheme()) && HOST.equals(uri.getHost()));
+      }
+
+      @Override public void onPageFinished(WebView view, String url) {
+        pageReady = true;
+        deliverRoute();
       }
 
       @Override public boolean onRenderProcessGone(WebView view, android.webkit.RenderProcessGoneDetail detail) {
@@ -192,6 +204,61 @@ public class MainActivity extends Activity {
     else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
   }
 
+  // ---------- Oeffnen aus einer Benachrichtigung (z. B. Probealarm) ----------
+  private static String routeFrom(Intent i) {
+    if (i == null) return null;
+    String r = i.getStringExtra("route");
+    return r != null && r.matches("#/[A-Za-z0-9/_?=&.-]{1,120}") ? r : null;
+  }
+
+  @Override protected void onNewIntent(Intent intent) {
+    super.onNewIntent(intent);
+    setIntent(intent);
+    String r = routeFrom(intent);
+    if (r != null) { pendingRoute = r; deliverRoute(); }
+  }
+
+  private void deliverRoute() {
+    if (!pageReady || pendingRoute == null || webView == null) return;
+    String r = pendingRoute;
+    pendingRoute = null;
+    webView.evaluateJavascript("window.__openRoute&&window.__openRoute(" + JSONObject.quote(r) + ")", null);
+  }
+
+  // ---------- Kartenimport (MBTiles) ----------
+  void startMapImport(int cb, String pack) {
+    mapCb = cb;
+    mapPack = pack;
+    try {
+      Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*");
+      startActivityForResult(i, REQ_MAP);
+    } catch (Exception e) {
+      resolve(cb, "{\"ok\":false,\"error\":\"Dateiauswahl nicht verfügbar\"}");
+    }
+  }
+
+  private void finishMapImport(int cb, String pack, Uri uri) {
+    new Thread(() -> {
+      try (InputStream in = getContentResolver().openInputStream(uri)) {
+        if (in == null) throw new IOException("Datei nicht lesbar");
+        JSONObject meta = bridge.maps().importMbtiles(in, new File(getCacheDir(), "import.mbtiles"), pack, (done, total) ->
+            runOnUiThread(() -> webView.evaluateJavascript("window.__mapProgress&&window.__mapProgress(" + done + "," + total + ")", null)));
+        JSONObject o = new JSONObject();
+        o.put("ok", true);
+        o.put("meta", meta);
+        resolve(cb, o.toString());
+      } catch (Throwable t) {
+        bridge.maps().delete(pack);
+        try {
+          JSONObject o = new JSONObject();
+          o.put("ok", false);
+          o.put("error", t.getMessage() == null ? "Import fehlgeschlagen" : t.getMessage());
+          resolve(cb, o.toString());
+        } catch (Exception ignored) {}
+      }
+    }).start();
+  }
+
   // ---------- Kamera ----------
   void startCameraCapture(int cb) {
     if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -254,6 +321,10 @@ public class MainActivity extends Activity {
     if (req == REQ_PICK && fileCallback != null) {
       fileCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(res, data));
       fileCallback = null;
+    } else if (req == REQ_MAP) {
+      int cb = mapCb; String pack = mapPack; mapCb = -1;
+      if (res != RESULT_OK || data == null || data.getData() == null) { resolve(cb, "{\"ok\":false,\"error\":\"abgebrochen\"}"); return; }
+      finishMapImport(cb, pack, data.getData());
     } else if (req == REQ_PHOTO) {
       final int cb = camCb;
       final File f = camFile;

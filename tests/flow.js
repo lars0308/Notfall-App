@@ -73,7 +73,7 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
   ok('Druckkarte: Name, 3 Kontakte, QR, freigegebene Angabe – keine privaten Daten', /Mia/.test(card) && /<svg/.test(card) && /Oma Erna/.test(card) && /Erdnüsse/.test(card) && !/Asthma/.test(card));
   // Notfallmodus
   await p.goto('http://localhost:8123/#/sos'); await p.waitForSelector('.callbtn'); const sos = await body(); await shot('12-notfall'); await noMarkup('Notfall');
-  ok('Notfallmodus: 112, Pässe mit Kontakten, Lagerort der Tasche, keine privaten Daten', /112/.test(sos) && /Oma Erna/.test(sos) && /Flur/.test(sos) && /Erdnüsse/.test(sos) && !/Asthma|Ramipril/.test(sos));
+  ok('Notfallmodus: 112, Pässe mit Kontakten, Lagerort der Tasche, keine privaten Daten', /112/.test(sos) && /Oma Erna/.test(sos) && /Flur/.test(sos) && /Erdnüsse/.test(sos) && !/Asthma|Ramipril/.test(sos), [/112/.test(sos), /Oma Erna/.test(sos), /Flur/.test(sos), /Erdnüsse/.test(sos), /Asthma/.test(sos), /Ramipril/.test(sos)].join());
   // weitere Seiten
   for (const r of ['bags', 'review', 'more', 'shop', 'remind', 'places', 'items', 'stock', 'recs', 'settings', 'sources', 'households']) { const before = errs.length; await p.goto('http://localhost:8123/#/' + r); await p.waitForTimeout(150); await noMarkup('#/' + r); if (errs.length !== before) ok('#/' + r + ' ohne Konsolenfehler', false, errs.slice(before).join(';')); }
   ok('Gestrichene Bereiche nicht mehr in der Navigation (Schutzräume, Benutzerverwaltung, Safe, Aufgaben)', !/Schutzr|Benutzer|Safe|Aufgaben|Empfehlungen/.test(await (async () => { await p.goto('http://localhost:8123/#/more'); await p.waitForTimeout(100); return body(); })()));

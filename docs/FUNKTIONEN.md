@@ -1,4 +1,4 @@
-# Umgesetzte Funktionen (Version 2.1.0, Fokus-Update)
+# Umgesetzte Funktionen (Version 2.2.0)
 
 Legende: ✅ umgesetzt und im Browser getestet · 📱 braucht Android-Code, nicht auf Gerät geprüft · 🟡 mit Einschränkung · ⬜ offen. Was gestrichen oder verschoben wurde, steht in der [Feature-Matrix](FEATURE-MATRIX.md).
 
@@ -24,23 +24,27 @@ Legende: ✅ umgesetzt und im Browser getestet · 📱 braucht Android-Code, nic
 - 🟡 „Nichts außen baumeln lassen“ wird nicht geprüft – die App kennt keine Außenbefestigung einzelner Gegenstände.
 
 ## 4 Notfallkontakte & Pässe ✅
-- Je Person: Name, Geburtsdatum, Rolle, Foto 📱, Allergien, Krankheiten, Medikamente, Hilfsmittel, Blutgruppe, Hinweise, Organspende-Angabe mit Hinweis, dass sie keinen Ausweis ersetzt.
+- Je Person: Name, Geburtsdatum, Rolle, Foto 📱, Allergien mit Reaktion, Krankheiten, Medikamente (Dosierung, Zweck, Einnahme, Aufbewahrung, Notfallmedikament), Hilfsmittel, Blutgruppe, Arzt/Ärztin, Abholberechtigte/Betreuung, Hinweise, Organspende-Angabe (ersetzt keinen Ausweis), eigene Felder, „bestätigt von“ und Stand.
+- Baukasten: nicht benötigte Felder ausblenden; ausgeblendete Felder bleiben auch bei Freigabe verborgen.
 - **Jedes Feld ist privat, bis es einzeln freigegeben wird.**
 - Bis zu drei priorisierte Kontakte je Person mit Beziehung, Telefon, Foto 📱; Reihenfolge änderbar; Schnellwahl öffnet die Wählansicht 📱.
 - Notfallpass-Ansicht zeigt nur Freigegebenes; auch ohne Entsperren erreichbar (abschaltbar).
 - QR-Code Variante A: freigegebene Angaben als Text direkt im Code, ohne App und ohne Internet lesbar; Vorschau „das kann jeder lesen“.
-- Notfallkarte als PDF/Druck 📱 mit Fotos, Kontakten, QR.
+- Kartendesigner: Module wählen und ordnen, Vorder-/Rückseite, Scheckkarte oder A6, Deutsch/Englisch, Live-Vorschau, vor dem Druck Liste aller sichtbaren Angaben; Druck/PDF 📱.
 - Hinweis auf die Android-Notfallinfos.
-- ⬜ QR Variante B (Webseite mit Fotos) und freier Kartendesigner: nicht umgesetzt.
+- ⬜ QR Variante B (Webseite mit Fotos): braucht Server – siehe [Online-Architektur](ONLINE-ARCHITEKTUR.md).
 
 ## Zusätzlich, schlank
 - ✅ Erinnerungen: Packkontrolle, Powerbanks, Batterien, Kinderkleidung, Medikamente, Ablaufdaten, eigene Termine; 📱 Benachrichtigung auch bei geschlossener App.
-- ✅ Optionale Notfallkiste zu Hause: erst nach „Kiste anlegen“; Mengen und Ablaufdaten.
-- ✅ Treffpunkte speichern. ⬜ **Offline-Karten: noch nicht gebaut.**
+- ✅ Optionale Notfallkiste zu Hause: erst nach „Kiste anlegen“; Mengen, MHD oder Verbrauchsdatum (MHD überschritten = „prüfen“, nicht „verdorben“), älteste Charge „zuerst verbrauchen“.
+- ✅ Offline-Karten: Gebiet um einen Ort oder sichtbaren Ausschnitt herunterladen 📱 (eigener Kartenserver mit Offline-Erlaubnis, Bestätigung der Bedingungen, Schätzung vorab, Abbruch), MBTiles-Datei importieren 📱, Anzeige ohne Internet, Treffpunkte und Unterkünfte als Markierungen, Position per Tippen oder Koordinaten. Kein Routing.
+- ✅ QR-Etikett für Taschen: Inhalt als Text, mit jeder Kamera lesbar, ohne Gesundheitsdaten.
 - ✅ Packliste mit Fachbelegung drucken 📱; verschlüsseltes Backup mit geprüfter Wiederherstellung; CSV-Export.
 - ✅ Mehrere Personenprofile; mehrere Haushalte unter Einstellungen. ⬜ Synchronisierung zwischen Handys.
 - ✅ App-Sperre mit einer PIN, 📱 optional Biometrie.
-- ⬜ Warnmodul und Probealarm: späteres Modul.
+- ✅ Probealarm: Datum und Uhrzeit, einmalig oder wiederkehrend, 9 Übungslagen; 📱 Benachrichtigung „TESTALARM – KEINE ECHTE GEFAHR“ mit Alarmton und Vibration auch bei geschlossener App, genaue Uhrzeit wenn erlaubt; Antippen öffnet die Notfallansicht mit der Übung; Auswertung (ausgelöst, geöffnet, gehört, geprüft – sonst „nicht geprüft“).
+- ✅ Notfall-Schnellübersicht: ein System für Notfall-Knopf und Probealarm; Lage wählen → kurze eigene Checkliste (klar getrennt von amtlichen Anweisungen, Links zu warnung.bund.de und bbk.bund.de), Taschen mit Lagerort und Hinweis „bereithalten / bei sicherer Evakuierung mitnehmen / nicht danach suchen“, „Bei Abreise mitnehmen“.
+- ⬜ Amtliche Warnungen per Push: braucht Server – siehe [Online-Architektur](ONLINE-ARCHITEKTUR.md).
 
 ## Design
 Mobile First, dunkler Glas-Look, große untereinander angeordnete Karten, Hauptaktionen unten im Daumenbereich, Navigation mit fünf Punkten (Start, Taschen, Packliste, Notfallpass, Mehr). Erklärtexte entfernt; Hinweise nur bei Fehlern, Risiken und Datenschutz.

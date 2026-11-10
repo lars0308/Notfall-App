@@ -36,11 +36,15 @@ import javax.crypto.spec.GCMParameterSpec;
 public class NativeBridge {
   private final MainActivity act;
   private final SecureStore store;
+  private final MapStore maps;
+  private final java.util.concurrent.ExecutorService net = java.util.concurrent.Executors.newFixedThreadPool(4);
 
   NativeBridge(MainActivity a) {
     act = a;
     store = new SecureStore(a);
+    maps = new MapStore(a);
   }
+  MapStore maps() { return maps; }
 
   private Executor mainExec() { return act.getMainExecutor(); }
 
@@ -127,12 +131,41 @@ public class NativeBridge {
   @JavascriptInterface public void requestNotifications(final int cb) {
     act.runOnUiThread(() -> act.requestNotifPermission(cb));
   }
+  @JavascriptInterface public String alarmLog() { return Reminders.logJson(act); }
+  @JavascriptInterface public String exactAlarmStatus() {
+    if (Build.VERSION.SDK_INT < 31) return "na";
+    return Reminders.canExact(act) ? "granted" : "denied";
+  }
+
+  // ---------- Offline-Karten ----------
+  @JavascriptInterface public boolean mapPut(String pack, int z, int x, int y, String b64) {
+    try { return maps.put(pack, z, x, y, Base64.decode(b64, Base64.DEFAULT)); } catch (Exception e) { return false; }
+  }
+  @JavascriptInterface public String mapGet(String pack, int z, int x, int y) {
+    try { return maps.get(pack, z, x, y); } catch (Exception e) { return null; }
+  }
+  @JavascriptInterface public double mapBytes(String pack) {
+    try { return maps.bytes(pack); } catch (Exception e) { return 0; }
+  }
+  @JavascriptInterface public void mapDelete(String pack) {
+    try { maps.delete(pack); } catch (Exception ignored) {}
+  }
+  /** Nur HTTPS, nur auf ausdruecklichen Start des Kartendownloads durch den Nutzer. */
+  @JavascriptInterface public void httpGet(final int cb, final String url) {
+    net.execute(() -> act.resolve(cb, MapStore.httpGet(url).toString()));
+  }
+  @JavascriptInterface public void mapImport(final int cb, final String pack) {
+    act.runOnUiThread(() -> act.startMapImport(cb, pack));
+  }
+
   @JavascriptInterface public void openSettings(String kind) {
     act.runOnUiThread(() -> {
       try {
         Intent i;
         if ("notif".equals(kind)) {
           i = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, act.getPackageName());
+        } else if ("exact".equals(kind) && Build.VERSION.SDK_INT >= 31) {
+          i = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + act.getPackageName()));
         } else if ("battery".equals(kind)) {
           i = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
         } else {

@@ -36,7 +36,7 @@ function navCounts() {
   } catch (e) { console.error(e); }
   return c;
 }
-const NAV_GROUP = { '#/pass': ['#/pass', '#/ice', '#/contacts'], '#/more': ['#/more', '#/items', '#/item', '#/recs', '#/safe', '#/settings', '#/stock', '#/places', '#/sources', '#/households', '#/docs'] };
+const NAV_GROUP = { '#/pass': ['#/pass', '#/ice', '#/contacts'], '#/more': ['#/more', '#/items', '#/item', '#/recs', '#/safe', '#/settings', '#/stock', '#/places', '#/map', '#/alarm', '#/sources', '#/households', '#/docs'] };
 function navLink(href, label, ic, counts, cur) {
   const n = counts[href]; const active = cur === href || (href !== '#/home' && cur.startsWith(href + '/')) || (NAV_GROUP[href] || []).some(r => cur === r || cur.startsWith(r + '/'));
   return h`<a href="${href}" ${active ? raw('aria-current="page"') : ''}>${icon(ic)}<span>${label}</span>${n ? h`<span class="count">${n}</span>` : ''}</a>`;
@@ -50,13 +50,14 @@ function render(keepScroll) {
   const root = $('#app'); $('#boot') && $('#boot').remove(); root.hidden = false;
   closeAllModals();
   if (UI.bag3d) { UI.bag3d.destroy(); UI.bag3d = null; }
+  if (UI.mapView) { UI.mapView.destroy(); UI.mapView = null; }
   if (UI.locked) { renderLock(root); return; }
   const H = HH();
   let cur = location.hash || '#/home';
   if (!H.setup.done && !H.setup.skipped && !H.bags.length && !/^#\/(wizard|settings|sos|households|ice)/.test(cur)) { history.replaceState(null, '', '#/wizard'); cur = '#/wizard'; }
   if (UI.sosLimited && !/^#\/sos/.test(cur)) { UI.sosLimited = false; UI.locked = !!DB.users.length; if (UI.locked) { renderLock(root); return; } }
   const rt = parseRoute() || { fn: () => ({ title: 'Nicht gefunden', html: h`<div class="empty">Diese Seite gibt es nicht. <a href="#/home">Zur Startseite</a></div>` }), params: [], path: cur };
-  UI.route = rt.path; UI.params = rt.params;
+  UI.route = rt.path; UI.params = rt.params; UI.q = new URLSearchParams((location.hash.split('?')[1]) || '');
   const wasTop = $('.page') ? $('.page').scrollTop : 0;
   let view;
   try { view = rt.fn(...rt.params, H) || {}; } catch (e) { console.error(e); view = { title: 'Fehler', html: h`<div class="notice must"><div><p class="nt">Anzeige fehlgeschlagen</p><p>${String(e.message || e)}</p><p><a href="#/home">Zur Startseite</a></p></div></div>` }; }
@@ -157,7 +158,7 @@ function formDlg({ title, body, ok = 'Speichern', wide, extraFoot = [], onSubmit
 /* ---- Formularbausteine ---- */
 const attrs = o => raw(Object.entries(o || {}).filter(([, v]) => v !== undefined && v !== false && v !== null).map(([k, v]) => v === true ? k : `${k}="${esc(v)}"`).join(' '));
 const F = {
-  text: (n, l, v = '', o = {}) => h`<div class="field"><label for="f_${n}">${l}</label><input id="f_${n}" type="${o.type || 'text'}" name="${n}" value="${v ?? ''}" ${attrs({ placeholder: o.ph, required: o.req, inputmode: o.mode, maxlength: o.max, min: o.min, max: o.maxv, step: o.step, autocomplete: 'off', list: o.list })}>${o.hint ? h`<div class="hint">${o.hint}</div>` : ''}</div>`,
+  text: (n, l, v = '', o = {}) => h`<div class="field"><label for="f_${n}">${l}</label><input id="f_${n}" type="${o.type || 'text'}" name="${n}" value="${v ?? ''}" ${attrs({ placeholder: o.ph, required: o.req, inputmode: o.mode, maxlength: o.max, min: o.min, max: o.maxv, step: o.step, autocomplete: 'off', list: o.list })} ${o.attrs ? attrs(o.attrs) : ''}>${o.hint ? h`<div class="hint">${o.hint}</div>` : ''}</div>`,
   num: (n, l, v = '', o = {}) => F.text(n, l, v, Object.assign({ type: 'number', mode: 'decimal', step: 'any', min: 0 }, o)),
   date: (n, l, v = '', o = {}) => F.text(n, l, v, Object.assign({ type: 'date' }, o)),
   area: (n, l, v = '', o = {}) => h`<div class="field"><label for="f_${n}">${l}</label><textarea id="f_${n}" name="${n}" ${attrs({ placeholder: o.ph, rows: o.rows || 4 })}>${v ?? ''}</textarea>${o.hint ? h`<div class="hint">${o.hint}</div>` : ''}</div>`,
@@ -235,7 +236,7 @@ ACT['pin-bio'] = async () => {
   const r = await nativeAsync('bioAuth', 'Notfall! entsperren', u.name);
   if (r.ok) unlockAs(u); else if ($('#lockmsg')) $('#lockmsg').textContent = r.error && r.error !== 'abgebrochen' ? r.error : '';
 };
-function unlockAs(u) { UI.locked = false; UI.userId = u.id; DB.settings.lastUserId = u.id; persist(); _pin = ''; _lockUser = null; UI.sosLimited = false; render(); }
+function unlockAs(u) { UI.locked = false; UI.userId = u.id; DB.settings.lastUserId = u.id; persist(); _pin = ''; _lockUser = null; UI.sosLimited = false; if (UI.pendingRoute) { const r = UI.pendingRoute; UI.pendingRoute = null; location.hash = r; } render(); }
 document.addEventListener('keydown', e => { if (UI.locked && _lockUser) { if (/^[0-9]$/.test(e.key)) ACT['pin-key']({ k: e.key }); else if (e.key === 'Backspace') ACT['pin-back'](); else if (e.key === 'Enter') ACT['pin-ok'](); } });
 let _hiddenAt = 0;
 document.addEventListener('visibilitychange', () => {

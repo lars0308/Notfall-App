@@ -16,7 +16,7 @@ route('/settings', H => {
       ${lockOn ? F.select('lockMin', 'Automatisch sperren', [[0, 'Sofort'], [1, 'Nach 1 Minute'], [5, 'Nach 5 Minuten'], [15, 'Nach 15 Minuten']], S.lockMin, { attrs: { 'data-change': 'set-lockmin' } }) : ''}
       ${lockOn ? F.check('lockContacts', 'Notfallpass ohne Entsperren zeigen', S.lockContacts, { desc: 'Nur freigegebene Angaben', attrs: { 'data-change': 'set-lockcontacts' } }) : ''}
       ${F.check('secure', 'Screenshots verhindern', S.secure, { attrs: { 'data-change': 'set-secure' } })}
-      <p class="small muted">Alle Daten bleiben auf diesem Gerät. Kein Konto, keine Internetverbindung.</p></div></div>
+      <p class="small muted">Alle Daten bleiben auf diesem Gerät. Kein Konto. Internet nur, wenn du eine Karte herunterlädst.</p></div></div>
     <div class="card"><h2>Erinnerungen</h2><div class="stack">
       <div class="row spread"><b>Benachrichtigungen</b>${S.notif.on ? h`<button class="btn sm" data-act="notif-off">Ausschalten</button>` : h`<button class="btn primary" data-act="notif-enable">${icon('bell')} Einschalten</button>`}</div>
       <div class="form-grid">${F.select('hour', 'Uhrzeit', [...Array(24).keys()].filter(x => x >= 6 && x <= 22).map(x => [x, x + ':00 Uhr']), S.notif.hour, { attrs: { 'data-change': 'set-hour' } })}${F.select('leadDays', 'Ablaufwarnung vorher', [[7, '7 Tage'], [14, '14 Tage'], [30, '30 Tage'], [60, '60 Tage'], [90, '90 Tage']], S.notif.leadDays, { attrs: { 'data-change': 'set-lead' } })}</div></div></div>
@@ -68,12 +68,13 @@ ACT['backup-restore'] = async () => {
   let entries; try { toast('Backup wird geprüft …'); entries = await readBackup(await readBuf(f), pass); } catch (e) { toast(e.message || 'Backup konnte nicht gelesen werden.'); return; }
   const hh = JSON.parse(entries.db).households || [];
   const ok = await confirmDlg('Backup wiederherstellen?', `Das Backup enthält ${hh.length} Haushalt(e) (${hh.map(x => x.name).join(', ')}). Alle aktuellen Daten auf diesem Gerät werden ersetzt.`, { ok: 'Wiederherstellen', danger: true }); if (!ok) return;
-  try { await flushDB(); await restoreEntries(entries); await loadDB(); Vault.lock(); UI.userId = null; UI.locked = DB.users.length > 0; applyTheme(); go('#/home'); render(); toast('Backup wiederhergestellt'); }
+  try { await flushDB(); await restoreEntries(entries); await loadDB(); pruneMaps().catch(() => { }); Vault.lock(); UI.userId = null; UI.locked = DB.users.length > 0; applyTheme(); go('#/home'); render(); toast('Backup wiederhergestellt'); }
   catch (e) { toast(e.message); await loadDB(); render(); }
 };
 ACT['wipe-all'] = async () => {
   const t = await promptDlg('Alle Daten löschen', 'Alle Haushalte, Fotos, der Safe und die Sperre werden unwiderruflich gelöscht. Tipp: erstelle vorher ein Backup. Zum Bestätigen LÖSCHEN eintippen.', ''); if (t === null) return;
   if (t.trim() !== 'LÖSCHEN') { toast('Nichts gelöscht.'); return; }
+  for (const p of (DB.maps || [])) await MapTiles.del(p.id);
   await KV.wipe(); if (NATIVE && NATIVE.bioClear) NATIVE.bioClear('vault'); try { localStorage.removeItem('notfall_data'); } catch { /* egal */ }
   Vault.lock(); Photos.cache.clear(); DB = emptyDB(); UI.userId = null; UI.locked = false; persist(); await flushDB(); syncNotifications(); applyTheme(); go('#/wizard'); render(); toast('Alle Daten gelöscht');
 };

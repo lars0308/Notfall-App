@@ -110,7 +110,7 @@ function itemFields(H, it) {
     <div class="form-grid">${F.num('qty', 'Menge', it.qty, { req: true })}${F.select('unit', 'Einheit', unitOpts, it.unit)}${F.select('status', 'Status', [['owned', 'Vorhanden'], ['planned', 'Offen'], ['missing', 'Fehlt']], it.status)}</div>
     <div class="form-grid">${F.select('bagId', 'Tasche', bagOpts, it.bagId || '')}${F.select('compId', 'Fach', compOpts, it.compId || '')}</div>
     ${F.check('lastMinute', 'Erst bei Abreise einpacken', it.lastMinute, { desc: 'Für Dinge im täglichen Gebrauch, z. B. Medikamente' })}
-    <div class="form-grid">${F.num('weightG', 'Gewicht je Stück (g)', it.weightG || '')}${F.date('expiry', 'Ablaufdatum', it.expiry)}</div>
+    <div class="form-grid">${F.num('weightG', 'Gewicht je Stück (g)', it.weightG || '')}${F.date('expiry', 'Datum', it.expiry)}${F.select('expiryType', 'Art des Datums', EXP_TYPES, it.expiryType || '')}</div>
     ${F.area('notes', 'Notiz', it.notes, { rows: 3 })}
     <details><summary style="min-height:44px;display:flex;align-items:center;cursor:pointer">Weitere Angaben</summary><div class="stack" style="margin-top:8px">
       ${F.area('desc', 'Beschreibung', it.desc, { rows: 2 })}
@@ -127,7 +127,7 @@ function applyItemForm(H, it, fd) {
   const oldStatus = it.status;
   Object.assign(it, { name, desc: fd.get('desc') || '', category: fd.get('category'), qty, unit: fd.get('unit'), weightG: num(fd.get('weightG')), volL: num(fd.get('volL')), liters: num(fd.get('liters')), kcal: num(fd.get('kcal')), container: fd.get('container'), place: (fd.get('place') || '').trim(), purchaseDate: fd.get('purchaseDate') || '', expiry: fd.get('expiry') || '', condition: fd.get('condition') || '', price: fd.get('price') === '' || fd.get('price') === null ? null : num(fd.get('price')), minQty: num(fd.get('minQty')), remindDays: num(fd.get('remindDays')), barcode: (fd.get('barcode') || '').trim(), prio: fd.get('prio'), manualUrl: (fd.get('manualUrl') || '').trim(), notes: fd.get('notes') || '' });
   const who = fd.get('who') || ''; it.personId = who && !who.startsWith('pet:') ? who : null; it.petId = who.startsWith('pet:') ? who.slice(4) : null;
-  it.lastMinute = fdBool(fd, 'lastMinute');
+  it.lastMinute = fdBool(fd, 'lastMinute'); it.expiryType = fd.get('expiryType') || '';
   if (fd.get('bagId')) { it.container = 'bag'; it.bagId = fd.get('bagId'); it.compId = fd.get('compId') || null; }
   else { if (it.container === 'bag') it.container = 'home'; it.bagId = null; it.compId = null; }
   if (it.expiry) it.tags = Array.from(new Set([...(it.tags || []), 'expiring']));
@@ -198,19 +198,31 @@ route('/stock', H => {
   if (!H.box.enabled) return { title: 'Notfallkiste zu Hause', back: '#/more', html: h`${empty('Optional: eine Kiste mit Wasser, Essen, Batterien und Hygiene für zu Hause.')}<div class="actionbar"><button class="btn primary lg" data-act="box-on">${icon('plus')} Kiste anlegen</button></div>` };
   const sup = calcSupplies(H, S);
   const home = H.items.filter(i => !i.archived && i.container === 'home');
-  const owned = home.filter(i => i.status === 'owned').sort((a, b) => a.name.localeCompare(b.name, 'de')); const todo = home.filter(i => i.status !== 'owned').sort((a, b) => ({ must: 0, rec: 1, opt: 2 }[a.prio] - { must: 0, rec: 1, opt: 2 }[b.prio]));
+  const owned = home.filter(i => i.status === 'owned').sort((a, b) => norm(a.name).localeCompare(norm(b.name)) || (a.expiry || '9').localeCompare(b.expiry || '9'));
+  const firsts = fifoFirsts(owned); const todo = home.filter(i => i.status !== 'owned').sort((a, b) => ({ must: 0, rec: 1, opt: 2 }[a.prio] - { must: 0, rec: 1, opt: 2 }[b.prio]));
   return {
     title: 'Notfallkiste zu Hause', back: '#/more',
     html: h`<div class="card"><div class="row spread"><span class="bold">${icon('drop')} ${fmt(sup.waterL)} l Wasser</span><span class="muted">ca. ${fmt(sup.waterDays)} Tage</span></div><div class="row spread" style="margin-top:6px"><span class="bold">${icon('food')} Essen</span><span class="muted">ca. ${fmt(sup.foodDays)} Tage</span></div><p class="muted small" style="margin-top:6px">Schätzung für ${sup.calc.n} ${plural(sup.calc.n, 'Person', 'Personen')}, Ziel ${H.box.days} Tage.</p></div>
-    ${owned.length ? h`<div class="card flush"><div class="list">${owned.map(i => stockRow(i))}</div></div>` : ''}
+    ${owned.length ? h`<div class="card flush"><div class="list">${owned.map(i => stockRow(i, firsts.has(i.id)))}</div></div>` : ''}
     ${todo.length ? h`<h2>Offen</h2><div class="card flush"><div class="list">${todo.map(i => reviewRow(H, i))}</div></div>` : ''}
     <div class="btns"><button class="btn" data-act="box-days">${icon('edit')} Ziel: ${H.box.days} Tage</button><button class="btn danger" data-act="box-off">Kiste auflösen</button></div>
     <div class="actionbar"><button class="btn primary lg" data-act="stock-new">${icon('plus')} Gegenstand</button></div>`,
   };
 });
-function stockRow(i) {
-  const dl = i.expiry ? daysUntil(i.expiry) : null;
-  return h`<div class="li ${dl !== null && dl <= 30 ? (dl < 0 ? 'must' : 'rec') : ''}"><a class="grow" href="#/item/${i.id}" style="color:inherit;text-decoration:none"><span class="t">${i.name}</span><br><span class="s">${[i.unit, i.expiry ? 'bis ' + fmtDate(i.expiry) : ''].filter(Boolean).join(' · ')}</span></a>
+const EXP_TYPES = [['', 'Haltbar bis'], ['mhd', 'Mindesthaltbarkeit (MHD)'], ['use', 'Verbrauchsdatum']];
+/* Ablaufstatus: MHD ist kein Verfallsdatum – abgelaufene Ware nicht pauschal als verdorben werten */
+function expiryState(i) {
+  const dl = i.expiry ? daysUntil(i.expiry) : null; if (dl === null) return null;
+  if (dl < 0) return i.expiryType === 'mhd' ? { cls: 'rec', label: 'MHD überschritten – prüfen' } : i.expiryType === 'use' ? { cls: 'must', label: 'Verbrauchsdatum überschritten' } : { cls: 'must', label: 'Abgelaufen' };
+  if (dl <= 30) return { cls: 'rec', label: relDays(i.expiry) };
+  return null;
+}
+/* Pro gleichem Namen: aelteste Charge zuerst verbrauchen */
+function fifoFirsts(list) { const seen = new Map(); for (const i of list) { const k = norm(i.name); if (!seen.has(k)) seen.set(k, []); seen.get(k).push(i); } const out = new Set(); for (const g of seen.values()) if (g.length > 1) { const s = g.filter(i => i.expiry).sort((a, b) => a.expiry.localeCompare(b.expiry)); if (s[0]) out.add(s[0].id); } return out; }
+function stockRow(i, first) {
+  const ex = expiryState(i);
+  return h`<div class="li ${ex ? ex.cls : ''}"><a class="grow" href="#/item/${i.id}" style="color:inherit;text-decoration:none"><span class="t">${i.name}</span><br><span class="s">${[i.unit, i.expiry ? (i.expiryType === 'mhd' ? 'MHD ' : i.expiryType === 'use' ? 'verbrauchen bis ' : 'bis ') + fmtDate(i.expiry) : ''].filter(Boolean).join(' · ')}</span>
+    ${ex || first ? h`<span class="row" style="margin-top:4px">${first ? h`<span class="badge info">Zuerst verbrauchen</span>` : ''}${ex ? h`<span class="badge ${ex.cls}">${ex.label}</span>` : ''}</span>` : ''}</a>
     <div class="stepper"><button type="button" data-act="st-adj" data-id="${i.id}" data-d="-1" aria-label="weniger">−</button><span>${fmt(i.qty)}</span><button type="button" data-act="st-adj" data-id="${i.id}" data-d="1" aria-label="mehr">+</button></div></div>`;
 }
 ACT['stock-new'] = () => ACT['item-new']({ container: 'home' });

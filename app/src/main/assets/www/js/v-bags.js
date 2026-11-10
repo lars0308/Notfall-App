@@ -60,7 +60,7 @@ route('/bags/:id', (id, H) => {
       <div class="btns" style="margin-top:12px">${selComp ? h`<button class="btn sm" data-act="comp-edit" data-bag="${bag.id}" data-id="${selComp.id}">${icon('edit')} ${selComp.name}</button><button class="btn sm danger" data-act="comp-del" data-bag="${bag.id}" data-id="${selComp.id}" aria-label="Fach entfernen">${icon('trash')}</button><button class="btn sm ghost" data-act="bg-sel" data-id="">Alle zeigen</button>` : ''}<button class="btn sm" data-act="comp-add" data-bag="${bag.id}">${icon('plus')} Fach</button></div></div>
     <div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h2>${selComp ? selComp.name : 'Packliste'}</h2><span class="badge">${shown.length}</span></div>
       <div class="list">${shown.length ? shown.map(it => bagItemRow(H, bag, it, !selComp)) : empty(selComp ? 'Leer.' : 'Noch nichts in der Tasche.')}</div></div>
-    <div class="btns"><a class="btn" href="#/bags/${bag.id}/missing">${icon('alert')} Was fehlt?${st.missing ? h` <span class="count">${st.missing}</span>` : ''}</a><button class="btn" data-act="bag-print" data-id="${bag.id}">${icon('print')} Drucken</button><button class="btn" data-act="bag-edit" data-id="${bag.id}">${icon('edit')} Bearbeiten</button><button class="btn" data-act="bag-pack" data-id="${bag.id}">${icon('cube')} Fächer neu zuteilen</button><button class="btn" data-act="bag-copy" data-id="${bag.id}">${icon('copy')} Kopieren</button><button class="btn danger" data-act="bag-del" data-id="${bag.id}">${icon('trash')} Löschen</button></div>
+    <div class="btns"><a class="btn" href="#/bags/${bag.id}/missing">${icon('alert')} Was fehlt?${st.missing ? h` <span class="count">${st.missing}</span>` : ''}</a><button class="btn" data-act="bag-print" data-id="${bag.id}">${icon('print')} Drucken</button><button class="btn" data-act="bag-label" data-id="${bag.id}">${icon('scan')} QR-Etikett</button><button class="btn" data-act="bag-edit" data-id="${bag.id}">${icon('edit')} Bearbeiten</button><button class="btn" data-act="bag-pack" data-id="${bag.id}">${icon('cube')} Fächer neu zuteilen</button><button class="btn" data-act="bag-copy" data-id="${bag.id}">${icon('copy')} Kopieren</button><button class="btn danger" data-act="bag-del" data-id="${bag.id}">${icon('trash')} Löschen</button></div>
     ${bag.photos.length ? h`<div class="card"><h3>Fotos</h3>${photoStrip(bag.photos, 'bag-ph-del', { id: bag.id })}<button class="btn sm" style="margin-top:8px" data-act="bag-ph-add" data-id="${bag.id}">${icon('camera')} Foto</button></div>` : ''}
     <div class="actionbar"><a class="btn primary lg" href="#/bags/${bag.id}/pack">${icon('check')} Packen starten</a><button class="btn lg" data-act="item-new-bag" data-bag="${bag.id}" data-comp="${BAGUI.sel || ''}">${icon('plus')} Gegenstand</button></div>`,
     after: () => {
@@ -241,4 +241,20 @@ ACT['bags-balance'] = async () => {
   for (const m of moves) { const it = byId(H.items, m.itemId); if (it) { it.bagId = m.to; it.compId = null; it.packed = false; } }
   for (const b of H.bags) autoPack(H, b, { onlyUnassigned: true });
   persist(); rerender(true); toast(moves.length + ' Gegenstände verschoben');
+};
+
+/* QR-Etikett: Inhalt der Tasche als Text, mit jeder Kamera lesbar (ohne Gesundheitsdaten) */
+function bagLabelText(H, b) {
+  const o = byId(H.people, b.owner);
+  const head = ['NOTFALL-TASCHE', b.name, b.location ? 'Ort: ' + b.location : '', o ? 'Gehört: ' + o.name : '', 'Stand: ' + fmtDate(todayISO())].filter(Boolean);
+  const items = bagItems(H, b).filter(i => i.status === 'owned' && !/^Medikament:|^Allergie|^Pflegebedarf|^Medizinisches Gerät|^Hilfsmittel:/.test(i.name));
+  let t = head.join('\n') + '\nInhalt:'; let n = 0;
+  for (const i of items) { const line = '\n- ' + i.name + (i.qty !== 1 ? ' (' + fmt(i.qty) + ')' : ''); if (enc(t + line).length > 640) break; t += line; n++; }
+  if (n < items.length) t += `\n… und ${items.length - n} weitere`;
+  return t;
+}
+ACT['bag-label'] = d => {
+  const H = HH(); const b = byId(H.bags, d.id); const t = bagLabelText(H, b);
+  const qr = qrSvg(t).s.replace('<svg ', '<svg style="width:55mm;height:55mm" ');
+  printDoc('Etikett ' + b.name, `<div class="card" style="width:90mm;text-align:center"><h1 style="margin:0 0 2mm">${esc(b.name)}</h1>${b.location ? `<div>Ort: ${esc(b.location)}</div>` : ''}<div style="margin:3mm 0">${qr}</div><small>QR-Code mit der Kamera scannen: Inhalt der Tasche (ohne Medikamente/Gesundheitsdaten).</small></div>`);
 };

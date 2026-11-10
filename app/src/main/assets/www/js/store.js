@@ -30,11 +30,12 @@ function defaultSettings() {
     lockMin: 1, secure: false, lockContacts: true, lockMedical: false,
     notif: { on: false, hour: 9, leadDays: 30 },
     plan: { waterPerDay: 2, adultKcal: 2200, reserve: 1, carryKg: 12, budget: 0 },
-    backupLastAt: null, backupRemindDays: 30, lastUserId: null,
+    backupLastAt: null, backupRemindDays: 30, lastUserId: null, mapUrl: '', mapAttr: '', mapOnline: false,
   };
 }
 const emptyNeeds = () => ({ allergies: '', intolerances: '', meds: [], devices: '', aids: '', diet: '', care: '', mobility: '', hygiene: '', conditions: '', blood: '', notes: '' });
-const SHARE_KEYS = ['photo', 'birth', 'allergies', 'conditions', 'meds', 'aids', 'blood', 'notes', 'organ'];
+const SHARE_KEYS = ['photo', 'birth', 'allergies', 'conditions', 'meds', 'aids', 'blood', 'notes', 'organ', 'pickup', 'doctor'];
+const CARD_MODS = [['photo', 'Foto der Person', 'f'], ['callnote', 'Hinweis „Im Notfall anrufen“', 'f'], ['contacts', 'Kontakte mit Nummer', 'f'], ['cphotos', 'Fotos der Kontakte', 'f'], ['info', 'Freigegebene Angaben', 'b'], ['qr', 'QR-Code', 'b']];
 /* Personenprofil inkl. Notfallpass: alles ist privat, bis es ausdruecklich freigegeben wird */
 function personShape(p) {
   p.needs = Object.assign(emptyNeeds(), p.needs || {});
@@ -44,6 +45,12 @@ function personShape(p) {
   p.organ = Object.assign({ status: '', place: '' }, p.organ || {});
   p.share = Object.assign(Object.fromEntries(SHARE_KEYS.map(k => [k, false])), p.share || {});
   p.passContacts = Array.isArray(p.passContacts) ? p.passContacts.slice(0, 3) : [];
+  for (const k of ['pickup', 'doctor', 'confirmedBy']) if (p[k] === undefined) p[k] = '';
+  p.custom = Array.isArray(p.custom) ? p.custom : [];
+  p.hide = Object.assign({}, p.hide || {});
+  p.card = Object.assign({ size: 'card', lang: 'de', twoSided: true }, p.card || {});
+  if (!Array.isArray(p.card.mods)) p.card.mods = CARD_MODS.map(([k, , side]) => ({ k, on: true, side }));
+  for (const [k, , side] of CARD_MODS) if (!p.card.mods.some(m => m.k === k)) p.card.mods.push({ k, on: true, side });
   return p;
 }
 function ageFromBirth(iso) { const d = parseISO(iso); if (!d) return null; const n = new Date(); let a = n.getFullYear() - d.getFullYear(); if (n.getMonth() < d.getMonth() || (n.getMonth() === d.getMonth() && n.getDate() < d.getDate())) a--; return Math.max(0, a); }
@@ -53,7 +60,7 @@ function newHousehold(name = 'Mein Haushalt') {
     setup: { done: false, skipped: false, step: 0, draft: null },
     cfg: null,
     people: [], pets: [], bags: [], items: [], shop: [], contacts: [], meeting: [], shelters: [], rooms: [],
-    reminders: [], docs: [], tasks: [], recs: {}, box: { enabled: false, days: 3 }, plan: { strategyNote: '', summary: null, lastBuilt: null }, usage: [], sample: false, budget: 0,
+    reminders: [], docs: [], tasks: [], recs: {}, box: { enabled: false, days: 3 }, alarms: [], alarmResults: [], plan: { strategyNote: '', summary: null, lastBuilt: null }, usage: [], sample: false, budget: 0,
   };
 }
 function emptyDB() {
@@ -66,6 +73,7 @@ function ensureShape(d) {
   d.settings.notif = Object.assign(defaultSettings().notif, d.settings.notif || {});
   d.settings.plan = Object.assign(defaultSettings().plan, d.settings.plan || {});
   d.users = d.users || [];
+  d.maps = Array.isArray(d.maps) ? d.maps : [];
   if (!Array.isArray(d.households) || !d.households.length) d.households = [newHousehold()];
   for (const H of d.households) {
     if (H.box === undefined) { const sd = ((H.cfg && H.cfg.goals) || []).map(g => (GOAL[g] || {}).days || 0); H.box = { enabled: (H.items || []).some(i => i.container === 'home' && !i.archived), days: Math.max(3, ...sd) }; }

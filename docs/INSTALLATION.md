@@ -1,13 +1,13 @@
 # Installationsanleitung
 
 ## A) Test-APK direkt am Handy installieren
-1. `dist/Notfall-2.1.0-debug.apk` aufs Handy laden: über die Dateikarte im Claude-Chat oder im Browser bei GitHub (Branch wählen → Datei öffnen → „Download raw file“).
+1. `dist/Notfall-2.2.0-debug.apk` aufs Handy laden: über die Dateikarte im Claude-Chat oder im Browser bei GitHub (Branch wählen → Datei öffnen → „Download raw file“).
 2. Datei in der Download-Benachrichtigung oder in der App „Dateien“ antippen.
 3. Android fragt, ob diese App installieren darf → „Einstellungen“ → „Dieser Quelle vertrauen“ → zurück → „Installieren“.
 4. Meldet Play Protect eine unbekannte App: „Trotzdem installieren“.
 5. Erscheint „App nicht installiert“, ist eine Version mit anderer Signatur vorhanden – siehe [Einschränkungen](EINSCHRAENKUNGEN.md), Abschnitt Installation.
 
-Ein Update von 2.0.0 (gleiche Signatur) auf 2.1.0 behält die Daten; der alte Stand wird vor der Umstellung zusätzlich gesichert.
+Ein Update von 2.0.0 oder 2.1.0 (gleiche Signatur) auf 2.2.0 behält die Daten; der alte Stand wird vor der Umstellung zusätzlich gesichert.
 Mindestens Android 10. Prüfsumme in `dist/SHA256.txt`.
 
 ## B) Selbst bauen (Android Studio)
@@ -30,6 +30,7 @@ tests/run-all.sh          # alles
 node tests/unit.js        # Planer, Packreihenfolge, Migration
 node tests/flow.js        # Abnahme-Ablauf v1
 node tests/data.js        # Migration, Backup, Sperre
+node tests/extra.js       # Karten, Probealarm, Kartendesigner, Lagen, Kiste
 node tests/native-sim.js  # Android-Schnittstelle (Attrappe)
 ```
 
