@@ -1,0 +1,40 @@
+'use strict';
+/* ===== Notfall! – Schutz- und Rückzugsräume (Dokumentation, keine Zertifizierung) ===== */
+const ROOM_RISKS = [['flood', 'Überflutungsgefahr (Keller, Hochwasser, Rückstau)'], ['vent', 'Unzureichende Belüftung / schlechte Luft'], ['exit', 'Fehlender zweiter Fluchtweg'], ['door', 'Tür lässt sich nicht von innen öffnen'], ['fire', 'Brandgefahr / brennbare Lagerung'], ['static', 'Statik oder Einsturzgefahr unklar'], ['gas', 'Gas- oder Schadstoffquellen in der Nähe'], ['damp', 'Feuchtigkeit / Schimmel'], ['access', 'Zugang für Rettungskräfte erschwert'], ['light', 'Keine Notbeleuchtung']];
+const ROOM_CHECK = ['Tür lässt sich von innen und außen öffnen', 'Notbeleuchtung (LED/Taschenlampe) vorhanden', 'Lüftungsmöglichkeit geprüft', 'CO-Melder und Rauchmelder vorhanden', 'Wasser- und Lebensmittelvorrat im Raum oder in der Nähe', 'Sitz- und Schlafplätze für alle Personen', 'Notfalltoilette bereit', 'Radio und Powerbank im Raum', 'Fluchtweg und Treffpunkt besprochen'];
+const ROOM_DISCLAIMER = 'Nicht fachlich geprüft. Diese App kann Räume nicht als sicher oder zertifiziert einstufen. Lass Belüftung, Statik, Brand- und Hochwasserschutz bei Bedarf von Fachleuten (z. B. Feuerwehr, Bauamt, Sachverständige) beurteilen.';
+route('/rooms', H => ({
+  title: 'Schutzräume', back: '#/more', actions: h`<button class="btn primary sm" data-act="room-new">${icon('plus')}<span>Neu</span></button>`,
+  html: h`${noticeBox('rec', 'Nur Dokumentation', ROOM_DISCLAIMER)}
+  ${H.rooms.length ? h`<div class="card flush"><div class="list">${H.rooms.map(r => { const fl = (r.risks || []).filter(x => x.flag).length; const done = (r.checklist || []).filter(x => x.done).length; return h`<a class="li ${fl ? 'rec' : ''}" href="#/rooms/${r.id}">${thumb((r.photos || [])[0], 'building')}<span class="grow"><span class="t">${r.name}</span><br><span class="s">${r.location || 'Lage offen'}${r.sizeM2 ? ' · ' + r.sizeM2 + ' m²' : ''} · Checkliste ${done}/${(r.checklist || []).length}</span></span>${fl ? h`<span class="badge rec">${fl} Risiko${fl > 1 ? 'en' : ''}</span>` : ''}<span class="badge">Nicht geprüft</span>${icon('chev', 'chev')}</a>`; })}</div></div>` : empty('Noch kein Raum dokumentiert. Lege z. B. deinen Keller oder einen innenliegenden Raum an.', h`<button class="btn primary" data-act="room-new">${icon('plus')} Raum anlegen</button>`)}`,
+}));
+ACT['room-new'] = () => {
+  const H = HH();
+  formDlg({ title: 'Raum anlegen', body: h`${F.text('name', 'Name', '', { req: true, ph: 'z. B. Keller, Flur im Erdgeschoss' })}${F.text('location', 'Lage im Haus', '')}`, ok: 'Anlegen',
+    onSubmit: fd => { const r = { id: uid(), name: fd.get('name').trim(), location: fd.get('location'), sizeM2: '', photos: [], access: '', ventilation: '', lighting: '', water: '', sanitation: '', storage: '', notes: '', checklist: ROOM_CHECK.map(t => ({ id: uid(), text: t, done: false })), risks: ROOM_RISKS.map(([k]) => ({ key: k, flag: false, note: '' })) }; H.rooms.push(r); persist(); go('#/rooms/' + r.id); } });
+};
+route('/rooms/:id', (id, H) => {
+  const r = byId(H.rooms, id); if (!r) return { title: 'Raum', back: '#/rooms', html: empty('Raum nicht gefunden.') };
+  return {
+    title: r.name, back: '#/rooms',
+    html: h`${noticeBox('rec', 'Nicht fachlich geprüft', ROOM_DISCLAIMER)}
+    <div class="card"><h3>Fotos</h3>${photoStrip(r.photos, 'room-ph-del', { id: r.id })}<button class="btn" style="margin-top:8px" data-act="room-ph-add" data-id="${r.id}">${icon('camera')} Foto hinzufügen</button></div>
+    <form class="card" id="roomform" data-form="room-save" data-id="${r.id}"><h3>Angaben</h3><div class="stack">
+      <div class="form-grid">${F.text('name', 'Name', r.name, { req: true })}${F.text('location', 'Lage', r.location)}${F.num('sizeM2', 'Größe (m²)', r.sizeM2)}</div>
+      ${F.area('access', 'Zugänge und Ausgänge', r.access, { rows: 2 })}${F.area('ventilation', 'Lüftung', r.ventilation, { rows: 2 })}${F.area('lighting', 'Beleuchtung', r.lighting, { rows: 2 })}
+      <div class="form-grid">${F.text('water', 'Wasser', r.water)}${F.text('sanitation', 'Sanitärversorgung', r.sanitation)}${F.text('storage', 'Lagerorte', r.storage)}</div>${F.area('notes', 'Notizen', r.notes, { rows: 3 })}
+      <div class="btns"><button class="btn primary" type="submit">${icon('check')} Speichern</button></div></div></form>
+    <div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h3>Risiken zur Prüfung markieren</h3></div><div class="list">${(r.risks || []).map(x => { const lab = (ROOM_RISKS.find(y => y[0] === x.key) || [0, x.key])[1]; return h`<label class="li ${x.flag ? 'rec' : ''}" style="cursor:pointer;flex-wrap:wrap"><input type="checkbox" style="width:1.5rem;height:1.5rem;accent-color:var(--rec-line)" data-change="room-risk" data-room="${r.id}" data-key="${x.key}" ${x.flag ? raw('checked') : ''}><span class="grow">${lab}</span>${x.flag ? h`<button class="btn sm" data-act="room-risk-note" data-room="${r.id}" data-key="${x.key}">${x.note ? 'Notiz ändern' : 'Notiz'}</button>` : ''}${x.note ? h`<div class="small muted" style="width:100%">${x.note}</div>` : ''}</label>`; })}</div></div>
+    <div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h3>Checkliste</h3><button class="btn sm" data-act="room-chk-add" data-id="${r.id}">${icon('plus')} Punkt</button></div><div class="list">${(r.checklist || []).map(c => h`<label class="li ${c.done ? 'done' : ''}" style="cursor:pointer"><input type="checkbox" style="width:1.5rem;height:1.5rem;accent-color:var(--primary)" data-change="room-chk" data-room="${r.id}" data-id="${c.id}" ${c.done ? raw('checked') : ''}><span class="grow t">${c.text}</span><button class="btn sm ghost" data-act="room-chk-del" data-room="${r.id}" data-id="${c.id}" aria-label="Punkt löschen">${icon('trash')}</button></label>`)}</div></div>
+    <button class="btn danger" data-act="room-del" data-id="${r.id}">${icon('trash')} Raum löschen</button>`,
+  };
+});
+FORM['room-save'] = (fd, f) => { const r = byId(HH().rooms, f.dataset.id); for (const k of ['name', 'location', 'sizeM2', 'access', 'ventilation', 'lighting', 'water', 'sanitation', 'storage', 'notes']) r[k] = (fd.get(k) || '').trim(); if (!r.name) throw new Error('Bitte einen Namen eintragen.'); persist(); rerender(true); toast('Gespeichert'); };
+INPUT['room-risk'] = el => { const r = byId(HH().rooms, el.dataset.room); const x = r.risks.find(y => y.key === el.dataset.key); x.flag = el.checked; persist(); rerender(true); };
+INPUT['room-chk'] = el => { const r = byId(HH().rooms, el.dataset.room); const c = r.checklist.find(y => y.id === el.dataset.id); c.done = el.checked; persist(); rerender(true); };
+ACT['room-risk-note'] = async d => { const r = byId(HH().rooms, d.room); const x = r.risks.find(y => y.key === d.key); const v = await promptDlg('Notiz zum Risiko', 'Was ist aufgefallen?', x.note || ''); if (v === null) return; x.note = v.trim(); persist(); rerender(true); };
+ACT['room-chk-add'] = async d => { const r = byId(HH().rooms, d.id); const v = await promptDlg('Neuer Punkt', 'Text', ''); if (!v || !v.trim()) return; r.checklist.push({ id: uid(), text: v.trim(), done: false }); persist(); rerender(true); };
+ACT['room-chk-del'] = d => { const r = byId(HH().rooms, d.room); r.checklist = r.checklist.filter(c => c.id !== d.id); persist(); rerender(true); };
+ACT['room-ph-add'] = async d => { const r = byId(HH().rooms, d.id); const pid = await addPhotoTo(null); if (!pid) return; r.photos = r.photos || []; r.photos.push(pid); persist(); rerender(true); };
+ACT['room-ph-del'] = async d => { const ok = await confirmDlg('Foto entfernen?', 'Das Foto wird gelöscht.', { ok: 'Entfernen', danger: true }); if (!ok) return; const r = byId(HH().rooms, d.id); r.photos = r.photos.filter(p => p !== d.pid); persist(); setTimeout(sweepPhotos, 300); rerender(true); };
+ACT['room-del'] = async d => { const ok = await confirmDlg('Raum löschen?', 'Der Raum und seine Fotos werden gelöscht.', { ok: 'Löschen', danger: true }); if (!ok) return; const H = HH(); H.rooms = H.rooms.filter(r => r.id !== d.id); persist(); setTimeout(sweepPhotos, 300); go('#/rooms'); };
