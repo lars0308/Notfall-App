@@ -28,7 +28,7 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
   ok('Abhaken markiert als vorhanden, Haken bleibt sichtbar', await p.evaluate(n => HH().items.filter(i => i.status === 'owned').length === n + 10, o0) && (await p.locator('[data-change=rv-tick]:checked').count()) === o0 + 10);
   await p.locator('[data-change=rv-tick]:checked').first().click(); await p.waitForTimeout(50);
   ok('Haken entfernen macht es wieder offen', await p.evaluate(n => HH().items.filter(i => i.status === 'owned').length === n + 9, o0));
-  await click('[data-act=ask-start]'); await p.waitForFunction(() => location.hash === '#/review/ask');
+  await click('[data-act=ask-start]'); await p.waitForSelector('[data-act=ask-yes]');
   ok('Einzeln abfragen fragt „Hast du das?“', /Hast du das\?/.test(await body()));
   for (let i = 0; i < 3; i++) { await click('[data-act=ask-yes]'); await p.waitForTimeout(40); } await click('[data-act=ask-skip]'); await p.waitForTimeout(40);
   for (let i = 0; i < 2; i++) { await click('[data-act=ask-no]'); await p.waitForTimeout(40); }
