@@ -1,6 +1,11 @@
-# Umgesetzte Funktionen (Version 2.2.2)
+# Umgesetzte Funktionen (Version 2.3.0)
 
 Legende: ✅ umgesetzt und im Browser getestet · 📱 braucht Android-Code, nicht auf Gerät geprüft · 🟡 mit Einschränkung · ⬜ offen. Was gestrichen oder verschoben wurde, steht in der [Feature-Matrix](FEATURE-MATRIX.md).
+
+## Packliste zum Abhaken ✅
+- Nach dem Assistenten: „Das brauchst du – hake ab, was du schon hast.“ Alle Sachen nach Tasche/Person gruppiert, je ein großer Haken; „Alle“ hakt eine Gruppe ab; Haken entfernen macht es wieder offen.
+- „Einzeln abfragen“: eine Frage pro Gegenstand („Hast du das?“ – Habe ich / Fehlt / Später), Wichtigstes zuerst.
+- „Fertig“: nicht Abgehaktes kommt nach Rückfrage auf die Einkaufsliste.
 
 ## 1 Meine Taschen ✅
 - Beliebig viele Rucksäcke, Taschen, Koffer; 9 Typen; Name, Foto 📱, Volumen, Gewicht, Besitzer, fester Lagerort, Verwendung, Packstatus.

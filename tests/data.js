@@ -93,7 +93,7 @@ const URL = 'http://localhost:8123/';
   ok('Eigener Gegenstand: Tasche vorbelegt, Fach automatisch, Notiz, „erst bei Abreise“', it && it.bag && it.comp && it.last && it.note === 'liegt im Regal');
   await p.goto(URL + '#/item/' + it.id); await p.waitForSelector('#itemform'); await p.fill('#itemform [name=notes]', 'geändert'); await p.locator('#itemform button[type=submit]').click(); await p.waitForTimeout(150);
   ok('Notiz auf der Detailseite änderbar', await p.evaluate(id => HH().items.find(i => i.id === id).notes, it.id) === 'geändert');
-  await p.goto(URL + '#/review'); await p.waitForSelector('[data-act=rv-miss]'); await p.locator('[data-act=rv-miss]').first().click(); await p.waitForTimeout(100);
+  await p.goto(URL + '#/review'); await p.waitForSelector('[data-act=ask-start]'); await p.click('[data-act=ask-start]'); await p.waitForSelector('[data-act=ask-no]'); await p.click('[data-act=ask-no]'); await p.waitForTimeout(100);
   await p.goto(URL + '#/shop'); await p.waitForSelector('[data-act=shop-buy]'); await p.click('[data-act=shop-buy]'); await p.waitForSelector('.modal [name=price]'); await p.fill('.modal [name=price]', '12'); await p.locator('.modal button[type=submit]').click(); await noModal(p);
   ok('„Fehlt“ → Einkaufsliste → „Gekauft“ übernimmt als vorhanden', await p.evaluate(() => { const s = HH().shop[0]; const i = HH().items.find(x => x.id === s.itemId); return s.bought && i.status === 'owned' && i.price === 12; }));
   await p.goto(URL + '#/bags/' + bid); await p.waitForSelector('.bag2d'); const n0 = await p.evaluate(() => HH().items.length);

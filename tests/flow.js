@@ -22,7 +22,18 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
   await click('[data-act=wz-finish]'); await p.waitForFunction(() => location.hash === '#/review');
   const s1 = await p.evaluate(() => { const H = HH(); return { items: H.items.length, bags: H.bags.length, home: H.items.filter(i => i.container === 'home' && i.source === 'plan').length, med: H.items.some(i => /Ramipril/.test(i.name) && i.lastMinute), pet: H.items.some(i => i.petId), bagOwner: H.bags[0].owner === H.people[0].id }; });
   ok('Packliste erzeugt (ohne Hausvorrat), Medikament „erst bei Abreise“, Tier berücksichtigt, eigene Tasche zugeordnet', s1.items > 40 && s1.home === 0 && s1.med && s1.pet && s1.bagOwner && s1.bags === 1, JSON.stringify(s1)); await shot('04-packliste'); await noMarkup('Packliste');
-  for (let i = 0; i < 12; i++) await p.locator('[data-act=rv-have]').first().click(); for (let i = 0; i < 2; i++) await p.locator('[data-act=rv-miss]').first().click();
+  { const t0 = await body(); ok('Packliste sagt, was gebraucht wird, und lässt abhaken', /Das brauchst du/.test(t0) && /Hake ab, was du schon hast/.test(t0) && (await p.locator('[data-change=rv-tick]').count()) > 40); }
+  const o0 = await p.evaluate(() => HH().items.filter(i => i.status === 'owned').length);
+  for (let i = 0; i < 10; i++) { await p.locator('[data-change=rv-tick]:not(:checked)').first().click(); await p.waitForTimeout(30); }
+  ok('Abhaken markiert als vorhanden, Haken bleibt sichtbar', await p.evaluate(n => HH().items.filter(i => i.status === 'owned').length === n + 10, o0) && (await p.locator('[data-change=rv-tick]:checked').count()) === o0 + 10);
+  await p.locator('[data-change=rv-tick]:checked').first().click(); await p.waitForTimeout(50);
+  ok('Haken entfernen macht es wieder offen', await p.evaluate(n => HH().items.filter(i => i.status === 'owned').length === n + 9, o0));
+  await click('[data-act=ask-start]'); await p.waitForFunction(() => location.hash === '#/review/ask');
+  ok('Einzeln abfragen fragt „Hast du das?“', /Hast du das\?/.test(await body()));
+  for (let i = 0; i < 3; i++) { await click('[data-act=ask-yes]'); await p.waitForTimeout(40); } await click('[data-act=ask-skip]'); await p.waitForTimeout(40);
+  for (let i = 0; i < 2; i++) { await click('[data-act=ask-no]'); await p.waitForTimeout(40); }
+  await shot('04b-abfragen');
+  await p.goto('http://localhost:8123/#/review'); await p.waitForSelector('[data-change=rv-tick]');
   ok('Vorhanden/Fehlt markiert, Einkaufsliste gefüllt', await p.evaluate(() => HH().shop.length === 2 && HH().items.filter(i => i.status === 'owned').length >= 12));
   // Start
   await p.goto('http://localhost:8123/#/home'); await p.waitForSelector('.tile'); await shot('05-start'); await noMarkup('Start');

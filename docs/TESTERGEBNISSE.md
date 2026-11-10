@@ -1,11 +1,11 @@
-# Testergebnisse (Version 2.2.2)
+# Testergebnisse (Version 2.3.0)
 
 Stand: 2026-11-10 08:21 UTC. Echte Ausgaben aus der Build-Umgebung (Node 22, Chromium/Playwright, Android SDK 35, Gradle 8.14.3). Wiederholbar mit `tests/run-all.sh`. Gesamt: **37 Unit-Prüfungen, 115 End-to-End-Prüfungen, 19 Schnittstellen-Prüfungen – 0 fehlgeschlagen.**
 
 | Ebene | Wie getestet | Ergebnis |
 |---|---|---|
 | Planer, Packreihenfolge, Regeln, Migration | 37 Unit-Tests (`tests/unit.js`) | alle bestanden |
-| Abnahme-Ablauf v1 | 47 Prüfungen (`tests/flow.js`) | alle bestanden |
+| Abnahme-Ablauf inkl. Abhakliste und Einzeln-Abfragen (2.3) | 47 Prüfungen (`tests/flow.js`) | alle bestanden |
 | Migration, Backup/Restore, PIN | 29 Prüfungen (`tests/data.js`) | alle bestanden |
 | Neu in 2.2: Pass-Baukasten, Kartendesigner, Lagen, Probealarm, Karten, Kiste, QR-Etikett | 39 Prüfungen (`tests/extra.js`), Karten/Probealarm gegen eine **Attrappe** der Android-Schnittstelle | alle bestanden |
 | Schnittstelle zu Android | 19 Prüfungen gegen die Attrappe (`tests/native-sim.js`) | alle bestanden |

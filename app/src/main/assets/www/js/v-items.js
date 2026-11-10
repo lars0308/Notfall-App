@@ -9,33 +9,65 @@ function groupInfo(H, it) {
   return ['home', 'Hausvorrat & Zuhause'];
 }
 const REV = { tab: 'check', prio: 'all' };
+const PRIO_ORDER = { must: 0, rec: 1, opt: 2 };
+/* Packliste als Abhakliste: zeigt alles, was gebraucht wird; Haken = „habe ich“ */
 route('/review', H => {
   const live = H.items.filter(i => !i.archived);
-  const cnt = { check: live.filter(i => i.status === 'planned').length, missing: live.filter(i => i.status === 'missing').length, owned: live.filter(i => i.status === 'owned').length };
-  const status = REV.tab === 'check' ? 'planned' : REV.tab;
-  let list = live.filter(i => i.status === status && (REV.prio === 'all' || i.prio === REV.prio));
+  const have = live.filter(i => i.status === 'owned').length, miss = live.filter(i => i.status === 'missing').length, open = live.length - have - miss;
   const groups = new Map();
-  for (const it of list) { const [k, label] = groupInfo(H, it); if (!groups.has(k)) groups.set(k, { label, items: [] }); groups.get(k).items.push(it); }
-  const order = { must: 0, rec: 1, opt: 2 };
-  for (const g of groups.values()) g.items.sort((a, b) => order[a.prio] - order[b.prio] || a.name.localeCompare(b.name));
+  for (const it of live) { const [k, label] = groupInfo(H, it); if (!groups.has(k)) groups.set(k, { label, items: [] }); groups.get(k).items.push(it); }
+  for (const g of groups.values()) g.items.sort((a, b) => PRIO_ORDER[a.prio] - PRIO_ORDER[b.prio] || a.name.localeCompare(b.name, 'de'));
+  if (!live.length) return { title: 'Packliste', html: h`${empty('Noch keine Packliste.')}<div class="actionbar"><a class="btn primary lg" href="#/wizard">${icon('list')} Packliste erstellen</a></div>` };
   return {
     title: 'Packliste',
-    html: h`<div class="tabs" role="tablist">${[['check', 'Offen'], ['missing', 'Fehlt'], ['owned', 'Vorhanden']].map(([k, l]) => h`<button role="tab" aria-selected="${REV.tab === k ? 'true' : 'false'}" data-act="rv-tab" data-tab="${k}">${l} (${cnt[k]})</button>`)}</div>
-    ${reviewGroups(H, groups)}
-    <div class="actionbar">${H.items.length ? h`<a class="btn lg" href="#/recs">${icon('alert')} Was fehlt?</a>` : ''}<a class="btn primary lg" href="#/wizard">${icon('list')} ${H.items.length ? 'Assistent' : 'Packliste erstellen'}</a></div>`,
+    actions: h`<a class="btn sm" href="#/wizard">${icon('list')}<span>Assistent</span></a>`,
+    html: h`<div class="card"><h2>${open + miss ? 'Das brauchst du' : 'Alles da'}</h2>
+      <p class="muted" style="margin:4px 0 12px">${open + miss ? 'Hake ab, was du schon hast.' : 'Alles abgehakt.'}</p>
+      ${bar(Math.round(have / live.length * 100), 'ok')}
+      <div class="row spread" style="margin-top:8px"><span class="bold">${have} von ${live.length} vorhanden</span>${miss ? h`<a class="badge must" href="#/shop" style="text-decoration:none">${miss} ${miss === 1 ? "fehlt" : "fehlen"}</a>` : ''}</div>
+      ${open ? h`<button class="btn block" style="margin-top:12px" data-act="ask-start">${icon('chev')} Einzeln abfragen (${open} offen)</button>` : ''}</div>
+    ${[...groups.entries()].map(([k, g]) => { const left = g.items.filter(i => i.status !== 'owned').length; return h`<div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h3>${g.label} <span class="badge">${g.items.length - left}/${g.items.length}</span></h3>${left ? h`<button class="btn sm" data-act="rv-group-have" data-group="${k}">${icon('check')} Alle</button>` : ''}</div><div class="list">${g.items.map(it => tickRow(it))}</div></div>`; })}
+    <div class="actionbar">${open + miss ? h`<button class="btn primary lg" data-act="rv-done">${icon('check')} Fertig</button>` : h`<a class="btn primary lg" href="#/bags">${icon('bag')} Taschen packen</a>`}</div>`,
   };
 });
-
-function reviewGroups(H, groups) {
-  if (!groups.size) {
-    if (REV.tab !== 'check') return empty('Keine Einträge.');
-    return H.items.length ? noticeBox('ok', 'Alles geprüft', '') : empty('Noch keine Packliste.');
-  }
-  return [...groups.entries()].map(([k, g]) => {
-    const bulk = REV.tab === 'check' ? h`<button class="btn sm" data-act="rv-group-have" data-group="${k}">${icon('check')} Alle vorhanden</button>` : '';
-    return h`<div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h3>${g.label} <span class="badge">${g.items.length}</span></h3>${bulk}</div><div class="list">${g.items.map(it => reviewRow(H, it))}</div></div>`;
-  });
+function tickRow(it) {
+  const own = it.status === 'owned'; const mark = own ? 'done' : it.prio === 'must' ? 'must' : it.prio === 'rec' ? 'rec' : '';
+  return h`<div class="li tick ${mark}"><label class="tickl grow"><input type="checkbox" data-change="rv-tick" data-id="${it.id}" ${own ? raw('checked') : ''} aria-label="${it.name} vorhanden"><span class="grow"><span class="t">${it.name}</span><br><span class="s">${itemQtyLabel(it)} · ${levelBadge(it.prio)}${it.status === 'missing' ? h` <span class="badge must">fehlt</span>` : ''}</span></span></label>
+    <a class="btn icon ghost sm" href="#/item/${it.id}" aria-label="Details zu ${it.name}">${icon('chev')}</a></div>`;
 }
+INPUT['rv-tick'] = el => { const H = HH(); const it = byId(H.items, el.dataset.id); if (!it) return; if (el.checked) setItemStatus(H, it, 'owned'); else { setItemStatus(H, it, 'planned'); H.shop = H.shop.filter(s => s.itemId !== it.id || s.bought); } persist(); rerender(true); };
+ACT['rv-done'] = async () => {
+  const H = HH(); const open = H.items.filter(i => !i.archived && i.status === 'planned');
+  if (open.length) {
+    const ok = await confirmDlg(`${open.length} nicht abgehakt`, 'Diese Sachen als „fehlt“ auf die Einkaufsliste setzen?', { ok: 'Auf die Einkaufsliste' });
+    if (!ok) return; open.forEach(i => setItemStatus(H, i, 'missing')); persist();
+  }
+  go('#/shop');
+};
+
+/* Einzeln abfragen: eine Frage pro Gegenstand, wichtigste zuerst */
+const ASK = { skip: new Set(), yes: 0, no: 0 };
+route('/review/ask', H => {
+  const open = H.items.filter(i => !i.archived && i.status === 'planned' && !ASK.skip.has(i.id)).sort((a, b) => PRIO_ORDER[a.prio] - PRIO_ORDER[b.prio] || groupInfo(H, a)[1].localeCompare(groupInfo(H, b)[1], 'de') || a.name.localeCompare(b.name, 'de'));
+  if (!open.length) {
+    const miss = H.items.filter(i => !i.archived && i.status === 'missing').length;
+    return { title: 'Abfragen', back: '#/review', html: h`<div class="card"><h2>Fertig</h2><p style="margin-top:8px">${ASK.yes} vorhanden · ${ASK.no} ${ASK.no === 1 ? "fehlt" : "fehlen"}${ASK.skip.size ? ` · ${ASK.skip.size} übersprungen` : ''}</p></div>
+      <div class="actionbar"><a class="btn lg" href="#/review">Zur Liste</a>${miss ? h`<a class="btn primary lg" href="#/shop">${icon('cart')} Einkaufsliste</a>` : h`<a class="btn primary lg" href="#/bags">${icon('bag')} Taschen packen</a>`}</div>` };
+  }
+  const it = open[0];
+  return {
+    title: 'Abfragen', back: '#/review',
+    html: h`<div class="row spread"><span class="muted small">${groupInfo(H, it)[1]}</span><span class="muted small mono">noch ${open.length}</span></div>
+      <div class="card"><p class="muted">Hast du das?</p><h1 class="q" style="margin:6px 0">${it.name}</h1><p class="bold">${itemQtyLabel(it)} · ${levelBadge(it.prio)}</p>${it.why ? h`<p class="muted small" style="margin-top:8px">${it.why}</p>` : ''}</div>
+      <button class="btn ghost block" data-act="ask-skip" data-id="${it.id}">Später</button>
+      <div class="actionbar"><button class="btn danger lg" data-act="ask-no" data-id="${it.id}">${icon('cart')} Fehlt</button><button class="btn primary lg" data-act="ask-yes" data-id="${it.id}">${icon('check')} Habe ich</button></div>`,
+  };
+});
+ACT['ask-start'] = () => { ASK.skip.clear(); ASK.yes = 0; ASK.no = 0; go('#/review/ask'); };
+ACT['ask-yes'] = d => { const H = HH(); const it = byId(H.items, d.id); if (!it) return; setItemStatus(H, it, 'owned'); ASK.yes++; persist(); rerender(); };
+ACT['ask-no'] = d => { const H = HH(); const it = byId(H.items, d.id); if (!it) return; setItemStatus(H, it, 'missing'); ASK.no++; persist(); rerender(); };
+ACT['ask-skip'] = d => { ASK.skip.add(d.id); rerender(); };
+
 function reviewRow(H, it) {
   const mark = it.prio === 'must' ? 'must' : it.prio === 'rec' ? 'rec' : '';
   return h`<div class="li ${mark}" style="flex-wrap:wrap;align-items:flex-start"><div class="grow" style="min-width:12rem"><a class="t" href="#/item/${it.id}" style="color:inherit;text-decoration:none">${it.name}</a>
@@ -49,9 +81,9 @@ ACT['rv-have'] = d => { const H = HH(); const it = byId(H.items, d.id); if (!it)
 ACT['rv-miss'] = d => { const H = HH(); const it = byId(H.items, d.id); if (!it) return; setItemStatus(H, it, 'missing'); persist(); rerender(); };
 ACT['rv-undo'] = d => { const H = HH(); const it = byId(H.items, d.id); if (!it) return; setItemStatus(H, it, 'planned'); H.shop = H.shop.filter(s => s.itemId !== it.id || s.bought); persist(); rerender(); };
 ACT['rv-group-have'] = async d => {
-  const H = HH(); const items = H.items.filter(i => !i.archived && i.status === 'planned' && groupInfo(H, i)[0] === d.group && (REV.prio === 'all' || i.prio === REV.prio));
+  const H = HH(); const items = H.items.filter(i => !i.archived && i.status !== 'owned' && groupInfo(H, i)[0] === d.group);
   if (!items.length) return;
-  const ok = await confirmDlg(`${items.length} Positionen vorhanden?`, '', { ok: 'Ja, alle vorhanden' });
+  const ok = await confirmDlg(`Alle ${items.length} abhaken?`, 'Du hast alles aus dieser Gruppe.', { ok: 'Ja, alle abhaken' });
   if (!ok) return; items.forEach(i => setItemStatus(H, i, 'owned')); persist(); rerender();
 };
 

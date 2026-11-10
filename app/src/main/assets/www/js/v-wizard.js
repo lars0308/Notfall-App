@@ -116,7 +116,7 @@ ACT['wz-finish'] = () => {
   finishWizard(H, d);
   H.setup.step = 0; H.setup.draft = null; persist(); flushDB();
   REV.tab = 'check'; REV.prio = 'all';
-  go('#/review'); toast(`Packliste erstellt: ${H.items.length - before} neue Positionen`);
+  go('#/review'); toast(`${H.items.length - before} Sachen auf der Liste – hake ab, was du hast`);
 };
 function finishWizard(H, d) {
   const S = DB.settings;

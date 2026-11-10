@@ -313,3 +313,9 @@ body{overflow-x:hidden;overflow-y:visible}
 .topbar,.bottomnav,.rail{background:var(--solid)}
 @media(min-width:56rem){.withnav .page{padding-bottom:calc(var(--u)*3)}.withnav .actionbar,.withnav .wiz-foot,.withnav .kbd-sticky{bottom:0}}
 .own{scroll-margin-top:calc(var(--topbar) + 12px)}
+/* Abhakliste */
+.li.tick{padding-top:4px;padding-bottom:4px;gap:4px}
+.tickl{display:flex;align-items:center;gap:calc(var(--u)*1.5);min-height:3.5rem;cursor:pointer;min-width:0}
+.tickl input{width:1.75rem;height:1.75rem;flex:none;margin:0;accent-color:var(--ok)}
+.li.done{border-left:6px solid var(--ok)}
+.li.done .t{text-decoration:none;color:var(--muted)}
