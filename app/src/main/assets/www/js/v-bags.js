@@ -64,7 +64,8 @@ route('/bags/:id', (id, H) => {
     <div class="card"><h3>Weitere Aktionen</h3><div class="actgrid">
       <a class="btn" href="#/bags/${bag.id}/missing">${icon('alert')} Was fehlt?${st.missing ? h` <span class="count">${st.missing}</span>` : ''}</a>
       <button class="btn" data-act="item-new-bag" data-bag="${bag.id}" data-comp="${BAGUI.sel || ''}">${icon('plus')} Eigener Gegenstand</button>
-      <button class="btn" data-act="bag-print" data-id="${bag.id}">${icon('print')} Packliste drucken</button>
+      <button class="btn" data-act="bag-share" data-id="${bag.id}">${icon('upload')} Packliste teilen</button>
+      <button class="btn" data-act="bag-print" data-id="${bag.id}">${icon('print')} Drucken / PDF</button>
       <button class="btn" data-act="bag-label" data-id="${bag.id}">${icon('scan')} QR-Etikett</button>
       <button class="btn" data-act="bag-pack" data-id="${bag.id}">${icon('cube')} Fächer neu zuteilen</button>
       <button class="btn" data-act="bag-copy" data-id="${bag.id}">${icon('copy')} Kopieren</button>

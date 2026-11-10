@@ -71,7 +71,7 @@ function emptyDB() {
 }
 function ensureShape(d) {
   d.v = d.v || 1;
-  d.settings = Object.assign(defaultSettings(), d.settings || {});
+  d.settings = Object.assign(defaultSettings(), d.settings || {}); d.settings.theme = 'dark';
   d.settings.notif = Object.assign(defaultSettings().notif, d.settings.notif || {});
   d.settings.plan = Object.assign(defaultSettings().plan, d.settings.plan || {});
   d.users = d.users || [];

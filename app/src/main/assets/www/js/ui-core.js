@@ -93,7 +93,7 @@ function render(keepScroll) {
 /* ---- Theme ---- */
 function applyTheme() {
   const s = DB.settings; const root = document.documentElement;
-  const dark = s.theme === 'dark' || (s.theme === 'system' && !(window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches));
+  const dark = true; // Die App ist immer dunkel
   root.dataset.theme = dark ? 'dark' : 'light'; root.dataset.scale = s.scale === 'l' ? 'l' : s.scale === 'xl' ? 'xl' : 'm'; root.dataset.contrast = s.contrast === 'high' ? 'high' : 'normal';
   applyBars();
 }

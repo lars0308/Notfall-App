@@ -69,3 +69,8 @@ Diese Punkte konnten in der Entwicklungsumgebung **nicht** geprüft werden. Bitt
 ## Neu in 3.0
 - [ ] Erster Start: „Ein paar Erlaubnisse“ – jede „Erlauben“-Taste zeigt die Android-Abfrage; danach steht „Erlaubt“. „Pünktliche Alarme“ öffnet die Einstellungen; nach Rückkehr aktualisiert sich die Anzeige.
 - [ ] Notfall-Bildschirm: Kontakte erscheinen nur einmal, Telefonnummern sind vollständig lesbar.
+
+## Neu in 3.1
+- [ ] Taschenseite → „Packliste teilen“ öffnet das Android-Teilen-Menü; in WhatsApp kommt der Text lesbar an; App bleibt entsperrt.
+- [ ] Einkaufsliste → Teilen-Symbol oben: gleiche Prüfung.
+- [ ] Datumsauswahl bei „Haltbar bis?“ lässt sich mit dem Daumen bedienen.

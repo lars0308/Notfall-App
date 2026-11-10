@@ -126,7 +126,7 @@ t('Migration v3 → v4: Daten bleiben, Personen bekommen Pass-Felder (alles priv
       { id: 'h2', name: 'Leer', people: [], pets: [], bags: [], items: [], shop: [], contacts: [], meeting: [], shelters: [], rooms: [], reminders: [], docs: [], tasks: [], recs: {} }] };
     const d = ensureShape(old); const H = d.households[0], p = H.people[0];
     return [d.v, H.items.length, H.items[0].notes, H.items[0].photos[0], H.items[1].packed, H.rooms.length, H.tasks.length, d.users.length, H.contacts[0].name, H.meeting[0].name, p.needs.allergies, p.needs.meds.length, Object.values(p.share).some(Boolean), p.passContacts.length, H.box.enabled, H.box.days, d.households[1].box.enabled, d.settings.theme]; })()`);
-  assert.deepEqual(r, [4, 2, 'Keller', 'ph1', true, 1, 1, 1, 'Oma', 'Platz', 'Pollen', 1, false, 0, true, 14, false, 'light']);
+  assert.deepEqual(r, [4, 2, 'Keller', 'ph1', true, 1, 1, 1, 'Oma', 'Platz', 'Pollen', 1, false, 0, true, 14, false, 'dark']);
 });
 t('Alter aus Geburtsdatum', () => { const y = new Date().getFullYear(); assert.equal(E(`ageFromBirth('${y - 5}-01-01')`), 5); assert.equal(E("ageFromBirth('')"), null); });
 console.log(out.join('\n')); console.log(`\n${pass} bestanden, ${fail} fehlgeschlagen`);

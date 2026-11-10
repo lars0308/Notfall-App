@@ -5,6 +5,7 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
   const srv = await start(8123); const b = await chromium.launch(); const ctx = await b.newContext({ viewport: { width: 400, height: 860 }, colorScheme: 'dark', acceptDownloads: true }); const p = await ctx.newPage();
   const errs = []; p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); }); p.on('pageerror', e => errs.push('PAGEERR ' + e.message));
   const click = s => p.locator(s).first().click(); const shot = n => p.screenshot({ path: `tests/out/f-${n}.png` });
+  const skipExp = async () => { await p.waitForTimeout(30); if (await p.locator('.modal [data-act=exp-skip]').count()) await p.click('.modal [data-act=exp-skip]'); };
   const hash = () => p.evaluate(() => location.hash); const body = () => p.locator('body').innerText();
   const noMarkup = async name => { const t = await body(); ok(name + ': kein Fehler/Markup im Text', !/Anzeige fehlgeschlagen|undefined|NaN|\[object|<\/?(div|span|button|a|svg)[ >]|class="/.test(t), (t.match(/Anzeige fehlgeschlagen.*|undefined|NaN|\[object[^\]]*\]|class="/) || [''])[0]); };
   await p.goto('http://localhost:8123/'); await p.waitForSelector('.q');
@@ -56,7 +57,7 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
   const cats = await p.locator('a.cat').evaluateAll(as => as.map(a => a.getAttribute('href')));
   const o0 = await p.evaluate(() => HH().items.filter(i => i.status === 'owned').length); let ticked = 0;
   for (const c of cats) { if (ticked >= 10) break; await p.goto('http://localhost:8123/' + c); await p.waitForSelector('.page-inner');
-    while (ticked < 10 && await p.locator('[data-change=rv-tick]:not(:checked)').count()) { await p.locator('[data-change=rv-tick]:not(:checked)').first().click(); ticked++; await p.waitForTimeout(30); } }
+    while (ticked < 10 && await p.locator('[data-change=rv-tick]:not(:checked)').count()) { await p.locator('[data-change=rv-tick]:not(:checked)').first().click(); ticked++; await skipExp(); } }
   ok('In den Kategorien abhaken markiert als vorhanden', ticked === 10 && await p.evaluate(n => HH().items.filter(i => i.status === 'owned').length === n + 10, o0));
   await p.locator('[data-change=rv-tick]:checked').first().click(); await p.waitForTimeout(50);
   ok('Haken entfernen macht es wieder offen', await p.evaluate(n => HH().items.filter(i => i.status === 'owned').length === n + 9, o0));
@@ -65,13 +66,13 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
   await click('[data-act=pick-add]'); await p.waitForTimeout(100);
   ok('Werkzeug antippen fügt es der Tasche hinzu (vorhanden, Fach zugeteilt)', await p.evaluate(k => { const i = HH().items.find(x => x.key === k && x.source === 'pick'); return !!i && i.status === 'owned' && !!i.bagId && !!i.compId; }, k0));
   await click('.topbar [data-act=pick-search]'); await p.waitForSelector('#pickq'); await p.keyboard.type('Feuerstahl'); await p.waitForSelector('#pickres [data-act=pick-add]');
-  await p.locator('#pickres [data-act=pick-add]').first().click(); await p.waitForTimeout(100);
+  await p.locator('#pickres [data-act=pick-add]').first().click(); await skipExp();
   await p.fill('#pickq', 'Ersatzakku Kamera'); await p.waitForTimeout(50); await click('[data-act=pick-custom]'); await p.waitForTimeout(100); await shot('04a-suche');
   ok('Lupe: suchen und direkt hinzufügen, auch eigene Sachen', await p.evaluate(() => HH().items.some(i => i.key === 'ferro_rod' && i.status === 'owned') && HH().items.some(i => i.name === 'Ersatzakku Kamera' && i.status === 'owned' && i.bagId)));
   await p.goto('http://localhost:8123/#/review'); await p.waitForSelector('a.cat');
   await click('[data-act=ask-start]'); await p.waitForSelector('[data-act=ask-yes]');
   ok('Einzeln abfragen fragt „Hast du das?“', /Hast du das\?/.test(await body()));
-  for (let i = 0; i < 3; i++) { await click('[data-act=ask-yes]'); await p.waitForTimeout(40); } await click('[data-act=ask-skip]'); await p.waitForTimeout(40);
+  for (let i = 0; i < 3; i++) { await click('[data-act=ask-yes]'); await skipExp(); } await click('[data-act=ask-skip]'); await p.waitForTimeout(40);
   for (let i = 0; i < 2; i++) { await click('[data-act=ask-no]'); await p.waitForTimeout(40); }
   await shot('04b-abfragen');
   await p.goto('http://localhost:8123/#/review'); await p.waitForSelector('a.cat');

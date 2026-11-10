@@ -1,4 +1,4 @@
-# Umgesetzte Funktionen (Version 3.0.0)
+# Umgesetzte Funktionen (Version 3.1.0)
 
 Legende: ✅ umgesetzt und im Browser getestet · 📱 braucht Android-Code, nicht auf Gerät geprüft · 🟡 mit Einschränkung · ⬜ offen. Was gestrichen oder verschoben wurde, steht in der [Feature-Matrix](FEATURE-MATRIX.md).
 
@@ -71,3 +71,9 @@ Alles Fehlende aus allen Rucksäcken zusammengefasst (z. B. „3 Stück · Lars,
 
 ## Notfall-Bildschirm ✅
 Aufgeräumt: 112 als großer Knopf, weitere Nummern klein daneben, Lagen als Raster, Kontakte nur einmal (auch wenn sie bei mehreren Personen eingetragen sind), Personen kompakt mit den freigegebenen Angaben, Taschen eine Zeile je Tasche, „Bei Abreise mitnehmen“ einmal für alle, Treffpunkte mit Karte.
+
+## Einkaufsliste, Teilen, Haltbarkeit ✅
+- Einkaufsliste nach Geschäften: Supermarkt, Drogerie/Apotheke, Outdoor-/Sportgeschäft, Baumarkt, Elektronik, Kleidung, Tierbedarf, Autozubehör (eigener Händler-Eintrag hat Vorrang); umschaltbar auf „Nach Wichtigkeit“.
+- Teilen 📱: Packliste eines Rucksacks (nach Kategorien, ✅/⬜) und Einkaufsliste (nach Geschäften) über das Android-Teilen-Menü, z. B. WhatsApp. Medikamente und Hilfsmittel erscheinen nur als „Persönliche Medikamente/Hilfsmittel“. Drucken/PDF bleibt.
+- Beim Abhaken von Sachen, die ablaufen (Wasser, Essen, Medikamente, Erste Hilfe, Batterien, Brennstoff, Tierfutter …), fragt die App einmal „Haltbar bis?“; „Kein Datum“ fragt nicht wieder. Daraus entstehen die Ablauf-Erinnerungen.
+- Darstellung: immer dunkel (Schriftgröße und hoher Kontrast bleiben einstellbar).

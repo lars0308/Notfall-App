@@ -120,7 +120,7 @@ function pickPut(H, it) {
   H.items.push(it); if (bag) autoPack(H, bag, { onlyUnassigned: true });
   persist(); toast(`${it.name} hinzugefügt${bag ? ' · ' + bag.name : ''}`);
 }
-ACT['pick-add'] = d => { const H = HH(); if (!T[d.key]) return; pickPut(H, makeItem({ key: d.key, qty: 1 }, { status: 'owned', source: 'pick', prio: 'opt' })); rerender(true); };
+ACT['pick-add'] = d => { const H = HH(); if (!T[d.key]) return; const it = makeItem({ key: d.key, qty: 1 }, { status: 'owned', source: 'pick', prio: 'opt' }); pickPut(H, it); rerender(true); askExpiry(it); };
 ACT['pick-custom'] = d => {
   const H = HH(); const name = String(d.name || '').trim().slice(0, 80); if (!name) return;
   const cat = PICK.cat && PICK_CAT[PICK.cat] ? PICK_CAT[PICK.cat].cats[0] : 'Sonstiges';
@@ -163,7 +163,23 @@ function bagLoad(H, bag) {
   const pct = cap ? Math.round(st.totalG / cap * 100) : 0; const cls = st.overweight ? (st.overFactor > 1.25 ? 'must' : 'rec') : 'ok';
   return h`<div class="load"><div class="row spread"><span class="small bold ${st.overweight ? 't' + cls : ''}">${icon('bag')} ${fmt(st.totalG / 1000)}${cap ? ' von ' + fmt(st.capKg) : ''} kg${st.overweight ? ' – zu schwer' : ''}</span><span class="small muted ${st.overfull ? 'tmust' : ''}">${fmt0(st.fillPct)} % voll</span></div>${cap ? bar(pct, cls) : ''}</div>`;
 }
-INPUT['rv-tick'] = el => { const H = HH(); const it = byId(H.items, el.dataset.id); if (!it) return; if (el.checked) setItemStatus(H, it, 'owned'); else { setItemStatus(H, it, 'planned'); H.shop = H.shop.filter(s => s.itemId !== it.id || s.bought); } persist(); rerender(true); };
+/* Beim Abhaken einmal nach dem Haltbarkeitsdatum fragen – nur bei Sachen, die ablaufen */
+const EXPIRY_KEYS = ['water_carry', 'water_stock', 'food_baby', 'food_child', 'food_snack', 'food_ration', 'nuts', 'batteries', 'coin_cells', 'hearing_batt', 'firstaid', 'firstaid_home', 'car_firstaid', 'painkiller', 'diarrhea', 'disinfect', 'sunscreen', 'electrolyte', 'water_treat', 'fuel', 'fuel_home', 'pet_food', 'pet_meds', 'meds', 'mask_ffp2'];
+const NO_EXPIRY_KEYS = ['thermometer', 'tick_tweezers', 'spare_glasses', 'gloves_nitrile'];
+function needsExpiry(it) {
+  if (!it || it.expiry || it.noExpiry || it.status !== 'owned') return false;
+  const k = String(it.key || '').split(':')[0]; if (NO_EXPIRY_KEYS.includes(k)) return false;
+  return EXPIRY_KEYS.includes(k) || ['Lebensmittel', 'Medizin'].includes(it.category) || (it.tags || []).some(t => ['food', 'meds', 'battery'].includes(t));
+}
+function askExpiry(it) {
+  if (!needsExpiry(it)) return;
+  const med = it.category === 'Medizin' || /^meds/.test(String(it.key || ''));
+  formDlg({ title: 'Haltbar bis?', ok: 'Speichern', extraFoot: [{ label: 'Kein Datum', act: 'exp-skip', data: { id: it.id } }],
+    body: h`<p><b>${privateName(it)}</b></p>${F.date('expiry', med ? 'Verfallsdatum' : 'Datum auf der Packung', '', { req: true })}<p class="muted small">Die App erinnert dich rechtzeitig, bevor es abläuft.</p>`,
+    onSubmit: fd => { const H = HH(); const x = byId(H.items, it.id); if (!x) return; x.expiry = fd.get('expiry'); x.expiryType = med ? 'use' : x.expiryType || 'mhd'; persist(); syncNotifications(); rerender(true); toast('Datum gespeichert'); } });
+}
+ACT['exp-skip'] = d => { const H = HH(); const x = byId(H.items, d.id); if (x) { x.noExpiry = true; persist(); } closeAllModals(); };
+INPUT['rv-tick'] = el => { const H = HH(); const it = byId(H.items, el.dataset.id); if (!it) return; if (el.checked) setItemStatus(H, it, 'owned'); else { setItemStatus(H, it, 'planned'); H.shop = H.shop.filter(s => s.itemId !== it.id || s.bought); } persist(); rerender(true); if (el.checked) askExpiry(it); };
 ACT['rv-done'] = async () => {
   const H = HH(); const open = packItems(H).filter(i => i.status === 'planned');
   if (open.length) {
@@ -192,7 +208,7 @@ route('/review/ask', H => {
   };
 });
 ACT['ask-start'] = d => { ASK.skip.clear(); ASK.yes = 0; ASK.no = 0; ASK.bag = (d && d.bag) || null; go('#/review/ask'); };
-ACT['ask-yes'] = d => { const H = HH(); const it = byId(H.items, d.id); if (!it) return; setItemStatus(H, it, 'owned'); ASK.yes++; persist(); rerender(); };
+ACT['ask-yes'] = d => { const H = HH(); const it = byId(H.items, d.id); if (!it) return; setItemStatus(H, it, 'owned'); ASK.yes++; persist(); rerender(); askExpiry(it); };
 ACT['ask-no'] = d => { const H = HH(); const it = byId(H.items, d.id); if (!it) return; setItemStatus(H, it, 'missing'); ASK.no++; persist(); rerender(); };
 ACT['ask-skip'] = d => { ASK.skip.add(d.id); rerender(); };
 

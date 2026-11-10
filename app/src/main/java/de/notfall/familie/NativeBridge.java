@@ -115,6 +115,17 @@ public class NativeBridge {
     act.runOnUiThread(() -> act.startCameraCapture(cb));
   }
 
+  // ---------- Teilen: Android-Teilen-Menü (WhatsApp, Mail, Notizen …) ----------
+  @JavascriptInterface public void shareText(final String title, final String text) {
+    act.runOnUiThread(() -> {
+      android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_SEND);
+      i.setType("text/plain");
+      i.putExtra(android.content.Intent.EXTRA_SUBJECT, title);
+      i.putExtra(android.content.Intent.EXTRA_TEXT, text);
+      try { act.startActivity(android.content.Intent.createChooser(i, title)); } catch (Exception ignored) { }
+    });
+  }
+
   // ---------- Telefonbuch: Android-Auswahl, die App bekommt nur den gewählten Kontakt (keine Berechtigung nötig) ----------
   @JavascriptInterface public void pickContact(final int cb) {
     act.runOnUiThread(() -> act.startContactPick(cb));

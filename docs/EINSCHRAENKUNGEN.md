@@ -30,5 +30,5 @@ Der Java-Teil (Keystore-Verschlüsselung, Biometrie, Benachrichtigungen, Probeal
 - **App-Sperre:** eine PIN für die App. Die Daten liegen per Android-Keystore verschlüsselt auf dem Gerät. Exportierte CSV- und PDF-Dateien sind unverschlüsselt.
 - **Kamera-Fotos** liegen kurz als temporäre Datei im App-Cache und werden danach gelöscht.
 - **Gestrichene Bereiche:** Schutzräume, Aufgabenliste, Benutzerverwaltung, Budget und Verbrauchsbuchung haben kein Menü mehr; ihre Daten bleiben gespeichert und im Backup. Ein bereits angelegter Dokumenten-Safe bleibt unter „Mehr“ erreichbar.
-- **Tablet-Layout und helles Farbschema** sind nur per Screenshot gesichtet, nicht automatisch getestet. Die neuen Bildschirme (Karte, Kartendesigner, Probealarm) wurden nur im Handyformat dunkel gesichtet.
+- **Tablet-Layout** ist nur per Screenshot gesichtet, nicht automatisch getestet. Ein helles Farbschema gibt es nicht mehr – die App ist immer dunkel. Die neuen Bildschirme (Karte, Kartendesigner, Probealarm) wurden nur im Handyformat dunkel gesichtet.
 - **Sprache:** nur Deutsch. **targetSdk 34**, minSdk 29.

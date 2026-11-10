@@ -1,6 +1,6 @@
 'use strict';
 /* ===== Notfall! – Einkaufsliste und Budget ===== */
-const SHOP = { prio: 'all', showBought: false };
+const SHOP = { prio: 'all', showBought: false, by: 'store' };
 function shopTotals(H, S) {
   const open = H.shop.filter(s => !s.bought), bought = H.shop.filter(s => s.bought);
   const est = open.reduce((a, s) => a + (+s.estPrice || 0) * (+s.qty || 1), 0);
@@ -14,10 +14,13 @@ route('/shop', H => {
   const order = { must: 0, rec: 1, opt: 2 };
   const list = t.open.filter(s => SHOP.prio === 'all' || s.priority === SHOP.prio).sort((a, b) => order[a.priority] - order[b.priority] || (a.category || '').localeCompare(b.category || '') || a.name.localeCompare(b.name, 'de'));
   return {
-    title: 'Einkaufsliste', back: '#/more', actions: h`<button class="btn primary sm" data-act="shop-new">${icon('plus')}<span>Neu</span></button>`,
+    title: 'Einkaufsliste', back: '#/more', actions: h`<button class="btn icon sm" data-act="shop-share" aria-label="Einkaufsliste teilen">${icon('upload')}</button><button class="btn primary sm" data-act="shop-new">${icon('plus')}<span>Neu</span></button>`,
     html: h`${t.est || t.spent ? h`<div class="card"><div class="row spread"><span>Geschätzt offen</span><span class="bold">${fmtEUR(t.est)}</span></div>${t.spent ? h`<div class="row spread"><span>Ausgegeben</span><span class="bold">${fmtEUR(t.spent)}</span></div>` : ''}</div>` : ''}
     ${unchecked ? h`<a class="btn" href="#/review">${unchecked} Positionen noch offen – erst prüfen</a>` : ''}
-    <div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h2>Zu besorgen</h2><span class="badge">${list.length}</span></div><div class="list">${list.length ? list.map(s => shopRow(s)) : empty('Nichts zu besorgen.')}</div></div>
+    ${list.length ? h`<div class="chips" role="group" aria-label="Sortierung">${[['store', 'Nach Geschäft'], ['prio', 'Nach Wichtigkeit']].map(([k, l]) => h`<button class="chip" aria-pressed="${SHOP.by === k ? 'true' : 'false'}" data-act="shop-by" data-v="${k}">${l}</button>`)}</div>` : ''}
+    ${!list.length ? h`<div class="card">${empty('Nichts zu besorgen.')}<a class="btn block" href="#/needs" style="margin-top:8px">${icon('cart')} Was fehlt noch?</a></div>`
+      : SHOP.by === 'store' ? groupByStore(H, list).map(g => h`<div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h3>${icon(g.icon)} ${g.label}</h3><span class="badge">${g.list.length}</span></div><div class="list">${g.list.map(s => shopRow(s))}</div></div>`)
+      : h`<div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h2>Zu besorgen</h2><span class="badge">${list.length}</span></div><div class="list">${list.map(s => shopRow(s))}</div></div>`}
     ${t.bought.length ? h`<div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h2>Gekauft</h2><button class="btn sm" data-act="shop-toggle-bought">${SHOP.showBought ? 'Ausblenden' : 'Anzeigen (' + t.bought.length + ')'}</button></div>${SHOP.showBought ? h`<div class="list">${t.bought.map(s => h`<div class="li done"><span class="grow"><span class="t">${s.name}</span><br><span class="s">${fmt(s.qty)} ${s.unit || ''} · ${s.actualPrice ? fmtEUR(s.actualPrice) : 'ohne Preis'}${s.store ? ' · ' + s.store : ''}</span></span><button class="btn sm" data-act="shop-unbuy" data-id="${s.id}">Rückgängig</button></div>`)}</div>` : ''}</div>` : ''}`,
   };
 });
@@ -30,6 +33,7 @@ function shopRow(s) {
     <button class="btn sm" data-act="shop-edit" data-id="${s.id}" aria-label="${s.name} bearbeiten">${icon('edit')}</button>
     <button class="btn sm ok" data-act="shop-buy" data-id="${s.id}">${icon('check')} Gekauft</button></div>`;
 }
+ACT['shop-by'] = d => { SHOP.by = d.v; rerender(true); };
 ACT['shop-prio'] = d => { SHOP.prio = d.prio; rerender(true); };
 ACT['shop-toggle-bought'] = () => { SHOP.showBought = !SHOP.showBought; rerender(true); };
 ACT['budget-set'] = async () => { const H = HH(); const v = await promptDlg('Budget festlegen', 'Gesamtbudget in Euro (0 = kein Budget)', H.budget || '', { type: 'number', hint: 'Gilt für diesen Haushalt.' }); if (v === null) return; H.budget = Math.max(0, num(v)); persist(); rerender(true); };

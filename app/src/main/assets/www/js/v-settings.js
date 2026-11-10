@@ -8,7 +8,6 @@ route('/settings', H => {
     title: 'Einstellungen', back: '#/more',
     html: h`
     <div class="card"><h2>Darstellung</h2><div class="stack">
-      ${radio('theme', [['dark', 'Dunkel'], ['light', 'Hell'], ['system', 'Wie Gerät']], S.theme, 'set-theme')}
       ${radio('scale', [['m', 'Schrift normal'], ['l', 'Groß'], ['xl', 'Sehr groß']], S.scale, 'set-scale')}
       ${F.check('contrast', 'Hoher Kontrast (ohne Glas-Effekt)', S.contrast === 'high', { attrs: { 'data-change': 'set-contrast' } })}</div></div>
     <div class="card"><h2>Sicherheit</h2><div class="stack">
@@ -16,7 +15,7 @@ route('/settings', H => {
       ${lockOn ? F.select('lockMin', 'Automatisch sperren', [[0, 'Sofort'], [1, 'Nach 1 Minute'], [5, 'Nach 5 Minuten'], [15, 'Nach 15 Minuten']], S.lockMin, { attrs: { 'data-change': 'set-lockmin' } }) : ''}
       ${lockOn ? F.check('lockContacts', 'Notfallpass ohne Entsperren zeigen', S.lockContacts, { desc: 'Nur freigegebene Angaben', attrs: { 'data-change': 'set-lockcontacts' } }) : ''}
       ${F.check('secure', 'Screenshots verhindern', S.secure, { attrs: { 'data-change': 'set-secure' } })}
-      <p class="small muted">Alle Daten bleiben auf diesem Gerät. Kein Konto. Internet nur, wenn du eine Karte herunterlädst.</p></div></div>
+      <p class="small muted">Alle Daten bleiben auf diesem Gerät. Kein Konto. Internet nur für Kartendownload, Ortssuche und Adresse aus dem Standort – jeweils auf Knopfdruck.</p></div></div>
     <div class="card"><h2>Erinnerungen</h2><div class="stack">
       <div class="row spread"><b>Benachrichtigungen</b>${S.notif.on ? h`<button class="btn sm" data-act="notif-off">Ausschalten</button>` : h`<button class="btn primary" data-act="notif-enable">${icon('bell')} Einschalten</button>`}</div>
       <div class="form-grid">${F.select('hour', 'Uhrzeit', [...Array(24).keys()].filter(x => x >= 6 && x <= 22).map(x => [x, x + ':00 Uhr']), S.notif.hour, { attrs: { 'data-change': 'set-hour' } })}${F.select('leadDays', 'Ablaufwarnung vorher', [[7, '7 Tage'], [14, '14 Tage'], [30, '30 Tage'], [60, '60 Tage'], [90, '90 Tage']], S.notif.leadDays, { attrs: { 'data-change': 'set-lead' } })}</div></div></div>

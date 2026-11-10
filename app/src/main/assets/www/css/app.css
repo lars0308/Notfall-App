@@ -392,3 +392,4 @@ h2.sec{font-size:1.0625rem;margin:4px 0 8px}
 .needbtns{display:flex;gap:8px;flex-basis:100%;justify-content:flex-end}
 .needbtns .btn{flex:1}
 .btn.block{white-space:normal;line-height:1.2;text-align:center}
+.card-head h3 svg{width:1.1rem;height:1.1rem;vertical-align:-2px;margin-right:4px}

@@ -1,4 +1,4 @@
-# Testergebnisse (Version 3.0.0)
+# Testergebnisse (Version 3.1.0)
 
 Stand: 2026-11-10 08:21 UTC. Echte Ausgaben aus der Build-Umgebung (Node 22, Chromium/Playwright, Android SDK 35, Gradle 8.14.3). Wiederholbar mit `tests/run-all.sh`. Gesamt: **37 Unit-Prüfungen, 115 End-to-End-Prüfungen, 19 Schnittstellen-Prüfungen – 0 fehlgeschlagen.**
 
@@ -16,6 +16,7 @@ Stand: 2026-11-10 08:21 UTC. Echte Ausgaben aus der Build-Umgebung (Node 22, Chr
 | Packliste: Menge, Gewicht, Verschieben (2.7) | 4 Prüfungen in `tests/bagedit.js` | alle bestanden |
 | Begrüßung, Erlaubnisse, Ortssuche, Adresse aus Standort, Telefonbuch, große Familien | 13 Prüfungen (`tests/places.js`) gegen Attrappe mit vorgegebenen OpenStreetMap-Antworten | alle bestanden |
 | „Was fehlt?“ (3.0) | 9 Prüfungen (`tests/needs.js`) | alle bestanden |
+| Einkaufsliste nach Geschäften, Teilen, Haltbarkeit beim Abhaken, immer dunkel (3.1) | 12 Prüfungen (`tests/shopshare.js`) | alle bestanden |
 | Zufallstest inkl. neuer Seiten | 3 Läufe × ca. 335 Aktionen | keine JS-Fehler |
 | Java-Teil (Keystore, Biometrie, Benachrichtigungen, **Probealarm, Kartendownload, MBTiles-Import**, Kamera, Drucken) | **nur kompiliert**, APK signiert, Berechtigungen mit `aapt2` geprüft | **nicht auf einem Gerät ausgeführt** |
 
