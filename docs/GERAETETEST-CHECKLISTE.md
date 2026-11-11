@@ -74,3 +74,10 @@ Diese Punkte konnten in der Entwicklungsumgebung **nicht** geprüft werden. Bitt
 - [ ] Taschenseite → „Packliste teilen“ öffnet das Android-Teilen-Menü; in WhatsApp kommt der Text lesbar an; App bleibt entsperrt.
 - [ ] Einkaufsliste → Teilen-Symbol oben: gleiche Prüfung.
 - [ ] Datumsauswahl bei „Haltbar bis?“ lässt sich mit dem Daumen bedienen.
+
+## Neu in 3.3 – Notfallpass auf dem Sperrbildschirm (wichtig)
+- [ ] „Für Rettungskräfte“ → Einschalten → Handy sperren: Hinweis „NOTFALLPASS“ mit Angaben ist auf dem Sperrbildschirm lesbar.
+- [ ] Hinweis im gesperrten Zustand antippen: Notfallpass-Ansicht erscheint ohne Entsperren; 112 und Kontakte öffnen die Wählansicht; Zurück führt nicht in die App.
+- [ ] Handy neu starten: Hinweis erscheint wieder.
+- [ ] Sperrbildschirm-Bild setzen: Bild ist auf dem Sperrbildschirm zu sehen, Uhrzeit verdeckt nichts Wichtiges.
+- [ ] „Kopieren und Einstellungen öffnen“: Notfallinformationen/Einstellungen öffnen sich, Text lässt sich einfügen.

@@ -87,13 +87,13 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
   ok('Vorhanden/Fehlt markiert, Einkaufsliste gefüllt', await p.evaluate(() => HH().shop.length === 2 && HH().items.filter(i => i.status === 'owned').length >= 12));
   // Start
   await p.goto('http://localhost:8123/#/home'); await p.waitForSelector('.stats'); await shot('05-start'); await noMarkup('Start');
-  const t = await body(); ok('Start ist Übersicht: vorhanden/gepackt/fehlt, Termine, Haushalt mit Tagesbedarf, „Als Nächstes“ – keine Taschen-Kacheln', /vorhanden/.test(t) && /gepackt/.test(t) && /Termine/.test(t) && /Rucksackkontrolle|Kontrolle/.test(t) && /Bedarf pro Tag/.test(t) && /Als Nächstes|Alles bereit/i.test(t) && !/Neue Tasche anlegen/.test(t) && (await p.locator('.page a.tile[href^="#/bags/"]').count()) === 0, JSON.stringify({ v: /vorhanden/.test(t), g: /gepackt/.test(t), te: /Termine/.test(t), k: /Rucksackkontrolle|Kontrolle/.test(t), b: /Bedarf pro Tag/.test(t), n: /Als Nächstes|Alles bereit/i.test(t), nt: !/Neue Tasche anlegen/.test(t) }));
+  const t = await body(); ok('Start ist Übersicht: da/fehlt, Termine, Haushalt mit Tagesbedarf, „Als Nächstes“ – keine Taschen-Kacheln', /\bda\b/.test(t) && /fehl/.test(t) && /Termine/.test(t) && /Rucksackkontrolle|Kontrolle/.test(t) && /Bedarf pro Tag/.test(t) && /Als Nächstes|Alles bereit/i.test(t) && !/Neue Tasche anlegen/.test(t) && (await p.locator('.page a.tile[href^="#/bags/"]').count()) === 0, JSON.stringify({ v: /\bda\b/.test(t), g: /fehl/.test(t), te: /Termine/.test(t), k: /Rucksackkontrolle|Kontrolle/.test(t), b: /Bedarf pro Tag/.test(t), n: /Als Nächstes|Alles bereit/i.test(t), nt: !/Neue Tasche anlegen/.test(t) }));
   ok('Kein Bereitschafts-Score auf dem Start', !/%/.test(t));
   // Tasche
   const bid = await p.evaluate(() => HH().bags[0].id); await p.goto('http://localhost:8123/#/bags/' + bid); await p.waitForSelector('.bag2d'); await shot('06-tasche'); await noMarkup('Tasche');
   await p.locator('.bag2d g.c[aria-label="Admin-Fach oben"] rect').click(); await p.waitForTimeout(150); ok('2D-Fachansicht: Fach antippen wählt aus', !!(await p.evaluate(() => BAGUI.sel)));
   await click('[data-act=comp-add]'); await p.fill('.modal [name=name]', 'Dokumentenfach'); await p.locator('.modal button[type=submit]').click(); await p.waitForFunction(() => !document.querySelector('.modal'));
-  const itemId = await p.evaluate(() => { BAGUI.sel = null; rerender(true); return HH().items.find(i => i.status === 'owned' && i.bagId).id; });
+  const itemId = await p.evaluate(() => { const it = HH().items.find(i => i.status === 'owned' && i.bagId && i.compId); BAGUI.sel = it.compId; rerender(true); return it.id; });
   await p.locator(`[data-act=bag-item-move][data-id="${itemId}"]`).click(); const cid = await p.evaluate(() => HH().bags[0].comps.find(c => c.name === 'Dokumentenfach').id); await p.selectOption('.modal [name=compId]', cid); await p.locator('.modal button[type=submit]').click(); await p.waitForFunction(() => !document.querySelector('.modal'));
   ok('Gegenstand einem eigenen Fach zugewiesen', await p.evaluate(([i, c]) => HH().items.find(x => x.id === i).compId === c, [itemId, cid]));
   await click('[data-act=bg-mode][data-v="3d"]'); await p.waitForSelector('#bagcv'); await p.waitForTimeout(300); ok('3D ist optional zuschaltbar', await p.evaluate(() => !!UI.bag3d && UI.bag3d.hits.length > 0)); await click('[data-act=bg-mode][data-v="2d"]');
@@ -105,7 +105,7 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
   ok('„Eingepackt“ hakt ab, „Später“ überspringt', await p.evaluate(() => HH().items.filter(i => i.packed).length) === n0 + 2);
   for (let i = 0; i < 40 && await p.locator('[data-act=pack-done]').count(); i++) { await click('[data-act=pack-done]'); await p.waitForTimeout(30); }
   const fin = await body(); ok('Am Ende: „Fertig gepackt“, Liste „Erst bei Abreise“, Hinweis auf Fehlendes', /Fertig gepackt/.test(fin) && /Erst bei Abreise/.test(fin) && /Was fehlt\?/.test(fin)); await shot('08-fertig');
-  await p.goto('http://localhost:8123/#/bags/' + bid + '/missing'); await p.waitForTimeout(200); await noMarkup('Was fehlt'); ok('„Was fehlt?“ listet offene Teile', (await p.locator('[data-act=rv-have]').count()) > 0); await shot('09-fehlt');
+  await p.goto('http://localhost:8123/#/bags/' + bid + '/missing'); await p.waitForTimeout(200); await noMarkup('Was fehlt'); ok('„Was fehlt?“ listet offene Teile kompakt (✓ / Kaufen rechts)', (await p.locator('[data-act=need-have]').count()) > 0); await shot('09-fehlt');
   // Druck (Browser: neues Fenster) – Inhalt pruefen
   const html = await p.evaluate(id => { let out = ''; const orig = window.open; window.open = () => ({ document: { write: h => { out = h; }, close() { } }, print() { } }); ACT['bag-print']({ id }); window.open = orig; return out; }, bid);
   ok('Packliste druckbar mit Fachbelegung', /Packliste/.test(html) && /Dokumentenfach/.test(html));

@@ -56,7 +56,7 @@ function syncNotifications() {
   if (!IS_NATIVE || !NATIVE.scheduleReminders) return 0;
   try { return NATIVE.scheduleReminders(JSON.stringify(buildNotifEvents())); } catch (e) { console.error(e); return -1; }
 }
-const onDataChanged = debounce(() => { try { syncNotifications(); } catch (e) { /* ignorieren */ } }, 2500);
+const onDataChanged = debounce(() => { try { syncNotifications(); } catch (e) { /* ignorieren */ } try { if (typeof lockPassSync === 'function') lockPassSync(); } catch (e) { /* ignorieren */ } }, 2500);
 ACT['notif-enable'] = async () => {
   if (IS_NATIVE) { const r = await nativeAsync('requestNotifications'); if (!r.ok) { toast('Android hat Benachrichtigungen nicht erlaubt.'); DB.settings.notif.on = false; persist(); NATIVE.openSettings && confirmDlg('Benachrichtigungen erlauben', 'Öffne die Systemeinstellungen und aktiviere Benachrichtigungen für Notfall!.', { ok: 'Einstellungen öffnen' }).then(ok => ok && NATIVE.openSettings('notif')); rerender(true); return; } }
   DB.settings.notif.on = true; persist(); syncNotifications(); rerender(true); toast(IS_NATIVE ? 'Benachrichtigungen eingeschaltet' : 'Im Browser-Test werden keine System-Benachrichtigungen gesendet.');

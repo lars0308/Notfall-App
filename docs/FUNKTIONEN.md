@@ -1,4 +1,4 @@
-# Umgesetzte Funktionen (Version 3.2.0)
+# Umgesetzte Funktionen (Version 3.3.0)
 
 Legende: ✅ umgesetzt und im Browser getestet · 📱 braucht Android-Code, nicht auf Gerät geprüft · 🟡 mit Einschränkung · ⬜ offen. Was gestrichen oder verschoben wurde, steht in der [Feature-Matrix](FEATURE-MATRIX.md).
 
@@ -85,3 +85,17 @@ Aufgeräumt: 112 als großer Knopf, weitere Nummern klein daneben, Lagen als Ras
 - Hinzufügen: ein Fenster je Rucksack (Suche + Kategorien, Plus, ✓, bleibt offen) – über „Hinzufügen“ auf der Taschenseite, die Lupe oder „Noch etwas dazu“.
 - Einkaufsliste: Geschäfte zugeklappt, gleiche Sachen in einer Zeile, Kästchen antippen = gekauft (ohne Formular), kein „Warum?“, keine Etiketten.
 - Haltbarkeit nur bei Sachen, die wirklich ablaufen (feste Liste: Wasser, Lebensmittel, Medikamente, Erste Hilfe, Masken, Batterien, Brennstoff …); nie bei Brille, Hörgerät, Thermometer, Akkus, Werkzeug.
+
+## Notfallpass für Rettungskräfte auf dem Sperrbildschirm (3.3) ✅ 📱
+Seite „Für Rettungskräfte“ (Notfallpass → oberste Karte). Vorschau, was Rettungskräfte sehen – nur Name, freigegebene Angaben und Notfallkontakte. Drei Wege:
+1. **Hinweis auf dem Sperrbildschirm**: dauerhafte, öffentliche Benachrichtigung mit den Angaben; Antippen öffnet eine eigene Notfallpass-Ansicht über dem Sperrbildschirm (große 112-Taste, Kontakte zum Anrufen) – ohne Entsperren und ohne Zugang zur restlichen App. Aktualisiert sich automatisch, startet nach Neustart wieder.
+2. **Sperrbildschirm-Bild** mit dem Notfallpass (Vorschau vor dem Setzen) – funktioniert auf jedem Handy.
+3. **Android-Notfallinformationen**: Angaben werden kopiert, die Einstellung wird geöffnet (Rettungskräfte: Sperrbildschirm → „Notruf“ → „Notfallinformationen“).
+
+## Überarbeitet in 3.3 ✅
+- Markierungen (Punkte, Status) immer rechts am Pfeil; „Notfall“ oben als rotes Symbol (mehr Platz für Seitentitel).
+- Nur noch „da“ und „fehlt“ statt zusätzlich „gepackt“ (Packanleitung bleibt unter „Weitere Aktionen“).
+- Taschenseite: Inhalt als Fach-Übersicht, Fach antippen zeigt den Inhalt.
+- „Was fehlt?“ (gesamt und je Tasche): eine Zeile je Sache, ✓ und 🛒 rechts; Hinweise zur Ausrüstung als eigene Seite.
+- Alle Gegenstände: nur Suche, Filter auf Knopfdruck. Mehr: gruppiert (Haushalt & Planung, Einkaufen & Vorrat, Üben & Erinnern, App).
+- Karte ohne gespeichertes Gebiet: kurzer Hinweis statt leerer Fläche. Doppelte Quelle entfernt.

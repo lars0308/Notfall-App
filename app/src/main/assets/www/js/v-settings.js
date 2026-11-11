@@ -9,7 +9,7 @@ route('/settings', H => {
     html: h`
     <div class="card"><h2>Darstellung</h2><div class="stack">
       ${radio('scale', [['m', 'Schrift normal'], ['l', 'Groß'], ['xl', 'Sehr groß']], S.scale, 'set-scale')}
-      ${F.check('contrast', 'Hoher Kontrast (ohne Glas-Effekt)', S.contrast === 'high', { attrs: { 'data-change': 'set-contrast' } })}</div></div>
+      ${F.check('contrast', 'Hoher Kontrast', S.contrast === 'high', { attrs: { 'data-change': 'set-contrast' } })}</div></div>
     <div class="card"><h2>Sicherheit</h2><div class="stack">
       <div class="row spread"><b>App-Sperre (PIN)</b>${lockOn ? h`<span class="btns"><button class="btn sm" data-act="lock-now">${icon('lock')} Sperren</button><button class="btn sm danger" data-act="lock-disable">Ausschalten</button></span>` : h`<button class="btn primary" data-act="lock-enable">${icon('lock')} Einrichten</button>`}</div>
       ${lockOn ? F.select('lockMin', 'Automatisch sperren', [[0, 'Sofort'], [1, 'Nach 1 Minute'], [5, 'Nach 5 Minuten'], [15, 'Nach 15 Minuten']], S.lockMin, { attrs: { 'data-change': 'set-lockmin' } }) : ''}

@@ -3,6 +3,8 @@
 
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
   <uses-permission android:name="android.permission.CAMERA"/>
+  <!-- Notfallpass als Sperrbildschirm-Bild (nur auf Knopfdruck) -->
+  <uses-permission android:name="android.permission.SET_WALLPAPER"/>
   <!-- Standort nur auf Knopfdruck im Assistenten (Haushalt), wird nicht gesendet -->
   <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
   <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
@@ -44,6 +46,9 @@
       </intent-filter>
     </activity>
 
+    <!-- Notfallpass über dem Sperrbildschirm: eigene Aufgabe, ohne Zugang zur App -->
+    <activity android:name=".PassActivity" android:exported="false" android:showWhenLocked="true" android:turnScreenOn="true"
+      android:taskAffinity="de.notfall.familie.pass" android:excludeFromRecents="true" android:launchMode="singleTask" android:theme="@android:style/Theme.Material.NoActionBar"/>
     <receiver android:name=".ReminderReceiver" android:exported="false"/>
     <receiver android:name=".BootReceiver" android:exported="true">
       <intent-filter>

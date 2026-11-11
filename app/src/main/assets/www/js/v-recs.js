@@ -4,7 +4,7 @@ const RECUI = { hidden: false };
 route('/recs', H => {
   const all = computeRecs(H, DB.settings); const open = all.filter(r => !r.state && r.level !== 'opt'); const hidden = all.filter(r => r.state === 'hidden');
   return {
-    title: 'Was fehlt?', back: '#/more',
+    title: 'Hinweise zur Ausrüstung', back: '#/needs',
     html: h`${open.length ? open.map(r => recRow(r)) : noticeBox('ok', 'Keine Lücken erkannt', '')}
     ${hidden.length ? h`<button class="btn ghost" data-act="rec-toggle-hidden">${RECUI.hidden ? 'Ausgeblendete verbergen' : 'Ausgeblendete zeigen (' + hidden.length + ')'}</button>${RECUI.hidden ? hidden.map(r => recRow(r)) : ''}` : ''}`,
   };

@@ -436,3 +436,19 @@ h2.sec{font-size:1.0625rem;margin:4px 0 8px}
 .addrow{border-left:0;min-height:3.25rem}
 .addok{display:inline-flex;align-items:center;justify-content:center;width:var(--tap);height:var(--tap);color:var(--ok)}
 .addok svg{width:1.5rem;height:1.5rem}
+/* ===== 3.3: Markierungen immer rechts ===== */
+.sdot{flex:none;width:.6rem;height:.6rem;border-radius:50%;background:var(--muted)}
+.sdot.ok{background:var(--ok)}.sdot.must{background:var(--must)}.sdot.rec{background:var(--rec)}
+.stats.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.topbar .btn.sos.icon{width:var(--tap);min-height:var(--tap);padding:0;flex:none}
+.topbar .btn.sos.icon svg{width:1.4rem;height:1.4rem}
+.li.need{flex-wrap:nowrap;gap:8px;border-left:0}
+.li.need .btn.icon.sm{width:2.75rem;min-height:2.75rem}
+.hint svg{width:1rem;height:1rem;vertical-align:-3px}
+.catlist .cat .sdot{margin-left:2px}
+.compline{width:100%;background:none;border:0;border-top:1px solid var(--line);color:inherit;font:inherit;text-align:left;cursor:pointer}.list>.compline:first-child{border-top:0}
+.morerow{min-height:3.5rem;border-left:0}
+.morerow .mi{flex:none;width:2.25rem;height:2.25rem;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--surface2);border:1px solid var(--line)}
+.morerow .mi svg{width:1.2rem;height:1.2rem}
+.topbar .btn.sos.icon{background:var(--must);border-color:var(--must);color:#fff}
+.sos-screen .topbar .btn.sos.icon{background:#c62828}

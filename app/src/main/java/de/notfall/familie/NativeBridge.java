@@ -115,6 +115,37 @@ public class NativeBridge {
     act.runOnUiThread(() -> act.startCameraCapture(cb));
   }
 
+  // ---------- Notfallpass auf dem Sperrbildschirm ----------
+  @JavascriptInterface public void setLockPass(String json, boolean enabled) { LockPass.save(act, json, enabled); }
+  @JavascriptInterface public boolean lockPassOn() { return LockPass.enabled(act); }
+  @JavascriptInterface public void openLockPass() { act.runOnUiThread(() -> act.startActivity(new android.content.Intent(act, PassActivity.class))); }
+  /** Sperrbildschirm-Bild setzen (PNG als Base64). */
+  @JavascriptInterface public void setLockWallpaper(final int cb, final String b64) {
+    new Thread(() -> {
+      try {
+        byte[] bytes = android.util.Base64.decode(b64, android.util.Base64.DEFAULT);
+        android.graphics.Bitmap bmp = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+        android.app.WallpaperManager.getInstance(act).setBitmap(bmp, null, true, android.app.WallpaperManager.FLAG_LOCK);
+        act.resolve(cb, "{\"ok\":true}");
+      } catch (Throwable t) {
+        act.resolve(cb, "{\"ok\":false,\"error\":\"Sperrbildschirm-Bild konnte nicht gesetzt werden\"}");
+      }
+    }).start();
+  }
+  /** Android-eigene Notfallinformationen öffnen (Rettungskräfte erreichen sie über „Notruf“ auf dem Sperrbildschirm). */
+  @JavascriptInterface public boolean openEmergencyInfo() {
+    String[] actions = { "android.telephony.action.EMERGENCY_ASSISTANCE", "android.settings.EMERGENCY_INFO", "com.android.emergency.EDIT_EMERGENCY_INFO" };
+    for (String a : actions) {
+      try { act.startActivity(new android.content.Intent(a).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)); return true; } catch (Exception ignored) { }
+    }
+    try { act.startActivity(new android.content.Intent(android.provider.Settings.ACTION_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)); } catch (Exception ignored) { }
+    return false;
+  }
+  @JavascriptInterface public void copyText(String label, String text) {
+    android.content.ClipboardManager cm = (android.content.ClipboardManager) act.getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+    if (cm != null) cm.setPrimaryClip(android.content.ClipData.newPlainText(label, text));
+  }
+
   // ---------- Teilen: Android-Teilen-Menü (WhatsApp, Mail, Notizen …) ----------
   @JavascriptInterface public void shareText(final String title, final String text) {
     act.runOnUiThread(() -> {

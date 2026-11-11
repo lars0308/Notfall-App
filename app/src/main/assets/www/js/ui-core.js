@@ -35,7 +35,7 @@ function navCounts() {
   } catch (e) { console.error(e); }
   return c;
 }
-const NAV_GROUP = { '#/pass': ['#/pass', '#/ice', '#/contacts'], '#/more': ['#/more', '#/items', '#/item', '#/recs', '#/safe', '#/settings', '#/stock', '#/places', '#/map', '#/alarm', '#/sources', '#/households', '#/docs'] };
+const NAV_GROUP = { '#/pass': ['#/pass', '#/ice', '#/contacts', '#/lockpass', '#/card'], '#/more': ['#/more', '#/items', '#/item', '#/recs', '#/safe', '#/settings', '#/stock', '#/places', '#/map', '#/alarm', '#/sources', '#/households', '#/docs'] };
 function navLink(href, label, ic, counts, cur) {
   const n = counts[href]; const active = cur === href || (href !== '#/home' && cur.startsWith(href + '/')) || (NAV_GROUP[href] || []).some(r => cur === r || cur.startsWith(r + '/'));
   return h`<a href="${href}" ${active ? raw('aria-current="page"') : ''}>${icon(ic)}<span>${label}</span>${n ? h`<span class="count">${n}</span>` : ''}</a>`;
@@ -75,7 +75,7 @@ function render(keepScroll) {
         <div class="small muted" style="padding:16px 12px">${esc(H.name)}${H.sample ? ' · Testdaten' : ''}</div>
       </nav>
       <div class="main withnav ${sos ? 'sos-screen' : ''}">
-        <header class="topbar">${topLeft}<h1>${view.title || ''}</h1>${view.actions || ''}<a class="btn sos sm" href="#/sos" aria-label="Notfallmodus öffnen">${icon('alert')}<span>Notfall</span></a></header>
+        <header class="topbar">${topLeft}<h1>${view.title || ''}</h1>${view.actions || ''}<a class="btn sos icon" href="#/sos" aria-label="Notfall" title="Notfall">${icon('alert')}</a></header>
         <main class="page" id="page"><div class="page-inner">${view.html}</div></main>
         <nav class="bottomnav" aria-label="Navigation">${NAV_MAIN.map(([href, label, ic]) => navLink(href, label, ic, counts, '#' + rt.path))}</nav>
       </div>
@@ -255,10 +255,11 @@ function whereOf(H, it) {
   if (it.container === 'car') return 'Auto'; return it.place || 'Zuhause';
 }
 function itemQtyLabel(it) { return `${fmt(it.qty)} ${it.unit || ''}`.trim(); }
+/* Status als kleiner Punkt rechts am Pfeil */
 function statusBadge(it) {
-  if (it.status === 'owned') return h`<span class="badge ok">Vorhanden</span>`;
-  if (it.status === 'missing') return h`<span class="badge must">Fehlt</span>`;
-  return h`<span class="badge rec">Zu prüfen</span>`;
+  if (it.status === 'owned') return h`<span class="sdot ok" title="Vorhanden" aria-label="Vorhanden"></span>`;
+  if (it.status === 'missing') return h`<span class="sdot must" title="Fehlt" aria-label="Fehlt"></span>`;
+  return h`<span class="sdot rec" title="Noch offen" aria-label="Noch offen"></span>`;
 }
 function newItemDefaults(o) {
   return Object.assign({ id: uid(), key: '', name: '', desc: '', category: 'Sonstiges', qty: 1, unit: 'Stück', weightG: 0, volL: 0, kcal: 0, liters: 0, status: 'owned', packed: false, container: 'home', bagId: null, compId: null, place: '', personId: null, petId: null, prio: 'rec', why: '', source: 'manual', tags: [], zone: 'main', expiry: '', photos: [], notes: '', price: null, purchaseDate: '', condition: '', barcode: '', minQty: 0, remindDays: 0, kind: 'gear', archived: false, created: new Date().toISOString(), uniq: '', flex: false }, o);

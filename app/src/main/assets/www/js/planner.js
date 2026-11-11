@@ -533,7 +533,7 @@ function bagStats(H, S, bag) {
   return {
     itemsG: w, ownG: own, totalG, volL: vol, usableL: usable, fillPct: usable > 0 ? Math.round(vol / usable * 100) : 0,
     capKg, overweight: capKg > 0 && totalG > capKg * 1000, overFactor: capKg > 0 ? totalG / (capKg * 1000) : 0, overfull: vol > usable,
-    total, packed, missing, noWeight, comps, packedPct: pct(packed, total),
+    total, packed, missing, have: total - missing, havePct: pct(total - missing, total), noWeight, comps, packedPct: pct(packed, total),
   };
 }
 function suggestBalance(H, S) {

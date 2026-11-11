@@ -32,3 +32,5 @@ Der Java-Teil (Keystore-Verschlüsselung, Biometrie, Benachrichtigungen, Probeal
 - **Gestrichene Bereiche:** Schutzräume, Aufgabenliste, Benutzerverwaltung, Budget und Verbrauchsbuchung haben kein Menü mehr; ihre Daten bleiben gespeichert und im Backup. Ein bereits angelegter Dokumenten-Safe bleibt unter „Mehr“ erreichbar.
 - **Tablet-Layout** ist nur per Screenshot gesichtet, nicht automatisch getestet. Ein helles Farbschema gibt es nicht mehr – die App ist immer dunkel. Die neuen Bildschirme (Karte, Kartendesigner, Probealarm) wurden nur im Handyformat dunkel gesichtet.
 - **Sprache:** nur Deutsch. **targetSdk 34**, minSdk 29.
+
+- **Sperrbildschirm-Notfallpass:** Ob Android das Antippen des Hinweises ohne Entsperren erlaubt, hängt vom Hersteller ab; der Text des Hinweises und das Sperrbildschirm-Bild sind in jedem Fall lesbar. Die Android-eigenen Notfallinformationen kann keine App direkt beschreiben – die App kopiert den Text und öffnet die Einstellung (je nach Hersteller die allgemeinen Einstellungen). Auf dem Gerät nicht getestet.

@@ -109,7 +109,7 @@ route('/review/b/:bid', (bid, H) => {
     title: bag.name, back: bags.length > 1 ? '#/review' : null, actions: searchBtn(bid),
     html: h`<div class="card tight"><div class="row spread"><b>${its.length ? `${have} von ${its.length} da` : 'Noch leer'}</b>${open ? h`<button class="btn sm ghost" data-act="ask-start" data-bag="${bid}">Einzeln abfragen</button>` : ''}</div>${its.length ? bar(Math.round(have / its.length * 100), 'ok') : ''}${miniLoad(H, bag)}</div>
     <div class="catlist">${pickVisible(H, bag).map(c => { const ci = its.filter(i => pickCatOf(i.category) === c.id); const n = ci.filter(i => i.status === 'owned').length; const mustOpen = ci.some(i => i.status !== 'owned' && i.prio === 'must'); const done = ci.length && n === ci.length;
-      return h`<a class="cat ${done ? 'done' : ''}" href="${bagHref(bid, c.id)}">${icon(done ? 'check' : c.icon)}<span class="cl">${c.short || c.label}</span><span class="cs">${ci.length ? `${n}/${ci.length}` : '+'}</span>${mustOpen ? h`<span class="dot" aria-label="Wichtiges offen"></span>` : ''}</a>`; })}</div>
+      return h`<a class="cat ${done ? 'done' : ''}" href="${bagHref(bid, c.id)}">${icon(done ? 'check' : c.icon)}<span class="cl">${c.short || c.label}</span><span class="cs">${ci.length ? `${n}/${ci.length}` : '+'}</span>${mustOpen ? h`<span class="sdot must" aria-label="Wichtiges offen"></span>` : ''}</a>`; })}</div>
     <div class="actionbar">${nc ? h`<a class="btn primary lg" href="${bagHref(bid, nc.id)}">${have ? 'Weiter packen' : 'Los geht’s'}: ${nc.label} ${icon('chev')}</a>` : nxt ? h`<a class="btn primary lg" href="${bagHref(nxt.id)}">Nächster: ${nxt.name} ${icon('chev')}</a>` : h`<button class="btn primary lg" data-act="rv-done">${icon('check')} Fertig</button>`}</div>`,
   };
 });
@@ -191,9 +191,9 @@ function tickRow(r, H) {
   const rows = Array.isArray(r) ? r : [r]; const it = rows[0]; const own = rows.every(i => i.status === 'owned');
   const qty = rows.reduce((a, i) => a + (+i.qty || 0), 0); const g = rows.reduce((a, i) => a + (+i.weightG || 0) * (+i.qty || 0), 0);
   const ids = rows.map(i => i.id).join(',');
-  return h`<div class="li tick ${own ? 'done' : ''}"><label class="tickl grow"><input type="checkbox" data-change="rv-tick" data-id="${it.id}" data-ids="${ids}" ${own ? raw('checked') : ''} aria-label="${it.name} vorhanden"><span class="grow"><span class="t">${!own && it.prio === 'must' && it.source !== 'pick' ? h`<span class="imp" aria-label="wichtig"></span>` : ''}${it.name}</span><br><span class="s">${fmt(qty)} ${it.unit || ''}${g ? ' · ' + fmtKg(g) : ''}${rows.some(i => i.status === 'missing') ? ' · auf der Einkaufsliste' : ''}</span></span></label>
+  return h`<div class="li tick ${own ? 'done' : ''}"><label class="tickl grow"><input type="checkbox" data-change="rv-tick" data-id="${it.id}" data-ids="${ids}" ${own ? raw('checked') : ''} aria-label="${it.name} vorhanden"><span class="grow"><span class="t">${it.name}</span><br><span class="s">${fmt(qty)} ${it.unit || ''}${g ? ' · ' + fmtKg(g) : ''}${rows.some(i => i.status === 'missing') ? ' · auf der Einkaufsliste' : ''}</span></span></label>
     ${it.photos && it.photos[0] ? h`<span class="thumb"><img data-ph="${it.photos[0]}" data-act="ph-view" data-id="${it.photos[0]}" alt="Foto"></span>` : ''}
-    <button class="btn icon ghost sm" data-act="it-sheet" data-ids="${ids}" aria-label="Mehr zu ${it.name}">${icon('chev')}</button></div>`;
+    ${!own && it.prio === 'must' && it.source !== 'pick' ? h`<span class="sdot must" title="wichtig" aria-label="wichtig"></span>` : ''}<button class="btn icon ghost sm" data-act="it-sheet" data-ids="${ids}" aria-label="Mehr zu ${it.name}">${icon('chev')}</button></div>`;
 }
 /* Unterseite eines Gegenstands: Menge, anderer Rucksack, Foto, Details */
 ACT['it-sheet'] = d => {
@@ -308,20 +308,21 @@ function inventoryList(H) {
 }
 function invRows(H, list) {
   if (!list.length) return [empty('Keine Gegenstände gefunden.')];
-  return list.slice(0, 300).map(it => h`<a class="li ${it.status === 'missing' ? 'must' : it.status === 'planned' ? 'rec' : ''}" href="#/item/${it.id}">${thumb(it.photos[0])}<span class="grow"><span class="t">${it.name}</span><br><span class="s">${itemQtyLabel(it)} · ${whereOf(H, it)}${it.expiry ? ' · bis ' + fmtDate(it.expiry) : ''}</span></span>${statusBadge(it)}${icon('chev', 'chev')}</a>`).concat(list.length > 300 ? [h`<div class="empty small">Es werden die ersten 300 von ${list.length} angezeigt. Nutze die Suche.</div>`] : []);
+  return list.slice(0, 300).map(it => h`<a class="li" href="#/item/${it.id}">${thumb(it.photos[0])}<span class="grow"><span class="t">${it.name}</span><br><span class="s">${itemQtyLabel(it)} · ${whereOf(H, it)}${it.expiry ? ' · bis ' + fmtDate(it.expiry) : ''}</span></span>${statusBadge(it)}${icon('chev', 'chev')}</a>`).concat(list.length > 300 ? [h`<div class="empty small">Es werden die ersten 300 von ${list.length} angezeigt. Nutze die Suche.</div>`] : []);
 }
 route('/items', H => {
   const list = inventoryList(H);
   return {
     title: 'Alle Gegenstände', back: '#/more', actions: h`<button class="btn primary sm" data-act="item-new">${icon('plus')}<span>Neu</span></button>`,
-    html: h`<div class="card"><div class="stack"><div class="field"><label for="invq">Suchen</label><input id="invq" type="search" value="${INV.q}" data-input="inv-q" placeholder="Name, Notiz, Ort …"></div>
-      <div class="form-grid">${F.select('cat', 'Kategorie', [['', 'Alle Kategorien'], ...CATEGORIES], INV.cat, { attrs: { 'data-change': 'inv-f' } })}
+    html: h`<div class="row nowrap" style="gap:8px"><input id="invq" class="grow" type="search" value="${INV.q}" data-input="inv-q" placeholder="Suchen: Name, Notiz, Ort …" aria-label="Suchen"><button class="btn icon ${INV.cat || INV.status || INV.loc || INV.archived ? 'primary' : ''}" data-act="inv-filter" aria-label="Filter" aria-expanded="${INV.showF ? 'true' : 'false'}">${icon('sliders')}</button></div>
+      ${INV.showF ? h`<div class="card"><div class="stack"><div class="form-grid">${F.select('cat', 'Kategorie', [['', 'Alle Kategorien'], ...CATEGORIES], INV.cat, { attrs: { 'data-change': 'inv-f' } })}
       ${F.select('status', 'Status', [['', 'Alle'], ['owned', 'Vorhanden'], ['planned', 'Zu prüfen'], ['missing', 'Fehlt']], INV.status, { attrs: { 'data-change': 'inv-f' } })}
       ${F.select('loc', 'Ort', [['', 'Überall'], ['bag', 'Im Rucksack'], ['home', 'Zuhause'], ['car', 'Auto']], INV.loc, { attrs: { 'data-change': 'inv-f' } })}</div>
-      ${F.check('archived', 'Archivierte anzeigen', INV.archived, { attrs: { 'data-change': 'inv-f' } })}</div></div>
+      ${F.check('archived', 'Archivierte anzeigen', INV.archived, { attrs: { 'data-change': 'inv-f' } })}</div></div>` : ''}
     <div class="card flush"><div class="list" id="invlist">${invRows(H, list)}</div></div>`,
   };
 });
+ACT['inv-filter'] = () => { INV.showF = !INV.showF; rerender(true); };
 INPUT['inv-q'] = el => { INV.q = el.value; const H = HH(); $('#invlist').innerHTML = invRows(H, inventoryList(H)).map(x => x.s !== undefined ? x.s : x).join(''); hydratePhotos($('#invlist')); };
 INPUT['inv-f'] = el => { if (el.name === 'archived') INV.archived = el.checked; else INV[el.name === 'cat' ? 'cat' : el.name] = el.value; rerender(); };
 

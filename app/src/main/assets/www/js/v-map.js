@@ -11,10 +11,9 @@ route('/map', H => {
   return {
     title: 'Karte & Treffpunkte', back: '#/more',
     html: h`${pick ? h`<div class="notice info">${icon('map')}<div class="grow"><p class="nt">Position für „${pick.name}“ antippen</p></div><button class="btn sm" data-act="map-pick-cancel">Abbrechen</button></div>` : ''}
-    <div class="mapbox"><canvas id="mapcv" aria-label="Karte" role="img"></canvas>
+    ${packs.length || DB.settings.mapOnline || MAPUI.pick ? h`<div class="mapbox"><canvas id="mapcv" aria-label="Karte" role="img"></canvas>
       <div class="mapctl"><button class="btn icon" data-act="map-zoom" data-d="1" aria-label="Vergrößern">${icon('plus')}</button><button class="btn icon" data-act="map-zoom" data-d="-1" aria-label="Verkleinern">${icon('minus')}</button><button class="btn icon" data-act="map-fit" aria-label="Alles zeigen">${icon('grid')}</button></div>
-      <div class="mapattr" id="mapattr"></div></div>
-    ${!packs.length && !DB.settings.mapOnline ? h`<p class="muted small">Noch keine Karte gespeichert. Treffpunkte funktionieren auch ohne Karte.</p>` : ''}
+      <div class="mapattr" id="mapattr"></div></div>` : h`<div class="card"><b>Noch keine Karte auf dem Handy</b><p class="muted small" style="margin-top:4px">Treffpunkte funktionieren auch ohne Karte. Für die Ansicht ohne Internet ein Gebiet laden.</p></div>`}
     <div class="row spread"><h2>Treffpunkte</h2>${canPlaceSearch() ? h`<button class="btn sm" data-act="map-search">${icon('search')} In der Nähe suchen</button>` : ''}</div>
     ${pts.length ? pts.map(p => { const c = placeCoord(p); const kind = H.meeting.includes(p) ? 'meeting' : 'shelter'; return h`<div class="tile"><span class="ti">${icon(kind === 'meeting' ? 'map' : 'building')}</span><button class="grow" style="background:none;border:0;text-align:left;color:inherit;cursor:pointer;padding:0;font:inherit" data-act="map-goto" data-id="${p.id}"><span class="tt">${p.name}</span><br><span class="ts">${[p.address, c ? 'Position gesetzt' : 'ohne Position', p.far ? 'weiter entfernt' : ''].filter(Boolean).join(' · ')}</span></button><button class="btn icon sm" data-act="place-edit" data-kind="${kind}" data-id="${p.id}" aria-label="${p.name} bearbeiten">${icon('edit')}</button></div>`; }) : empty('Noch kein Treffpunkt.')}
     <h2>Gespeicherte Karten</h2>

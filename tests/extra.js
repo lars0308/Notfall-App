@@ -138,7 +138,8 @@ function attrappe(png) {
   ok('Bei gesperrter App: Testalarm zeigt eingeschränkte Notfallansicht ohne Navigation', (await p.locator('.bottomnav:visible').count()) === 0 && /TESTALARM/.test(await body(p)));
   await p.evaluate(() => { DB.users = []; UI.sosLimited = false; UI.locked = false; persist(); go('#/home'); render(); });
   // Karten: Server einstellen, Gebiet laden
-  await p.goto(URL + '#/map'); await p.waitForSelector('#mapcv');
+  await p.goto(URL + '#/map'); await p.waitForSelector('[data-act=map-server]');
+  ok('Karte ohne gespeichertes Gebiet: kurzer Hinweis statt leerer Fläche', (await p.locator('#mapcv').count()) === 0 && /Noch keine Karte/.test(await body(p)));
   await p.click('[data-act=map-server]'); await p.fill('.modal [name=url]', 'http://tiles.example/{z}/{x}/{y}.png'); await p.locator('.modal button[type=submit]').click(); await p.waitForTimeout(200);
   ok('Kartenserver ohne HTTPS wird abgelehnt', await p.evaluate(() => DB.settings.mapUrl === '') && !!(await p.$('.modal')));
   await p.fill('.modal [name=url]', 'https://tiles.example/{z}/{x}/{y}.png'); await p.fill('.modal [name=attr]', '© Testkarten'); await p.locator('.modal button[type=submit]').click(); await noModal(p);

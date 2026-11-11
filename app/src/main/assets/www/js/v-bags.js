@@ -30,9 +30,9 @@ route('/bags', H => {
   const S = DB.settings;
   return {
     title: 'Meine Taschen',
-    html: h`${H.bags.map(b => { const st = bagStats(H, S, b); return h`<a class="tile" href="#/bags/${b.id}">${b.photos[0] ? thumb(b.photos[0]) : h`<span class="ti">${icon(b.role === 'car' ? 'car' : 'bag')}</span>`}<span class="grow"><span class="tt">${b.name}</span><br><span class="ts">${bagMeta(H, b)}</span><br><span class="ts">${bagLine(st)}</span><br><span class="ts ${st.overweight ? 'tmust' : ''}">${fmt(st.totalG / 1000)}${st.capKg ? ' von ' + fmt(st.capKg) : ''} kg${st.overweight ? ' – zu schwer' : ''}${st.overfull ? ' · zu voll' : ''}</span><span style="display:block;margin-top:6px">${bar(st.packedPct, 'ok')}</span></span>${icon('chev', 'chev')}</a>`; })}
+    html: h`${H.bags.map(b => { const st = bagStats(H, S, b); return h`<a class="tile" href="#/bags/${b.id}">${b.photos[0] ? thumb(b.photos[0]) : h`<span class="ti">${icon(b.role === 'car' ? 'car' : 'bag')}</span>`}<span class="grow"><span class="tt">${b.name}</span><br><span class="ts">${bagMeta(H, b)}</span><br><span class="ts">${bagLine(st)}</span><br><span class="ts ${st.overweight ? 'tmust' : ''}">${fmt(st.totalG / 1000)}${st.capKg ? ' von ' + fmt(st.capKg) : ''} kg${st.overweight ? ' – zu schwer' : ''}${st.overfull ? ' · zu voll' : ''}</span><span style="display:block;margin-top:6px">${bar(st.havePct, 'ok')}</span></span>${icon('chev', 'chev')}</a>`; })}
     ${H.bags.length ? '' : empty('Noch keine Tasche.')}
-    ${H.bags.filter(b => b.owner).length > 1 ? h`<button class="btn" data-act="bags-balance">${icon('repeat')} Gewicht ausgleichen</button>` : ''}
+    ${H.bags.filter(b => b.owner).length > 1 && H.bags.some(b => bagStats(H, S, b).overweight) ? h`<button class="btn" data-act="bags-balance">${icon('repeat')} Gewicht ausgleichen</button>` : ''}
     <div class="actionbar"><button class="btn primary lg" data-act="bag-new">${icon('plus')} Neue Tasche</button></div>`,
   };
 });
@@ -52,15 +52,17 @@ route('/bags/:id', (id, H) => {
     html: h`<div class="card"><div class="row nowrap">${bag.photos[0] ? h`<span class="thumb lg"><img data-ph="${bag.photos[0]}" data-act="ph-view" data-id="${bag.photos[0]}" alt="Foto"></span>` : h`<button class="thumb lg" data-act="bag-ph-add" data-id="${bag.id}" aria-label="Foto hinzufügen" style="cursor:pointer">${icon('camera')}</button>`}
         <div class="grow"><div class="bold" style="font-size:1.125rem;overflow-wrap:anywhere">${bag.name}</div><div class="muted small">${bagMeta(H, bag)}${bag.use ? ' · ' + bag.use : ''}</div><div class="bold" style="font-size:1.125rem;margin:2px 0">${bagLine(st)}</div>
         <div class="muted small">${noDims ? 'ca. ' : ''}${fmt(st.totalG / 1000)} kg${st.capKg ? ' von ' + fmt(st.capKg) + ' kg' : ''} · ${noDims ? 'ca. ' : ''}${fmt0(st.fillPct)} % Volumen</div></div></div>
-      <div style="margin-top:12px">${bar(st.packedPct, 'ok')}</div></div>
+      <div style="margin-top:12px">${bar(st.havePct, 'ok')}</div></div>
     ${st.overweight ? noticeBox(st.overFactor > 1.25 ? 'must' : 'rec', `Zu schwer: ${fmt(st.totalG / 1000)} kg (Richtwert ${fmt(st.capKg)} kg)`, '', H.bags.filter(b => b.owner).length > 1 ? h`<button class="btn sm" data-act="bags-balance">Gewicht ausgleichen</button>` : '') : ''}
     ${st.overfull ? noticeBox('must', `Zu voll: ${fmt(st.volL)} l bei ${fmt(st.usableL)} l nutzbar`, 'Nichts wird gestrichen. Größere Tasche oder umverteilen.') : ''}
     <div class="card"><div class="card-head"><h2>Fächer</h2><div class="tabs" style="padding:2px"><button aria-selected="${BAGUI.view === '2d' ? 'true' : 'false'}" data-act="bg-mode" data-v="2d" style="min-height:36px">2D</button><button aria-selected="${BAGUI.view === '3d' ? 'true' : 'false'}" data-act="bg-mode" data-v="3d" style="min-height:36px">3D</button></div></div>
       ${BAGUI.view === '3d' ? h`<div class="bag3d"><canvas id="bagcv" tabindex="0" role="img" aria-label="3D-Ansicht"></canvas><div class="bag3d-tools">${[['iso', 'Schräg'], ['front', 'Vorne'], ['back', 'Hinten'], ['left', 'Links'], ['right', 'Rechts']].map(([k, l]) => h`<button class="btn sm" data-act="bg-view" data-v="${k}">${l}</button>`)}</div></div>` : bag2d(bag, st.comps, BAGUI.sel)}
       ${innerChips(st.comps, BAGUI.sel)}
       <div class="btns" style="margin-top:12px">${selComp ? h`<button class="btn sm" data-act="comp-edit" data-bag="${bag.id}" data-id="${selComp.id}">${icon('edit')} ${selComp.name}</button><button class="btn sm danger" data-act="comp-del" data-bag="${bag.id}" data-id="${selComp.id}" aria-label="Fach entfernen">${icon('trash')}</button><button class="btn sm ghost" data-act="bg-sel" data-id="">Alle zeigen</button>` : ''}<button class="btn sm" data-act="comp-add" data-bag="${bag.id}">${icon('plus')} Fach</button></div></div>
-    <div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h2>${selComp ? selComp.name : 'Packliste'}</h2><span class="badge">${shown.length}</span></div>
-      <div class="list">${shown.length ? shown.map(it => bagItemRow(H, bag, it, !selComp)) : empty(selComp ? 'Leer.' : 'Noch nichts in der Tasche.')}</div></div>
+    ${selComp ? h`<div class="card flush"><div class="card-head" style="padding:14px 16px 0"><h3>${selComp.name}</h3><span class="badge">${shown.length}</span></div>
+      <div class="list">${shown.length ? shown.map(it => bagItemRow(H, bag, it, false)) : empty('Leer.')}</div></div>`
+    : h`<div class="card flush"><div class="card-head" style="padding:14px 16px 0"><h3>Inhalt nach Fach</h3><span class="muted small">antippen</span></div><div class="list">${st.comps.filter(c => c.total).map(c => h`<button class="li compline" data-act="bg-sel" data-id="${c.id}"><span class="grow"><span class="t">${c.name}</span><br><span class="s">${c.total} ${c.total === 1 ? 'Sache' : 'Sachen'} · ${fmtKg(c.weightG)}</span></span>${c.missing ? h`<span class="small muted">${c.missing} fehlt</span><span class="sdot rec"></span>` : h`<span class="sdot ok"></span>`}${icon('chev', 'chev')}</button>`)}
+        ${items.some(i => !byId(bag.comps, i.compId)) ? h`<div class="li"><span class="grow"><span class="t">Ohne Fach</span><br><span class="s">${items.filter(i => !byId(bag.comps, i.compId)).length} Sachen</span></span></div>` : ''}${!items.length ? empty('Noch nichts in der Tasche.') : ''}</div></div>`}
     <div class="card"><h3>Weitere Aktionen</h3><div class="actgrid">
       <a class="btn" href="#/bags/${bag.id}/pack">${icon('check')} Packanleitung</a>
       <a class="btn" href="#/bags/${bag.id}/missing">${icon('alert')} Was fehlt?${st.missing ? h` <span class="count">${st.missing}</span>` : ''}</a>
@@ -85,23 +87,21 @@ route('/bags/:id', (id, H) => {
 function saveCam() { if (UI.bag3d) BAGUI.cam = { yaw: UI.bag3d.yaw, pitch: UI.bag3d.pitch, zoom: UI.bag3d.zoom }; }
 function bagItemRow(H, bag, it, showComp) {
   const c = byId(bag.comps, it.compId);
-  return h`<div class="li ${it.status === 'missing' ? 'must' : it.status === 'planned' ? 'rec' : ''}">
+  return h`<div class="li">
     ${it.status === 'owned' ? h`<input type="checkbox" style="width:1.75rem;height:1.75rem;accent-color:var(--ok);flex:none" ${it.packed ? raw('checked') : ''} data-change="bag-pack-toggle" data-id="${it.id}" aria-label="${it.name} gepackt">` : h`<span style="width:1.75rem;flex:none"></span>`}
     ${it.photos[0] ? thumb(it.photos[0]) : ''}
     <a class="grow" href="#/item/${it.id}" style="color:inherit;text-decoration:none"><span class="t" ${it.packed ? raw('style="text-decoration:line-through;color:var(--muted)"') : ''}>${it.name}</span><br><span class="s">${[itemQtyLabel(it), it.weightG ? fmtKg(it.weightG * it.qty) : '', showComp ? (c ? c.name : 'ohne Fach') : '', it.lastMinute ? 'erst bei Abreise' : '', it.status === 'missing' ? 'fehlt' : it.status === 'planned' ? 'ungeprüft' : ''].filter(Boolean).join(' · ')}</span></a>
-    <button class="btn icon sm" data-act="bag-item-move" data-id="${it.id}" aria-label="${it.name} in anderes Fach">${icon('move')}</button></div>`;
+    ${it.status !== 'owned' ? h`<span class="sdot ${it.status === 'missing' ? 'must' : 'rec'}"></span>` : ''}<button class="btn icon ghost sm" data-act="bag-item-move" data-id="${it.id}" aria-label="${it.name} in anderes Fach">${icon('move')}</button></div>`;
 }
 ACT['bg-mode'] = d => { BAGUI.view = d.v; rerender(true); };
 
 /* ---- Was fehlt? ---- */
 route('/bags/:id/missing', (id, H) => {
   const bag = byId(H.bags, id); if (!bag) return { title: 'Was fehlt?', back: '#/bags', html: empty('Nicht gefunden.') };
-  const miss = bagItems(H, bag).filter(i => i.status !== 'owned').sort((a, b) => ({ must: 0, rec: 1, opt: 2 }[a.prio] - { must: 0, rec: 1, opt: 2 }[b.prio]));
-  const recs = openRecs(H, DB.settings).filter(r => r.level !== 'opt' && (!r.bagId || r.bagId === bag.id) && r.action.type === 'template').slice(0, 8);
+  const list = needList(H, i => i.bagId === bag.id);
   return {
     title: 'Was fehlt?', back: '#/bags/' + bag.id,
-    html: h`${miss.length ? h`<div class="card flush"><div class="list">${miss.map(it => reviewRow(H, it))}</div></div>` : noticeBox('ok', 'Alles vorhanden', '')}
-    ${recs.length ? h`<h2>Vorschläge</h2>${recs.map(r => recRow(r))}` : ''}`,
+    html: h`${list.length ? h`<p class="hint">${bag.name}: ${list.length} ${list.length === 1 ? 'Sache fehlt' : 'Sachen fehlen'}. ${icon('check')} = habe ich · ${icon('cart')} = kaufen</p><div class="card flush"><div class="list">${list.map(needRow)}</div></div>` : noticeBox('ok', 'Alles da', '')}`,
   };
 });
 

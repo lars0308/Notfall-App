@@ -11,7 +11,7 @@ async function boot() {
     if (r.fresh && !location.hash) location.hash = '#/home';
     const legacy = r.fresh ? readLegacy() : null;
     if (legacy && !UI.locked) offerLegacy(legacy);
-    setTimeout(() => { try { syncNotifications(); } catch (e) { /* ignorieren */ } }, 1500);
+    setTimeout(() => { try { syncNotifications(); } catch (e) { /* ignorieren */ } try { lockPassSync(); } catch (e) { /* ignorieren */ } }, 1500);
     setTimeout(() => sweepPhotos().catch(() => { }), 8000);
     setTimeout(() => pruneMaps().catch(() => { }), 3000);
     if (UI.pendingRoute) { const r = UI.pendingRoute; UI.pendingRoute = null; window.__openRoute(r); }
