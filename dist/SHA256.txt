@@ -1,1 +1,1 @@
-9bf6df77b9c136664fd92eee64a95d1de52b43f15d8261b74aefcd85a8ccd6cb  Notfall-3.1.0-debug.apk
+a6b424ab5bc626700ad938c23aa3eba6d88653bcbd427563901a049a2bbc8ae8  Notfall-3.2.0-debug.apk

@@ -31,7 +31,6 @@ function navCounts() {
   const H = HH(); const S = DB.settings; const c = {};
   try {
     c['#/shop'] = H.shop.filter(s => !s.bought).length;
-    c['#/review'] = H.items.filter(i => !i.archived && i.container !== 'home' && i.status === 'planned').length;
     c['#/remind'] = H.reminders.filter(r => r.enabled && daysUntil(r.next) !== null && daysUntil(r.next) <= 0).length;
   } catch (e) { console.error(e); }
   return c;

@@ -393,3 +393,46 @@ h2.sec{font-size:1.0625rem;margin:4px 0 8px}
 .needbtns .btn{flex:1}
 .btn.block{white-space:normal;line-height:1.2;text-align:center}
 .card-head h3 svg{width:1.1rem;height:1.1rem;vertical-align:-2px;margin-right:4px}
+/* ===== 3.2: ruhiger und kompakter ===== */
+.catlist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.catlist .cat{position:relative;display:flex;flex-direction:row;align-items:center;gap:10px;min-height:3.5rem;padding:8px 12px;border-radius:14px;border:1px solid var(--line);background:var(--surface);color:var(--text);text-decoration:none}
+.catlist .cat svg{width:1.25rem;height:1.25rem;flex:none;color:var(--muted)}
+.catlist .cat .cl{flex:1;min-width:0;font-weight:700;font-size:.9375rem;line-height:1.2;hyphens:auto}
+.catlist .cat .cs{color:var(--muted);font-size:.8125rem;font-weight:700;margin:0}
+.catlist .cat.done{border-color:var(--ok)}.catlist .cat.done svg,.catlist .cat.done .cs{color:var(--ok)}
+.catlist .cat .dot{position:absolute;top:6px;right:6px;width:.5rem;height:.5rem}
+.miniload{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+.miniload .progress{height:.375rem}
+.card.tight .progress{margin-top:8px}
+.stepline{display:flex;flex-direction:column;gap:2px}
+.stepline .miniload{margin-top:2px}
+.hint{color:var(--muted);font-size:.9375rem;margin:0}
+.imp,.dotlegend{display:inline-block;width:.55rem;height:.55rem;border-radius:50%;background:var(--must);margin-right:8px;vertical-align:.12em}
+.dotlegend{margin:0 2px 0 4px}
+.li.tick{flex-wrap:nowrap;min-height:3.75rem;padding-top:6px;padding-bottom:6px;border-left:0}
+.li.tick.done .t{color:var(--muted)}
+.li.tick .s{font-size:.8125rem}
+.tile.slim{min-height:3.25rem;padding:8px 12px}
+/* Untere Leiste: eine durchgehende Fläche statt Rahmen */
+.actionbar{background:var(--bg);margin:auto calc(var(--u)*-2) 0;padding:calc(var(--u)*1.25) calc(var(--u)*2);border-top:1px solid var(--line)}
+.actionbar .btn.lg{min-height:52px}
+.nextstep{position:relative;display:flex;flex-direction:column;gap:2px;padding:14px 44px 14px 16px;border-radius:var(--radius);background:var(--primary);color:#fff;text-decoration:none}
+.nextstep .ns-k{font-size:.8125rem;font-weight:700;opacity:.85;text-transform:uppercase;letter-spacing:.04em}
+.nextstep .ns-t{font-size:1.1875rem;font-weight:800;line-height:1.25}
+.nextstep .ns-s{font-size:.9375rem;opacity:.9}
+.nextstep .chev{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:1.5rem;height:1.5rem;color:#fff}
+.nextstep.ok{background:var(--surface);border:1px solid var(--ok);color:var(--text)}
+/* Einkaufsliste: zugeklappte Geschäfte, eine Zeile je Sache */
+.fold .foldhead{display:flex;align-items:center;gap:10px;width:100%;min-height:3.5rem;padding:10px 16px;background:none;border:0;color:var(--text);font:inherit;text-align:left;cursor:pointer}
+.fold .foldhead svg{width:1.25rem;height:1.25rem;flex:none;color:var(--muted)}
+.fold .foldhead .chev{transition:transform .15s}
+.fold .foldhead[aria-expanded="true"] .chev{transform:rotate(90deg)}
+.fold .list{border-top:1px solid var(--line)}
+.shopline{gap:12px;border-left:0}
+.buybox{flex:none;width:1.75rem;height:1.75rem;border-radius:8px;border:2px solid var(--line-strong);background:transparent;cursor:pointer}
+.buybox:active{background:var(--ok)}
+.linkish{background:none;border:0;color:inherit;font:inherit;text-align:left;padding:0;cursor:pointer;min-width:0}
+#addq{width:100%}
+.addrow{border-left:0;min-height:3.25rem}
+.addok{display:inline-flex;align-items:center;justify-content:center;width:var(--tap);height:var(--tap);color:var(--ok)}
+.addok svg{width:1.5rem;height:1.5rem}

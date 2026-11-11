@@ -52,7 +52,7 @@ ACT['wz-finish'] = () => {
   finishWizard(H, d);
   H.setup.step = 0; H.setup.draft = null; persist(); flushDB();
   REV.tab = 'check'; REV.prio = 'all';
-  PICK.cat = null; go('#/review'); toast(`${H.items.length - before} Sachen vorgeschlagen – hake ab, was du hast`);
+  PICK.cat = null; const b = packBags(H)[0]; const c = b && nextOpenCat(H, b); go(b && c ? bagHref(b.id, c.id) : '#/review'); toast('Jetzt Kategorie für Kategorie abhaken, was du hast');
 };
 function finishWizard(H, d) {
   const S = DB.settings;

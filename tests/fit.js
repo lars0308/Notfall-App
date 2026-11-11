@@ -38,7 +38,7 @@ const { start } = require('./serve');
     await p.goto('http://localhost:8123/#/' + r); await p.waitForTimeout(250); await check('#/' + r);
   }
   // Dialoge
-  for (const [r, act] of [['bags/' + H.bag, '.topbar [data-act=bag-del]'], ['bags/' + H.bag, '.topbar [data-act=bag-edit]'], ['bags', '[data-act=bag-new]'], ['review/b/' + H.bag + '/c/tech', '[data-act=pick-custom-open]'], ['alarm', '[data-act=al-new]']]) {
+  for (const [r, act] of [['bags/' + H.bag, '.topbar [data-act=bag-del]'], ['bags/' + H.bag, '.topbar [data-act=bag-edit]'], ['bags', '[data-act=bag-new]'], ['review/b/' + H.bag + '/c/tech', '[data-act=it-sheet]'], ['alarm', '[data-act=al-new]']]) {
     await p.goto('http://localhost:8123/#/' + r); await p.waitForTimeout(200); await p.click(act); await p.waitForSelector('.modal'); await check('Dialog ' + act + ' auf #/' + r);
     const foot = await p.evaluate(() => { const f = document.querySelector('.modal-foot'); if (!f) return true; const b = f.getBoundingClientRect(); return b.bottom <= innerHeight + 1; }); ok('Dialog-Knöpfe sichtbar: ' + act, foot);
     await p.keyboard.press('Escape'); await p.evaluate(() => closeAllModals());

@@ -53,21 +53,29 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
   await p.evaluate(() => { const b = HH().bags[0]; b.name = 'Mein Tactical'; b.location = 'Flur'; persist(); });
   const s1 = await p.evaluate(() => { const H = HH(); return { items: H.items.length, bags: H.bags.length, home: H.items.filter(i => i.container === 'home' && i.source === 'plan').length, med: H.items.some(i => /Ramipril/.test(i.name) && i.lastMinute), pet: H.items.some(i => i.petId), bagOwner: H.bags[0].owner === H.people[0].id }; });
   ok('Packliste erzeugt (ohne Hausvorrat), Medikament „erst bei Abreise“, Tier berücksichtigt, eigene Tasche zugeordnet', s1.items > 40 && s1.home === 0 && s1.med && s1.pet && s1.bagOwner && s1.bags === 1, JSON.stringify(s1)); await shot('04-packliste'); await noMarkup('Packliste');
-  { const t0 = await body(); ok('Packliste: ein Rucksack → direkt „Das brauchst du“ mit Kategorien', /Das brauchst du/.test(t0) && /^#\/review\/b\//.test(await hash()) && ['Allgemein', 'Medikamente', 'Kleidung', 'Werkzeug', 'Feuer', 'Wasser', 'Nahrung', 'Technik'].every(w => t0.includes(w))); }
+  ok('Nach dem Anlegen direkt in die erste Kategorie (geführt, ein „Weiter“)', /\/c\//.test(await hash()) && (await p.locator('.actionbar .btn').count()) === 1 && /Hake ab/.test(await body()));
+  await p.goto('http://localhost:8123/#/review'); await p.waitForSelector('.catlist');
+  { const t0 = await body(); ok('Packliste: ein Rucksack → Kategorien kompakt', /^#\/review\/b\//.test(await hash()) && ['Allgemein', 'Medizin', 'Kleidung', 'Werkzeug', 'Feuer', 'Wasser', 'Nahrung', 'Technik'].every(w => t0.includes(w)) && !/Empfohlen|Notwendig/.test(t0)); }
   const cats = await p.locator('a.cat').evaluateAll(as => as.map(a => a.getAttribute('href')));
   const o0 = await p.evaluate(() => HH().items.filter(i => i.status === 'owned').length); let ticked = 0;
   for (const c of cats) { if (ticked >= 10) break; await p.goto('http://localhost:8123/' + c); await p.waitForSelector('.page-inner');
     while (ticked < 10 && await p.locator('[data-change=rv-tick]:not(:checked)').count()) { await p.locator('[data-change=rv-tick]:not(:checked)').first().click(); ticked++; await skipExp(); } }
-  ok('In den Kategorien abhaken markiert als vorhanden', ticked === 10 && await p.evaluate(n => HH().items.filter(i => i.status === 'owned').length === n + 10, o0));
+  const o1 = await p.evaluate(() => HH().items.filter(i => i.status === 'owned').length);
+  ok('In den Kategorien abhaken markiert als vorhanden (keine Etiketten, eine Zeile je Sache)', ticked === 10 && o1 >= o0 + 10 && !/Empfohlen|Notwendig/.test(await body()) && (await p.locator('.li.tick [data-act=qty]').count()) === 0);
   await p.locator('[data-change=rv-tick]:checked').first().click(); await p.waitForTimeout(50);
-  ok('Haken entfernen macht es wieder offen', await p.evaluate(n => HH().items.filter(i => i.status === 'owned').length === n + 9, o0));
-  ok('Abgehakte Sachen: Foto-Knopf', (await p.locator('[data-act=pick-photo]').count()) > 0);
-  await p.goto('http://localhost:8123/#/review/c/tools'); await p.waitForSelector('[data-act=pick-add]'); ok('Kategorie zeigt den Rucksack, in den es kommt', /Mein Tactical/.test(await body())); const k0 = await p.locator('[data-act=pick-add]').first().getAttribute('data-key');
-  await click('[data-act=pick-add]'); await p.waitForTimeout(100);
-  ok('Werkzeug antippen fügt es der Tasche hinzu (vorhanden, Fach zugeteilt)', await p.evaluate(k => { const i = HH().items.find(x => x.key === k && x.source === 'pick'); return !!i && i.status === 'owned' && !!i.bagId && !!i.compId; }, k0));
-  await click('.topbar [data-act=pick-search]'); await p.waitForSelector('#pickq'); await p.keyboard.type('Feuerstahl'); await p.waitForSelector('#pickres [data-act=pick-add]');
-  await p.locator('#pickres [data-act=pick-add]').first().click(); await skipExp();
-  await p.fill('#pickq', 'Ersatzakku Kamera'); await p.waitForTimeout(50); await click('[data-act=pick-custom]'); await p.waitForTimeout(100); await shot('04a-suche');
+  ok('Haken entfernen macht es wieder offen', await p.evaluate(n => HH().items.filter(i => i.status === 'owned').length < n, o1));
+  await p.locator('[data-act=it-sheet]').first().click(); await p.waitForSelector('.modal [data-act=qty]');
+  ok('Pfeil öffnet: Menge, Foto, Alle Angaben', (await p.locator('.modal [data-act=pick-photo]').count()) === 1 && (await p.locator('.modal a[href^="#/item/"]').count()) === 1);
+  await p.locator('.modal [data-act=modal-close]').click(); await p.waitForTimeout(100);
+  await p.goto('http://localhost:8123/#/review/c/tools'); await p.waitForSelector('[data-act=add-open]'); ok('Kategorie zeigt den Rucksack, in den es kommt', /Mein Tactical/.test(await body()));
+  await click('.page [data-act=add-open][data-cat]'); await p.waitForSelector('.modal #addq');
+  ok('Hinzufügen: ein Fenster mit Suche und Kategorien', (await p.locator('.modal [data-act=add-cat]').count()) >= 8);
+  await p.click('.modal [data-act=add-cat][data-id=tools]'); await p.waitForSelector('.modal [data-act=add-one]'); const k0 = await p.locator('.modal [data-act=add-one]').first().getAttribute('data-key');
+  await p.locator('.modal [data-act=add-one]').first().click(); await p.waitForTimeout(100);
+  ok('Plus fügt sofort hinzu, Fenster bleibt offen mit ✓', (await p.locator('.modal').count()) === 1 && (await p.locator('.modal .addok').count()) === 1 && await p.evaluate(k => { const i = HH().items.find(x => x.key === k && x.source === 'pick'); return !!i && i.status === 'owned' && !!i.bagId && !!i.compId; }, k0));
+  await p.fill('.modal #addq', 'Feuerstahl'); await p.waitForSelector('.modal [data-act=add-one]'); await p.locator('.modal [data-act=add-one]').first().click(); await p.waitForTimeout(80);
+  await p.fill('.modal #addq', 'Ersatzakku Kamera'); await p.waitForSelector('.modal [data-act=add-custom]'); await p.click('.modal [data-act=add-custom]'); await p.waitForTimeout(100); await shot('04a-suche');
+  await p.locator('.modal [data-act=modal-close]').click(); await p.waitForTimeout(100);
   ok('Lupe: suchen und direkt hinzufügen, auch eigene Sachen', await p.evaluate(() => HH().items.some(i => i.key === 'ferro_rod' && i.status === 'owned') && HH().items.some(i => i.name === 'Ersatzakku Kamera' && i.status === 'owned' && i.bagId)));
   await p.goto('http://localhost:8123/#/review'); await p.waitForSelector('a.cat');
   await click('[data-act=ask-start]'); await p.waitForSelector('[data-act=ask-yes]');
@@ -79,7 +87,7 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
   ok('Vorhanden/Fehlt markiert, Einkaufsliste gefüllt', await p.evaluate(() => HH().shop.length === 2 && HH().items.filter(i => i.status === 'owned').length >= 12));
   // Start
   await p.goto('http://localhost:8123/#/home'); await p.waitForSelector('.stats'); await shot('05-start'); await noMarkup('Start');
-  const t = await body(); ok('Start ist Übersicht: vorhanden/gepackt/fehlt, Termine, Haushalt mit Tagesbedarf, Notrufnummern – keine Taschen-Kacheln', /vorhanden/.test(t) && /gepackt/.test(t) && /Termine/.test(t) && /Rucksackkontrolle|Kontrolle/.test(t) && /Bedarf pro Tag/.test(t) && /Notrufnummern/.test(t) && !/Neue Tasche anlegen/.test(t) && (await p.locator('.page a.tile[href^="#/bags/"]').count()) === 0, JSON.stringify({ v: /vorhanden/.test(t), g: /gepackt/.test(t), te: /Termine/.test(t), k: /Rucksackkontrolle|Kontrolle/.test(t), b: /Bedarf pro Tag/.test(t), n: /Notrufnummern/.test(t), nt: !/Neue Tasche anlegen/.test(t) }));
+  const t = await body(); ok('Start ist Übersicht: vorhanden/gepackt/fehlt, Termine, Haushalt mit Tagesbedarf, „Als Nächstes“ – keine Taschen-Kacheln', /vorhanden/.test(t) && /gepackt/.test(t) && /Termine/.test(t) && /Rucksackkontrolle|Kontrolle/.test(t) && /Bedarf pro Tag/.test(t) && /Als Nächstes|Alles bereit/i.test(t) && !/Neue Tasche anlegen/.test(t) && (await p.locator('.page a.tile[href^="#/bags/"]').count()) === 0, JSON.stringify({ v: /vorhanden/.test(t), g: /gepackt/.test(t), te: /Termine/.test(t), k: /Rucksackkontrolle|Kontrolle/.test(t), b: /Bedarf pro Tag/.test(t), n: /Als Nächstes|Alles bereit/i.test(t), nt: !/Neue Tasche anlegen/.test(t) }));
   ok('Kein Bereitschafts-Score auf dem Start', !/%/.test(t));
   // Tasche
   const bid = await p.evaluate(() => HH().bags[0].id); await p.goto('http://localhost:8123/#/bags/' + bid); await p.waitForSelector('.bag2d'); await shot('06-tasche'); await noMarkup('Tasche');

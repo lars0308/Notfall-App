@@ -62,6 +62,7 @@ route('/bags/:id', (id, H) => {
     <div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h2>${selComp ? selComp.name : 'Packliste'}</h2><span class="badge">${shown.length}</span></div>
       <div class="list">${shown.length ? shown.map(it => bagItemRow(H, bag, it, !selComp)) : empty(selComp ? 'Leer.' : 'Noch nichts in der Tasche.')}</div></div>
     <div class="card"><h3>Weitere Aktionen</h3><div class="actgrid">
+      <a class="btn" href="#/bags/${bag.id}/pack">${icon('check')} Packanleitung</a>
       <a class="btn" href="#/bags/${bag.id}/missing">${icon('alert')} Was fehlt?${st.missing ? h` <span class="count">${st.missing}</span>` : ''}</a>
       <button class="btn" data-act="item-new-bag" data-bag="${bag.id}" data-comp="${BAGUI.sel || ''}">${icon('plus')} Eigener Gegenstand</button>
       <button class="btn" data-act="bag-share" data-id="${bag.id}">${icon('upload')} Packliste teilen</button>
@@ -71,7 +72,7 @@ route('/bags/:id', (id, H) => {
       <button class="btn" data-act="bag-copy" data-id="${bag.id}">${icon('copy')} Kopieren</button>
     </div></div>
     ${bag.photos.length ? h`<div class="card"><h3>Fotos</h3>${photoStrip(bag.photos, 'bag-ph-del', { id: bag.id })}<button class="btn sm" style="margin-top:8px" data-act="bag-ph-add" data-id="${bag.id}">${icon('camera')} Foto</button></div>` : ''}
-    <div class="actionbar"><a class="btn lg" href="#/review/b/${bag.id}">${icon('list')} Sachen auswählen</a><a class="btn primary lg" href="#/bags/${bag.id}/pack">${icon('check')} Packen</a></div>`,
+    <div class="actionbar"><button class="btn lg" data-act="add-open" data-bag="${bag.id}">${icon('plus')} Hinzufügen</button><a class="btn primary lg" href="#/review/b/${bag.id}">${icon('list')} Packliste</a></div>`,
     after: () => {
       const cv = $('#bagcv'); if (!cv) return;
       const g = new Bag3D(cv, { onPick: cid => { saveCam(); BAGUI.sel = cid; rerender(true); } });

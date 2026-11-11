@@ -15,6 +15,14 @@ const fmtDist = m => m < 1000 ? `${Math.round(m / 10) * 10} m` : `${fmt(Math.rou
 const inDays = n => n === 0 ? 'heute' : n === 1 ? 'morgen' : n < 0 ? `seit ${-n} ${-n === 1 ? 'Tag' : 'Tagen'}` : `in ${n} Tagen`;
 const stat = (val, label, cls = '') => h`<div class="stat ${cls}"><span class="sv">${val}</span><span class="sl">${label}</span></div>`;
 
+/* Genau ein nächster Schritt – damit klar ist, was zu tun ist */
+function nextStep(H) {
+  for (const b of packBags(H)) { const c = nextOpenCat(H, b); if (c) { const its = bagItemsOf(H, b.id); const n = its.filter(i => i.status === 'owned').length;
+    return h`<a class="nextstep" href="${bagHref(b.id, c.id)}"><span class="ns-k">Als Nächstes</span><span class="ns-t">${n ? 'Weiter packen' : 'Packen'}: ${b.name}</span><span class="ns-s">${c.label} · ${n} von ${its.length} da</span>${icon('chev', 'chev')}</a>`; } }
+  const miss = needList(H).filter(g => g.prio === 'must');
+  if (miss.length) return h`<a class="nextstep" href="#/needs"><span class="ns-k">Als Nächstes</span><span class="ns-t">Einkaufen: ${miss.length} wichtige Sachen</span><span class="ns-s">Liste nach Geschäften sortiert</span>${icon('chev', 'chev')}</a>`;
+  return h`<div class="nextstep ok"><span class="ns-k">Alles bereit</span><span class="ns-t">Eure Rucksäcke sind gepackt</span><span class="ns-s">Nächste Kontrolle steht unten unter „Termine“.</span></div>`;
+}
 /* Startseite = Übersicht mit Informationen; Bedienung über die Reiter unten */
 route('/home', H => {
   const S = DB.settings;
@@ -43,10 +51,10 @@ route('/home', H => {
   const ice = H.contacts.filter(c => c.type === 'ice').length;
   return {
     title: H.name && H.name !== 'Mein Haushalt' ? H.name : 'Notfall!',
-    html: h`<div class="stats">${stat(`${have.length}/${live.length}`, 'vorhanden', have.length === live.length && live.length ? 'ok' : '')}${stat(`${packed.length}/${live.length}`, 'gepackt')}${stat(miss.length, miss.length === 1 ? 'fehlt' : 'fehlen', miss.length ? 'must' : 'ok')}</div>
-    ${needs.length ? h`<div class="card"><div class="row spread"><h3>${mustN ? 'Das fehlt noch' : 'Noch sinnvoll'}</h3>${mustN ? h`<span class="badge must">${mustN} wichtig</span>` : ''}</div><ul class="plain">${needs.slice(0, 4).map(g => h`<li><b>${g.name}</b><span class="muted small"> · ${fmt(g.qty)} ${g.unit}</span></li>`)}</ul>
-      <a class="btn primary block" style="margin-top:12px" href="#/needs">${icon('cart')} ${needs.length > 4 ? `Alle ${needs.length} ansehen` : 'Ansehen'} – Habe ich / Kaufen</a></div>` : ''}
-    ${heavy.length ? h`<div class="card"><h3>Gewicht</h3><ul class="plain">${heavy.map(x => h`<li><span class="${x.st.overFactor > 1.25 ? 'tmust' : 'trec'}">${x.b.name}: ${x.st.overweight ? `${fmt(x.st.totalG / 1000)} von ${fmt(x.st.capKg)} kg` : `zu voll (${fmt(x.st.volL)} von ${fmt(x.st.usableL)} l)`}</span></li>`)}</ul></div>` : ''}
+    html: h`${nextStep(H)}
+    <div class="stats">${stat(`${have.length}/${live.length}`, 'vorhanden', have.length === live.length && live.length ? 'ok' : '')}${stat(`${packed.length}/${live.length}`, 'gepackt')}${stat(miss.length, miss.length === 1 ? 'fehlt' : 'fehlen', miss.length ? 'must' : 'ok')}</div>
+    ${needs.length ? h`<div class="card"><div class="row spread"><h3>${mustN ? 'Das fehlt noch' : 'Noch sinnvoll'}</h3>${mustN ? h`<span class="badge must">${mustN} wichtig</span>` : ''}</div><ul class="plain">${needs.slice(0, 3).map(g => h`<li><b>${g.name}</b><span class="muted small"> · ${fmt(g.qty)} ${g.unit}</span></li>`)}</ul>
+      <a class="btn primary block" style="margin-top:12px" href="#/needs">${icon('cart')} ${needs.length > 3 ? `Alle ${needs.length} ansehen` : 'Ansehen'}</a></div>` : ''}
     <div class="card"><h3>Termine</h3><ul class="plain">
       ${rem.length ? rem.map(r => h`<li>${r.title}: <b>${fmtDate(r.next)}</b> <span class="muted small">(${inDays(daysUntil(r.next))})</span></li>`) : h`<li class="muted">Keine Kontrolle geplant</li>`}
       ${al ? h`<li>Probealarm: <b>${new Date(al).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' })}</b></li>` : ''}
@@ -56,8 +64,7 @@ route('/home', H => {
       <div class="chips" style="margin-top:10px">${H.people.map(p => h`<span class="chip static">${avatar(p.photo, p.name, 'sm')} ${p.name}</span>`)}${H.pets.map(t => h`<span class="chip static">${icon('paw')} ${t.name || t.species}</span>`)}</div>
       ${H.people.length ? h`<p style="margin-top:10px">Bedarf pro Tag: <b>${fmt0(kcal)} kcal</b> · <b>${fmt(water)} l Wasser</b></p><p class="muted small">Für ${hours} Stunden: ${fmt(water * hours / 24)} l Trinkwasser</p>` : ''}
       ${!ice ? h`<p class="tmust" style="margin-top:8px">Noch kein Notfallkontakt eingetragen.</p>` : h`<p class="muted small" style="margin-top:8px">${ice} ${ice === 1 ? 'Notfallkontakt' : 'Notfallkontakte'}</p>`}</div>
-    ${meet.length ? h`<div class="card"><h3>Treffpunkte</h3><ul class="plain">${meet.map((m, k) => { const c = placeCoord(m); return h`<li>${k + 1}. ${m.name}${home && c ? h` <span class="muted small">· ${fmtDist(distM(home, c))} Luftlinie</span>` : ''}</li>`; })}</ul></div>` : ''}
-    <div class="card"><h3>Notrufnummern</h3><div class="numgrid">${country.numbers.slice(0, 4).map(([n, t]) => h`<button class="numbtn" data-act="call" data-n="${n}"><b>${n}</b><span>${t}</span></button>`)}</div></div>`,
+    ${meet.length ? h`<div class="card"><h3>Treffpunkte</h3><ul class="plain">${meet.map((m, k) => { const c = placeCoord(m); return h`<li>${k + 1}. ${m.name}${home && c ? h` <span class="muted small">· ${fmtDist(distM(home, c))} Luftlinie</span>` : ''}</li>`; })}</ul></div>` : ''}`,
   };
 });
 

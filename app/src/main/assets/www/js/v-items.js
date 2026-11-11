@@ -24,16 +24,49 @@ function pickVisible(H, bag) {
   return bag.role === 'car' ? cats.sort((x, y) => (y.id === 'car') - (x.id === 'car')) : cats;
 }
 function pickable(t, cat) { return !t.nopack && t.z !== 'home' && (t.z !== 'car' || cat === 'car') && !/^stock_/.test(t.k) && t.k !== 'meds'; }
-function pickTemplates(H, bid, catId, q) {
+function pickTemplates(H, bid, catId, q, keep) {
   const have = new Set(bagItemsOf(H, bid).map(i => String(i.key || '').split(':')[0]));
   const nq = q ? norm(q) : ''; const car = (byId(H.bags, bid) || {}).role === 'car';
-  return Object.values(T).filter(t => !have.has(t.k) && (catId ? PICK_CAT[catId].cats.includes(t.c) && pickable(t, catId) : pickable(t, car ? 'car' : '')) && (!nq || norm(t.n + ' ' + t.c).includes(nq))).sort((x, y) => x.n.localeCompare(y.n, 'de'));
+  return Object.values(T).filter(t => (!have.has(t.k) || (keep && keep.has(t.k))) && (catId ? PICK_CAT[catId].cats.includes(t.c) && pickable(t, catId) : pickable(t, car ? 'car' : '')) && (!nq || norm(t.n + ' ' + t.c).includes(nq))).sort((x, y) => x.n.localeCompare(y.n, 'de'));
 }
 const sortPrio = (a, b) => (a.source === 'pick') - (b.source === 'pick') || PRIO_ORDER[a.prio] - PRIO_ORDER[b.prio] || a.name.localeCompare(b.name, 'de');
 function addRow(t) {
   return h`<div class="li"><span class="grow"><span class="t">${t.n}</span>${t.w ? h`<br><span class="s">${t.w}</span>` : ''}</span><button class="btn icon primary" data-act="pick-add" data-key="${t.k}" aria-label="${t.n} hinzufügen">${icon('plus')}</button></div>`;
 }
-const searchBtn = bid => h`<a class="btn icon sm" href="#/review/search" data-act="pick-search" data-bag="${bid}" aria-label="Suchen">${icon('search')}</a>`;
+const searchBtn = bid => h`<button class="btn icon sm" data-act="add-open" data-bag="${bid}" aria-label="Suchen und hinzufügen">${icon('search')}</button>`;
+/* Ein Fenster zum Hinzufügen: suchen oder Kategorie antippen, Plus drücken – bleibt offen für mehr */
+const ADD = { bag: null, cat: null, q: '', added: new Set() };
+function addSheetBody(H) {
+  const bags = H.bags; const bag = byId(H.bags, ADD.bag) || bags[0]; if (!bag) return h`<p class="muted">Erst einen Rucksack anlegen.</p>`;
+  ADD.bag = bag.id; PICK.bag = bag.id; PICK.cat = ADD.cat;
+  const q = ADD.q.trim();
+  const res = q ? pickTemplates(H, bag.id, null, q, ADD.added).slice(0, 25) : ADD.cat ? pickTemplates(H, bag.id, ADD.cat, '', ADD.added) : [];
+  const row = t => h`<div class="li addrow"><span class="grow"><span class="t">${t.n}</span>${t.w ? h`<br><span class="s">${t.w}</span>` : ''}</span>${ADD.added.has(t.k) ? h`<span class="addok">${icon('check')}</span>` : h`<button class="btn icon primary" data-act="add-one" data-key="${t.k}" aria-label="${t.n} hinzufügen">${icon('plus')}</button>`}</div>`;
+  return h`${bags.length > 1 ? h`<div class="chips">${bags.map(b => h`<button class="chip" aria-pressed="${b.id === bag.id ? 'true' : 'false'}" data-act="add-bag" data-id="${b.id}">${b.name}</button>`)}</div>` : ''}
+    <div class="chips">${pickVisible(H, bag).map(c => h`<button class="chip" aria-pressed="${!q && ADD.cat === c.id ? 'true' : 'false'}" data-act="add-cat" data-id="${c.id}">${c.short || c.label}</button>`)}</div>
+    <div id="addres">${res.length ? h`<div class="list">${res.map(row)}</div>` : !q && !ADD.cat ? h`<p class="muted">Tippe oben, was du suchst – oder wähle eine Kategorie.</p>` : h`<p class="muted">Keine Vorschläge${q ? ' für „' + q + '“' : ''}.</p>`}
+    ${q ? h`<button class="btn block" style="margin-top:8px" data-act="add-custom">${icon('plus')} „${q}“ hinzufügen</button>` : ''}</div>`;
+}
+function openAddSheet(bid, cat) {
+  const H = HH(); ADD.bag = bid && bid !== NOBAG ? bid : (H.bags[0] || {}).id; ADD.cat = cat || null; ADD.q = ''; ADD.added = new Set();
+  const bag = byId(H.bags, ADD.bag);
+  const m = openModal({ title: 'Hinzufügen', body: h`<input id="addq" type="search" placeholder="Suchen, z. B. Batterien" autocomplete="off" enterkeyhint="search" maxlength="60"><div id="addbody" class="stack-s" style="margin-top:10px">${addSheetBody(H)}</div>`, onClose: () => rerender(true) });
+  const refresh = () => { const b = $('#addbody', m.el); if (b) { b.innerHTML = addSheetBody(HH()).s; } const t = $('h2', m.el); const bg = byId(HH().bags, ADD.bag); if (t && bg) t.textContent = 'Zu „' + bg.name + '“ hinzufügen'; };
+  $('#addq', m.el).addEventListener('input', e => { ADD.q = e.target.value; refresh(); });
+  m.el.addEventListener('click', e => {
+    const a = e.target.closest('[data-act]'); if (!a) return; const d = a.dataset; const H2 = HH();
+    if (d.act === 'add-bag') { ADD.bag = d.id; ADD.added = new Set(); refresh(); }
+    else if (d.act === 'add-cat') { ADD.cat = d.id; ADD.q = ''; $('#addq', m.el).value = ''; refresh(); }
+    else if (d.act === 'add-one' && T[d.key]) { PICK.bag = ADD.bag; pickPut(H2, makeItem({ key: d.key, qty: 1 }, { status: 'owned', source: 'pick', prio: 'opt' })); ADD.added.add(d.key); refresh(); }
+    else if (d.act === 'add-custom') { const name = ADD.q.trim().slice(0, 80); if (!name) return; PICK.bag = ADD.bag; PICK.cat = ADD.cat; pickPut(H2, makeItem({ key: '', name, category: ADD.cat && PICK_CAT[ADD.cat] ? PICK_CAT[ADD.cat].cats[0] : 'Sonstiges', tags: inferTags(name) }, { status: 'owned', source: 'pick', prio: 'opt', key: '' })); ADD.q = ''; $('#addq', m.el).value = ''; refresh(); }
+    else return;
+    e.stopPropagation();
+  }, true);
+  refresh();
+  if (!cat) setTimeout(() => { const i = $('#addq', m.el); if (i) i.focus(); }, 60);
+  return m;
+}
+ACT['add-open'] = d => openAddSheet(d.bag || PICK.bag, d.cat);
 function progressCard(title, its, extra) {
   const have = its.filter(i => i.status === 'owned').length, miss = its.filter(i => i.status === 'missing').length;
   return h`<div class="card"><h2>${title}</h2>
@@ -56,39 +89,60 @@ route('/review', H => {
   };
 });
 
+/* Kurze Zeile mit Gewicht – statt großer Karte */
+function miniLoad(H, bag) {
+  if (!bag || bag.id === NOBAG) return '';
+  const st = bagStats(H, DB.settings, bag); const cap = st.capKg ? st.capKg * 1000 : 0;
+  const cls = st.overweight ? (st.overFactor > 1.25 ? 'must' : 'rec') : 'ok';
+  return h`<div class="miniload"><span class="small ${st.overweight ? 't' + cls : 'muted'}">${fmt(st.totalG / 1000)}${cap ? ' / ' + fmt(st.capKg) : ''} kg${st.overweight ? ' – zu schwer' : ''}</span>${cap ? bar(Math.round(st.totalG / cap * 100), cls) : ''}</div>`;
+}
+/* Erste Kategorie, in der noch etwas offen ist (für „Weiter packen“) */
+function nextOpenCat(H, bag) { const its = bagItemsOf(H, bag.id); const c = pickVisible(H, bag).find(c => its.some(i => pickCatOf(i.category) === c.id && i.status !== 'owned')); return c || null; }
+
 /* 2) Kategorien eines Rucksacks */
 route('/review/b/:bid', (bid, H) => {
   const bag = bid === NOBAG ? packBags(H).find(b => b.id === NOBAG) : byId(H.bags, bid);
   if (!bag) return { title: 'Packliste', back: '#/review', html: empty('Rucksack nicht gefunden.') };
-  PICK.bag = bid; const its = bagItemsOf(H, bid); const open = its.filter(i => i.status === 'planned').length;
-  const bags = packBags(H); const k = bags.findIndex(b => b.id === bid); const nxt = bags[k + 1];
+  PICK.bag = bid; const its = bagItemsOf(H, bid); const have = its.filter(i => i.status === 'owned').length; const open = its.filter(i => i.status === 'planned').length;
+  const bags = packBags(H); const k = bags.findIndex(b => b.id === bid); const nxt = bags[k + 1]; const nc = nextOpenCat(H, bag);
   return {
     title: bag.name, back: bags.length > 1 ? '#/review' : null, actions: searchBtn(bid),
-    html: h`${progressCard(its.length && its.every(i => i.status === 'owned') ? 'Alles da' : 'Das brauchst du', its, h`<p class="muted small" style="margin-top:6px">${bagMetaShort(H, bag)}</p>${bagLoad(H, bag)}${open ? h`<button class="btn block" style="margin-top:12px" data-act="ask-start" data-bag="${bid}">${icon('chev')} Einzeln abfragen (${open} offen)</button>` : ''}`)}
-    <div class="catgrid">${pickVisible(H, bag).map(c => { const ci = its.filter(i => pickCatOf(i.category) === c.id); const n = ci.filter(i => i.status === 'owned').length; const mustOpen = ci.some(i => i.status !== 'owned' && i.prio === 'must');
-      return h`<a class="cat ${ci.length && n === ci.length ? 'done' : ''}" href="${bagHref(bid, c.id)}"><span class="ti">${icon(c.icon)}</span><span class="cl">${c.label}</span><span class="cs">${ci.length ? `${n} von ${ci.length}` : 'antippen zum Auswählen'}</span>${mustOpen ? h`<span class="dot" aria-label="Wichtiges offen"></span>` : ''}</a>`; })}</div>
-    <div class="actionbar">${nxt ? h`<a class="btn primary lg" href="${bagHref(nxt.id)}">Nächster: ${nxt.name} ${icon('chev')}</a>` : h`<button class="btn primary lg" data-act="rv-done">${icon('check')} Fertig</button>`}</div>`,
+    html: h`<div class="card tight"><div class="row spread"><b>${its.length ? `${have} von ${its.length} da` : 'Noch leer'}</b>${open ? h`<button class="btn sm ghost" data-act="ask-start" data-bag="${bid}">Einzeln abfragen</button>` : ''}</div>${its.length ? bar(Math.round(have / its.length * 100), 'ok') : ''}${miniLoad(H, bag)}</div>
+    <div class="catlist">${pickVisible(H, bag).map(c => { const ci = its.filter(i => pickCatOf(i.category) === c.id); const n = ci.filter(i => i.status === 'owned').length; const mustOpen = ci.some(i => i.status !== 'owned' && i.prio === 'must'); const done = ci.length && n === ci.length;
+      return h`<a class="cat ${done ? 'done' : ''}" href="${bagHref(bid, c.id)}">${icon(done ? 'check' : c.icon)}<span class="cl">${c.short || c.label}</span><span class="cs">${ci.length ? `${n}/${ci.length}` : '+'}</span>${mustOpen ? h`<span class="dot" aria-label="Wichtiges offen"></span>` : ''}</a>`; })}</div>
+    <div class="actionbar">${nc ? h`<a class="btn primary lg" href="${bagHref(bid, nc.id)}">${have ? 'Weiter packen' : 'Los geht’s'}: ${nc.label} ${icon('chev')}</a>` : nxt ? h`<a class="btn primary lg" href="${bagHref(nxt.id)}">Nächster: ${nxt.name} ${icon('chev')}</a>` : h`<button class="btn primary lg" data-act="rv-done">${icon('check')} Fertig</button>`}</div>`,
   };
 });
 
+/* Gleiche Sachen im selben Rucksack als eine Zeile */
+function groupRows(items) {
+  const m = new Map();
+  for (const i of items) { const k = (String(i.key || '').split(':')[0] || '') + '|' + norm(i.name) + '|' + (i.unit || ''); if (!m.has(k)) m.set(k, []); m.get(k).push(i); }
+  return [...m.values()];
+}
 /* 3) Eine Kategorie in einem Rucksack */
+const MORE = new Set();
 route('/review/b/:bid/c/:cat', (bid, cat, H) => {
   const C = PICK_CAT[cat]; const bag = bid === NOBAG ? packBags(H).find(b => b.id === NOBAG) : byId(H.bags, bid);
   if (!C || !bag) return { title: 'Packliste', back: '#/review', html: empty('Nicht gefunden.') };
   PICK.bag = bid; PICK.cat = cat;
-  const mine = bagItemsOf(H, bid).filter(i => pickCatOf(i.category) === cat).sort(sortPrio);
-  const more = pickTemplates(H, bid, cat, '');
+  const rows = groupRows(bagItemsOf(H, bid).filter(i => pickCatOf(i.category) === cat).sort(sortPrio));
+  const more = pickTemplates(H, bid, cat, ''); const showMore = !rows.length || MORE.has(bid + cat);
   const vis = pickVisible(H, bag); const k = vis.findIndex(c => c.id === cat); const nxt = vis[k + 1];
   const bags = packBags(H); const nb = bags[bags.findIndex(b => b.id === bid) + 1];
+  const haveN = rows.filter(r => r.every(i => i.status === 'owned')).length;
   return {
     title: C.label, back: bagHref(bid), actions: searchBtn(bid),
-    html: h`<div class="card tight"><p class="small bold">${bag.name}</p>${bagLoad(H, bag)}</div>
-    ${mine.length ? h`<div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h3>Hast du das?</h3><span class="badge">${mine.filter(i => i.status === 'owned').length}/${mine.length}</span></div><div class="list">${mine.map(it => tickRow(it, H))}</div></div>` : ''}
-    ${more.length ? h`<div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h3>${mine.length ? 'Noch mehr' : 'Zum Hinzufügen antippen'}</h3></div><div class="list">${more.map(addRow)}</div></div>` : ''}
-    <button class="btn block" data-act="pick-custom-open">${icon('plus')} Eigenen Gegenstand hinzufügen</button>
-    <div class="actionbar"><a class="btn lg" href="${bagHref(bid)}">Übersicht</a>${nxt ? h`<a class="btn primary lg" href="${bagHref(bid, nxt.id)}">${nxt.label} ${icon('chev')}</a>` : nb ? h`<a class="btn primary lg" href="${bagHref(nb.id)}">Nächster: ${nb.name} ${icon('chev')}</a>` : h`<button class="btn primary lg" data-act="rv-done">${icon('check')} Fertig</button>`}</div>`,
+    html: h`<div class="stepline"><span class="muted small">${bag.name} · ${k + 1} von ${vis.length}</span>${miniLoad(H, bag)}</div>
+    ${rows.length ? h`<p class="hint">Hake ab, was du hast.${rows.some(r => r[0].prio === 'must') ? h` <span class="dotlegend"></span> = wichtig` : ''}</p>
+      <div class="card flush"><div class="list">${rows.map(r => tickRow(r, H))}</div></div>
+      <p class="muted small" style="text-align:right">${haveN} von ${rows.length} da</p>` : ''}
+    ${!rows.length && more.length ? h`<div class="card flush"><div class="card-head" style="padding:14px 16px 0"><h3>Was kommt rein?</h3></div><div class="list">${more.map(addRow)}</div></div>` : ''}
+    <button class="btn block" data-act="add-open" data-bag="${bid}" data-cat="${cat}">${icon('plus')} ${rows.length ? 'Noch etwas dazu' : 'Etwas anderes hinzufügen'}</button>
+    <div class="actionbar">${nxt ? h`<a class="btn primary lg" href="${bagHref(bid, nxt.id)}">Weiter: ${nxt.label} ${icon('chev')}</a>` : nb ? h`<a class="btn primary lg" href="${bagHref(nb.id)}">Nächster: ${nb.name} ${icon('chev')}</a>` : h`<button class="btn primary lg" data-act="rv-done">${icon('check')} Fertig</button>`}</div>`,
   };
 });
+ACT['pick-more'] = d => { MORE.add(d.k); rerender(true); };
 route('/review/c/:cat', (cat, H) => { const b = packBags(H)[0]; if (!b) return { title: 'Packliste', html: empty('Noch kein Rucksack.') }; history.replaceState(null, '', bagHref(b.id, cat)); return ROUTES.find(r => r.re.test('/review/b/x/c/y')).fn(b.id, cat, H); });
 
 function pickResults(H) {
@@ -132,29 +186,37 @@ ACT['pick-custom-open'] = () => {
 };
 ACT['pick-photo'] = async d => { const H = HH(); const it = byId(H.items, d.id); if (!it) return; const pid = await addPhotoTo(null); if (!pid) return; it.photos = it.photos || []; it.photos.push(pid); persist(); rerender(true); };
 const QTY_STEP = { Euro: 10, g: 50, kg: .5, Liter: .5 };
-function tickRow(it, H) {
-  const own = it.status === 'owned'; const mark = own ? 'done' : it.prio === 'must' ? 'must' : it.prio === 'rec' ? 'rec' : '';
-  const canMove = H && H.bags.length > 1;
-  return h`<div class="li tick ${mark}"><label class="tickl grow"><input type="checkbox" data-change="rv-tick" data-id="${it.id}" ${own ? raw('checked') : ''} aria-label="${it.name} vorhanden"><span class="grow"><span class="t">${it.name}</span>${it.source !== 'pick' || it.status === 'missing' ? h`<br><span class="s">${it.source !== 'pick' ? levelBadge(it.prio) : ''}${it.status === 'missing' ? h` <span class="badge must">fehlt</span>` : ''}</span>` : ''}</span></label>
-    ${it.photos && it.photos[0] ? h`<span class="thumb"><img data-ph="${it.photos[0]}" data-act="ph-view" data-id="${it.photos[0]}" alt="Foto"></span>` : own ? h`<button class="btn icon ghost sm" data-act="pick-photo" data-id="${it.id}" aria-label="Foto von ${it.name}">${icon('camera')}</button>` : ''}
-    <a class="btn icon ghost sm" href="#/item/${it.id}" aria-label="Details zu ${it.name}">${icon('chev')}</a>
-    <div class="tickx"><span class="qty"><button class="btn icon sm" data-act="qty" data-id="${it.id}" data-d="-1" aria-label="weniger">${icon('minus')}</button><span class="qv">${itemQtyLabel(it)}</span><button class="btn icon sm" data-act="qty" data-id="${it.id}" data-d="1" aria-label="mehr">${icon('plus')}</button></span>
-      ${it.weightG ? h`<span class="muted small">${fmtKg(it.weightG * it.qty)}</span>` : ''}${canMove ? h`<button class="btn icon sm mv" data-act="mv-bag" data-id="${it.id}" aria-label="${it.name} in andere Tasche" title="In andere Tasche">${icon('move')}</button>` : ''}</div></div>`;
+/* Eine Zeile: Haken, Name, Menge – mehr gibt es hinter dem Pfeil */
+function tickRow(r, H) {
+  const rows = Array.isArray(r) ? r : [r]; const it = rows[0]; const own = rows.every(i => i.status === 'owned');
+  const qty = rows.reduce((a, i) => a + (+i.qty || 0), 0); const g = rows.reduce((a, i) => a + (+i.weightG || 0) * (+i.qty || 0), 0);
+  const ids = rows.map(i => i.id).join(',');
+  return h`<div class="li tick ${own ? 'done' : ''}"><label class="tickl grow"><input type="checkbox" data-change="rv-tick" data-id="${it.id}" data-ids="${ids}" ${own ? raw('checked') : ''} aria-label="${it.name} vorhanden"><span class="grow"><span class="t">${!own && it.prio === 'must' && it.source !== 'pick' ? h`<span class="imp" aria-label="wichtig"></span>` : ''}${it.name}</span><br><span class="s">${fmt(qty)} ${it.unit || ''}${g ? ' · ' + fmtKg(g) : ''}${rows.some(i => i.status === 'missing') ? ' · auf der Einkaufsliste' : ''}</span></span></label>
+    ${it.photos && it.photos[0] ? h`<span class="thumb"><img data-ph="${it.photos[0]}" data-act="ph-view" data-id="${it.photos[0]}" alt="Foto"></span>` : ''}
+    <button class="btn icon ghost sm" data-act="it-sheet" data-ids="${ids}" aria-label="Mehr zu ${it.name}">${icon('chev')}</button></div>`;
 }
+/* Unterseite eines Gegenstands: Menge, anderer Rucksack, Foto, Details */
+ACT['it-sheet'] = d => {
+  const H = HH(); const S = DB.settings; const rows = String(d.ids).split(',').map(id => byId(H.items, id)).filter(Boolean); const it = rows[0]; if (!it) return;
+  const others = H.bags.filter(b => b.id !== it.bagId);
+  const m = openModal({ title: it.name, body: h`<div class="stack">
+      <div class="row spread"><b>Menge</b><span class="qty"><button class="btn icon" data-act="qty" data-id="${it.id}" data-d="-1" aria-label="weniger">${icon('minus')}</button><span class="qv" id="sheetqv">${itemQtyLabel(it)}</span><button class="btn icon" data-act="qty" data-id="${it.id}" data-d="1" aria-label="mehr">${icon('plus')}</button></span></div>
+      ${it.why ? h`<p class="muted small">${it.why}</p>` : ''}
+      <div class="btns"><button class="btn" data-act="pick-photo" data-id="${it.id}">${icon('camera')} Foto</button><a class="btn" href="#/item/${it.id}">${icon('edit')} Alle Angaben</a></div>
+      ${others.length ? h`<div><div class="label">In anderen Rucksack</div><div class="stack-s" style="margin-top:6px">${others.map(b => { const st = bagStats(H, S, b); return h`<button class="tile slim" data-act="mv-to" data-ids="${String(d.ids)}" data-bag="${b.id}"><span class="grow"><span class="tt">${b.name}</span><br><span class="ts ${st.overweight ? 'tmust' : ''}">${fmt(st.totalG / 1000)}${st.capKg ? ' / ' + fmt(st.capKg) : ''} kg</span></span>${icon('chev', 'chev')}</button>`; })}</div></div>` : ''}</div>`,
+    onClose: () => rerender(true) });
+  m.el.addEventListener('click', e => { if (e.target.closest('[data-act=mv-to],[data-act=pick-photo],a[href]')) { m.onClose = null; closeModal(m); } });
+};
 ACT['qty'] = d => {
   const H = HH(); const it = byId(H.items, d.id); if (!it) return; const st = QTY_STEP[it.unit] || 1;
-  it.qty = Math.max(st, Math.round(((+it.qty || 0) + st * (+d.d)) * 100) / 100); persist(); rerender(true);
+  it.qty = Math.max(st, Math.round(((+it.qty || 0) + st * (+d.d)) * 100) / 100); persist();
+  const qv = $('#sheetqv'); if (qv) qv.textContent = itemQtyLabel(it); else rerender(true);
 };
-ACT['mv-bag'] = d => {
-  const H = HH(); const it = byId(H.items, d.id); if (!it) return; const S = DB.settings;
-  const others = H.bags.filter(b => b.id !== it.bagId);
-  const m = openModal({ title: `„${it.name}“ verschieben`, body: h`<div class="stack-s">${others.map(b => { const st = bagStats(H, S, b); return h`<button class="tile" data-act="mv-to" data-id="${it.id}" data-bag="${b.id}"><span class="ti">${icon(b.role === 'car' ? 'car' : 'bag')}</span><span class="grow"><span class="tt">${b.name}</span><br><span class="ts ${st.overweight ? 'tmust' : ''}">${fmt(st.totalG / 1000)}${st.capKg ? ' von ' + fmt(st.capKg) : ''} kg</span></span></button>`; })}</div>` });
-  m.el.addEventListener('click', e => { if (e.target.closest('[data-act=mv-to]')) closeModal(m); });
-};
+ACT['mv-bag'] = d => ACT['it-sheet']({ ids: d.id });
 ACT['mv-to'] = d => {
-  const H = HH(); const it = byId(H.items, d.id); const b = byId(H.bags, d.bag); if (!it || !b) return;
-  it.bagId = b.id; it.compId = null; it.packed = false; it.container = b.role === 'car' ? 'car' : 'bag'; it.personId = b.owner || null;
-  autoPack(H, b, { onlyUnassigned: true }); persist(); rerender(true); toast(`${it.name} → ${b.name}`);
+  const H = HH(); const b = byId(H.bags, d.bag); const its = String(d.ids || d.id).split(',').map(id => byId(H.items, id)).filter(Boolean); if (!its.length || !b) return;
+  for (const it of its) { it.bagId = b.id; it.compId = null; it.packed = false; it.container = b.role === 'car' ? 'car' : 'bag'; it.personId = b.owner || null; }
+  autoPack(H, b, { onlyUnassigned: true }); persist(); rerender(true); toast(`${its[0].name} → ${b.name}`);
 };
 /* Gewicht und Volumen des Rucksacks, damit man beim Auswählen sieht, wie schwer er wird */
 function bagLoad(H, bag) {
@@ -164,12 +226,15 @@ function bagLoad(H, bag) {
   return h`<div class="load"><div class="row spread"><span class="small bold ${st.overweight ? 't' + cls : ''}">${icon('bag')} ${fmt(st.totalG / 1000)}${cap ? ' von ' + fmt(st.capKg) : ''} kg${st.overweight ? ' – zu schwer' : ''}</span><span class="small muted ${st.overfull ? 'tmust' : ''}">${fmt0(st.fillPct)} % voll</span></div>${cap ? bar(pct, cls) : ''}</div>`;
 }
 /* Beim Abhaken einmal nach dem Haltbarkeitsdatum fragen – nur bei Sachen, die ablaufen */
-const EXPIRY_KEYS = ['water_carry', 'water_stock', 'food_baby', 'food_child', 'food_snack', 'food_ration', 'nuts', 'batteries', 'coin_cells', 'hearing_batt', 'firstaid', 'firstaid_home', 'car_firstaid', 'painkiller', 'diarrhea', 'disinfect', 'sunscreen', 'electrolyte', 'water_treat', 'fuel', 'fuel_home', 'pet_food', 'pet_meds', 'meds', 'mask_ffp2'];
-const NO_EXPIRY_KEYS = ['thermometer', 'tick_tweezers', 'spare_glasses', 'gloves_nitrile'];
+/* Was abläuft, steht fest in dieser Liste (Vorlagen-Schlüssel). Alles andere – Brille, Thermometer, Akkus, Werkzeug – nie fragen. */
+const EXPIRY_KEYS = ['water_carry', 'water_stock', 'food_baby', 'food_child', 'food_snack', 'food_ration', 'nuts', 'car_water', 'pet_food', 'pet_water',
+  'batteries', 'coin_cells', 'hearing_batt', 'firstaid', 'firstaid_home', 'car_firstaid', 'painkiller', 'diarrhea', 'disinfect', 'sunscreen', 'insect_repellent', 'electrolyte',
+  'water_treat', 'fuel', 'fuel_home', 'pet_meds', 'meds', 'mask_ffp2', 'tinder', 'stock_grain', 'stock_protein', 'stock_veg', 'stock_fruit', 'stock_dairy', 'stock_fat', 'stock_extras'];
 function needsExpiry(it) {
   if (!it || it.expiry || it.noExpiry || it.status !== 'owned') return false;
-  const k = String(it.key || '').split(':')[0]; if (NO_EXPIRY_KEYS.includes(k)) return false;
-  return EXPIRY_KEYS.includes(k) || ['Lebensmittel', 'Medizin'].includes(it.category) || (it.tags || []).some(t => ['food', 'meds', 'battery'].includes(t));
+  const [k, k2] = String(it.key || '').split(':');
+  if (['aid', 'device', 'care'].includes(k2)) return false;   // Brille, Hörgerät, Pflege: läuft nicht ab
+  return EXPIRY_KEYS.includes(k) || (!k && it.category === 'Lebensmittel');
 }
 function askExpiry(it) {
   if (!needsExpiry(it)) return;
@@ -179,7 +244,11 @@ function askExpiry(it) {
     onSubmit: fd => { const H = HH(); const x = byId(H.items, it.id); if (!x) return; x.expiry = fd.get('expiry'); x.expiryType = med ? 'use' : x.expiryType || 'mhd'; persist(); syncNotifications(); rerender(true); toast('Datum gespeichert'); } });
 }
 ACT['exp-skip'] = d => { const H = HH(); const x = byId(H.items, d.id); if (x) { x.noExpiry = true; persist(); } closeAllModals(); };
-INPUT['rv-tick'] = el => { const H = HH(); const it = byId(H.items, el.dataset.id); if (!it) return; if (el.checked) setItemStatus(H, it, 'owned'); else { setItemStatus(H, it, 'planned'); H.shop = H.shop.filter(s => s.itemId !== it.id || s.bought); } persist(); rerender(true); if (el.checked) askExpiry(it); };
+INPUT['rv-tick'] = el => {
+  const H = HH(); const its = String(el.dataset.ids || el.dataset.id).split(',').map(id => byId(H.items, id)).filter(Boolean); if (!its.length) return;
+  for (const it of its) { if (el.checked) setItemStatus(H, it, 'owned'); else { setItemStatus(H, it, 'planned'); H.shop = H.shop.filter(s => s.itemId !== it.id || s.bought); } }
+  persist(); rerender(true); if (el.checked) askExpiry(its[0]);
+};
 ACT['rv-done'] = async () => {
   const H = HH(); const open = packItems(H).filter(i => i.status === 'planned');
   if (open.length) {

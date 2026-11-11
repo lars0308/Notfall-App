@@ -8,22 +8,46 @@ function shopTotals(H, S) {
   const budget = +H.budget || +S.plan.budget || 0;
   return { open, bought, est, spent, budget, noPrice: open.filter(s => !(+s.estPrice)).length };
 }
+/* Gleiche Sachen in einer Zeile */
+function shopGroups(list) {
+  const m = new Map();
+  for (const s of list) { const k = norm(s.name) + '|' + (s.unit || ''); if (!m.has(k)) m.set(k, { name: s.name, unit: s.unit || '', qty: 0, prio: s.priority, list: [] }); const g = m.get(k); g.qty += +s.qty || 0; g.list.push(s); if ({ must: 0, rec: 1, opt: 2 }[s.priority] < { must: 0, rec: 1, opt: 2 }[g.prio]) g.prio = s.priority; }
+  return [...m.values()].sort((a, b) => ({ must: 0, rec: 1, opt: 2 }[a.prio] - { must: 0, rec: 1, opt: 2 }[b.prio]) || a.name.localeCompare(b.name, 'de'));
+}
+function shopLine(g) {
+  return h`<div class="li shopline"><button class="buybox" data-act="shop-quick" data-ids="${g.list.map(s => s.id).join(',')}" aria-label="${g.name} gekauft"></button>
+    <button class="grow linkish" data-act="shop-edit" data-id="${g.list[0].id}"><span class="t">${g.prio === 'must' ? h`<span class="imp" aria-label="wichtig"></span>` : ''}${g.name}</span><br><span class="s">${fmt(g.qty)} ${g.unit}</span></button></div>`;
+}
+SHOP.open = new Set();
 route('/shop', H => {
   const S = DB.settings; const t = shopTotals(H, S);
-  const unchecked = H.items.filter(i => !i.archived && i.status === 'planned').length;
-  const order = { must: 0, rec: 1, opt: 2 };
-  const list = t.open.filter(s => SHOP.prio === 'all' || s.priority === SHOP.prio).sort((a, b) => order[a.priority] - order[b.priority] || (a.category || '').localeCompare(b.category || '') || a.name.localeCompare(b.name, 'de'));
+  const list = t.open;
+  const groups = SHOP.by === 'store' ? groupByStore(H, list) : [['must', 'Zuerst besorgen'], ['rec', 'Sinnvoll'], ['opt', 'Wenn Platz ist']].map(([p, l]) => ({ id: 'p:' + p, label: l, icon: p === 'must' ? 'alert' : 'cart', list: list.filter(s => s.priority === p) })).filter(g => g.list.length);
   return {
-    title: 'Einkaufsliste', back: '#/more', actions: h`<button class="btn icon sm" data-act="shop-share" aria-label="Einkaufsliste teilen">${icon('upload')}</button><button class="btn primary sm" data-act="shop-new">${icon('plus')}<span>Neu</span></button>`,
-    html: h`${t.est || t.spent ? h`<div class="card"><div class="row spread"><span>Geschätzt offen</span><span class="bold">${fmtEUR(t.est)}</span></div>${t.spent ? h`<div class="row spread"><span>Ausgegeben</span><span class="bold">${fmtEUR(t.spent)}</span></div>` : ''}</div>` : ''}
-    ${unchecked ? h`<a class="btn" href="#/review">${unchecked} Positionen noch offen – erst prüfen</a>` : ''}
-    ${list.length ? h`<div class="chips" role="group" aria-label="Sortierung">${[['store', 'Nach Geschäft'], ['prio', 'Nach Wichtigkeit']].map(([k, l]) => h`<button class="chip" aria-pressed="${SHOP.by === k ? 'true' : 'false'}" data-act="shop-by" data-v="${k}">${l}</button>`)}</div>` : ''}
-    ${!list.length ? h`<div class="card">${empty('Nichts zu besorgen.')}<a class="btn block" href="#/needs" style="margin-top:8px">${icon('cart')} Was fehlt noch?</a></div>`
-      : SHOP.by === 'store' ? groupByStore(H, list).map(g => h`<div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h3>${icon(g.icon)} ${g.label}</h3><span class="badge">${g.list.length}</span></div><div class="list">${g.list.map(s => shopRow(s))}</div></div>`)
-      : h`<div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h2>Zu besorgen</h2><span class="badge">${list.length}</span></div><div class="list">${list.map(s => shopRow(s))}</div></div>`}
-    ${t.bought.length ? h`<div class="card flush"><div class="card-head" style="padding:16px 16px 0"><h2>Gekauft</h2><button class="btn sm" data-act="shop-toggle-bought">${SHOP.showBought ? 'Ausblenden' : 'Anzeigen (' + t.bought.length + ')'}</button></div>${SHOP.showBought ? h`<div class="list">${t.bought.map(s => h`<div class="li done"><span class="grow"><span class="t">${s.name}</span><br><span class="s">${fmt(s.qty)} ${s.unit || ''} · ${s.actualPrice ? fmtEUR(s.actualPrice) : 'ohne Preis'}${s.store ? ' · ' + s.store : ''}</span></span><button class="btn sm" data-act="shop-unbuy" data-id="${s.id}">Rückgängig</button></div>`)}</div>` : ''}</div>` : ''}`,
+    title: 'Einkaufsliste', back: '#/more', actions: h`<button class="btn icon sm" data-act="shop-share" aria-label="Einkaufsliste teilen">${icon('upload')}</button><button class="btn icon sm" data-act="shop-new" aria-label="Neu">${icon('plus')}</button>`,
+    html: h`${list.length ? h`<div class="row spread"><span class="muted">${shopGroups(list).length} Sachen · Kästchen antippen, wenn gekauft</span></div>
+      <div class="chips" role="group" aria-label="Sortierung">${[['store', 'Nach Geschäft'], ['prio', 'Nach Wichtigkeit']].map(([k, l]) => h`<button class="chip" aria-pressed="${SHOP.by === k ? 'true' : 'false'}" data-act="shop-by" data-v="${k}">${l}</button>`)}</div>
+      <div class="stack-s">${groups.map(g => { const gs = shopGroups(g.list); const open = SHOP.open.has(g.id); const imp = gs.filter(x => x.prio === 'must').length;
+        return h`<div class="card flush fold"><button class="foldhead" data-act="shop-fold" data-id="${g.id}" aria-expanded="${open ? 'true' : 'false'}">${icon(g.icon)}<span class="grow"><b>${g.label}</b>${imp && SHOP.by === 'store' ? h`<span class="muted small"> · ${imp} wichtig</span>` : ''}</span><span class="badge">${gs.length}</span>${icon('chev', 'chev')}</button>
+          ${open ? h`<div class="list">${gs.map(shopLine)}</div>` : ''}</div>`; })}</div>`
+      : h`<div class="card">${empty('Nichts zu besorgen.')}<a class="btn block" href="#/needs" style="margin-top:8px">${icon('cart')} Was fehlt noch?</a></div>`}
+    ${t.bought.length ? h`<button class="btn block ghost" data-act="shop-toggle-bought">${SHOP.showBought ? 'Gekauftes ausblenden' : `Gekauft (${t.bought.length}) anzeigen`}</button>${SHOP.showBought ? h`<div class="card flush"><div class="list">${t.bought.map(s => h`<div class="li"><span class="grow"><span class="t">${s.name}</span><br><span class="s">${fmt(s.boughtQty || s.qty)} ${s.unit || ''}${s.boughtAt ? ' · ' + fmtDate(s.boughtAt) : ''}</span></span><button class="btn sm ghost" data-act="shop-unbuy" data-id="${s.id}">Rückgängig</button></div>`)}</div></div>` : ''}` : ''}`,
   };
 });
+ACT['shop-fold'] = d => { if (SHOP.open.has(d.id)) SHOP.open.delete(d.id); else SHOP.open.add(d.id); rerender(true); };
+/* Schnell gekauft: ohne Formular, Gegenstand wird „vorhanden“ */
+ACT['shop-quick'] = d => {
+  const H = HH(); let first = null;
+  for (const id of String(d.ids).split(',')) {
+    const s = byId(H.shop, id); if (!s) continue;
+    s.bought = true; s.boughtAt = todayISO(); s.boughtQty = s.qty;
+    let item = byId(H.items, s.itemId); if (!item) { item = newItemDefaults({ name: s.name, category: s.category, qty: s.qty, unit: s.unit, source: 'shop', prio: s.priority, tags: inferTags(s.name) }); H.items.push(item); s.itemId = item.id; }
+    item.status = 'owned'; item.purchaseDate = s.boughtAt; item.packed = false;
+    if (item.bagId) { const b = byId(H.bags, item.bagId); if (b) autoPack(H, b, { onlyUnassigned: true }); }
+    first = first || item;
+  }
+  persist(); rerender(true); toast('Gekauft – steht jetzt als vorhanden in der Packliste'); if (first) askExpiry(first);
+};
 function shopRow(s) {
   return h`<div class="li ${s.priority === 'must' ? 'must' : s.priority === 'rec' ? 'rec' : ''}" style="flex-wrap:wrap;align-items:flex-start">
     <div class="grow" style="min-width:11rem"><a href="#" data-act="shop-edit" data-id="${s.id}" class="t" style="color:inherit;text-decoration:none">${s.name}</a>

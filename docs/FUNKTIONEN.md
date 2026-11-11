@@ -1,4 +1,4 @@
-# Umgesetzte Funktionen (Version 3.1.0)
+# Umgesetzte Funktionen (Version 3.2.0)
 
 Legende: ✅ umgesetzt und im Browser getestet · 📱 braucht Android-Code, nicht auf Gerät geprüft · 🟡 mit Einschränkung · ⬜ offen. Was gestrichen oder verschoben wurde, steht in der [Feature-Matrix](FEATURE-MATRIX.md).
 
@@ -77,3 +77,11 @@ Aufgeräumt: 112 als großer Knopf, weitere Nummern klein daneben, Lagen als Ras
 - Teilen 📱: Packliste eines Rucksacks (nach Kategorien, ✅/⬜) und Einkaufsliste (nach Geschäften) über das Android-Teilen-Menü, z. B. WhatsApp. Medikamente und Hilfsmittel erscheinen nur als „Persönliche Medikamente/Hilfsmittel“. Drucken/PDF bleibt.
 - Beim Abhaken von Sachen, die ablaufen (Wasser, Essen, Medikamente, Erste Hilfe, Batterien, Brennstoff, Tierfutter …), fragt die App einmal „Haltbar bis?“; „Kein Datum“ fragt nicht wieder. Daraus entstehen die Ablauf-Erinnerungen.
 - Darstellung: immer dunkel (Schriftgröße und hoher Kontrast bleiben einstellbar).
+
+## Vereinfacht in 3.2 ✅
+- Startseite beginnt mit genau einem nächsten Schritt („Als Nächstes: Weiter packen: Rucksack Lars · Kleidung“ oder „Einkaufen“). Notrufnummern und Gewicht stehen nicht mehr doppelt auf der Startseite (Notfall-Knopf bzw. Rucksack).
+- Packliste: Kategorien als kompakte Liste; eine Zeile je Sache (Haken, Name, Menge); gleiche Sachen im Rucksack zusammengefasst; keine Etiketten „Notwendig/Empfohlen“ mehr – Wichtiges hat einen kleinen roten Punkt. Menge, Foto, anderer Rucksack und Details hinter dem Pfeil.
+- Nach dem Anlegen geht es geführt Kategorie für Kategorie, unten nur ein „Weiter“.
+- Hinzufügen: ein Fenster je Rucksack (Suche + Kategorien, Plus, ✓, bleibt offen) – über „Hinzufügen“ auf der Taschenseite, die Lupe oder „Noch etwas dazu“.
+- Einkaufsliste: Geschäfte zugeklappt, gleiche Sachen in einer Zeile, Kästchen antippen = gekauft (ohne Formular), kein „Warum?“, keine Etiketten.
+- Haltbarkeit nur bei Sachen, die wirklich ablaufen (feste Liste: Wasser, Lebensmittel, Medikamente, Erste Hilfe, Masken, Batterien, Brennstoff …); nie bei Brille, Hörgerät, Thermometer, Akkus, Werkzeug.
