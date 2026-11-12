@@ -45,6 +45,25 @@ const { start } = require('./serve');
   await p.click('#bsbody [data-act=bs-trim]'); await p.waitForTimeout(150);
   ok('Zu voll: „Herausnehmen“ entfernt Vorschläge, bis es passt (Notwendiges bleibt)', tr >= 8 && await p.evaluate(b => { const H = HH(); const bag = byId(H.bags, b); const st = bagStats(H, DB.settings, bag); return ((!st.overweight && !st.overfull) || !trimmable(H, bag).length) && bagItems(H, bag).filter(i => i.key === 'tent').length < 8; }, bid));
   await p.evaluate(() => closeAllModals());
+  // Eigene Kategorie
+  await p.evaluate(() => closeAllModals()); await p.goto('http://localhost:8123/#/bags'); await p.waitForSelector('.bagrow'); await p.click(`.bagrow[data-id="${bid}"]`); await p.waitForSelector('#bsbody');
+  await p.click('#bsbody [data-act=bs-newcat]'); await p.waitForSelector('.modal #pd'); await p.fill('.modal #pd', 'Angelzeug'); await p.locator('.modal #pdlg').evaluate(f => f.requestSubmit()); await p.waitForTimeout(200);
+  const cc = await p.evaluate(() => (HH().customCats || []).find(c => c.label === 'Angelzeug'));
+  ok('Eigene Kategorie angelegt und im Fenster sichtbar (auch leer)', !!cc && (await p.locator(`#bsbody [data-act=bs-catmenu][data-cat="${cc && cc.id}"]`).count()) === 1);
+  await p.click(`#bsbody [data-act=add-open][data-cat="${cc.id}"]`); await p.waitForSelector('#addq'); await p.fill('#addq', 'Angelrute'); await p.waitForSelector('.modal [data-act=add-custom]'); await p.click('.modal [data-act=add-custom]'); await p.waitForTimeout(100); await p.evaluate(() => closeModal());
+  ok('Eigene Sache landet in der eigenen Kategorie', await p.evaluate(([b, c]) => HH().items.some(i => i.bagId === b && i.name === 'Angelrute' && i.pcat === c), [bid, cc.id]));
+  await p.click(`#bsbody [data-act=bs-catmenu][data-cat="${cc.id}"]`); await p.waitForSelector('.menulist'); await p.click('.menulist [data-act=bs-catren]'); await p.waitForSelector('.modal #pd'); await p.fill('.modal #pd', 'Angeln'); await p.locator('.modal #pdlg').evaluate(f => f.requestSubmit()); await p.waitForTimeout(150);
+  ok('Umbenennen', await p.evaluate(c => HH().customCats.find(x => x.id === c).label === 'Angeln', cc.id) && /Angeln/.test(await p.locator('#bsbody').innerText()));
+  await p.click(`#bsbody [data-act=bs-catmenu][data-cat="${cc.id}"]`); await p.waitForSelector('.menulist'); ok('Löschen steht ganz unten', /löschen/i.test(await p.locator('.menulist .menurow').last().innerText()));
+  await p.click('.menulist [data-act=bs-catdel]'); await p.waitForSelector('.modal [data-act=dlg-yes]'); await p.click('.modal [data-act=dlg-yes]'); await p.waitForTimeout(150);
+  ok('Eigene Kategorie gelöscht – samt Inhalt', await p.evaluate(c => !(HH().customCats || []).some(x => x.id === c) && !HH().items.some(i => i.pcat === c), cc.id));
+  // Vorhandene Kategorie aus der Tasche entfernen und wieder zeigen
+  await p.click(`#bsbody [data-act=bs-catmenu][data-cat=hygiene]`); await p.waitForSelector('.menulist'); await p.click('.menulist [data-act=bs-cathide]'); await p.waitForSelector('.modal [data-act=dlg-yes]'); await p.click('.modal [data-act=dlg-yes]'); await p.waitForTimeout(150);
+  ok('„Hygiene“ aus der Tasche entfernt: Sachen weg, Kategorie weg', await p.evaluate(b => { const H = HH(); const bag = byId(H.bags, b); return bag.hiddenCats.includes('hygiene') && !bagItems(H, bag).some(i => itemCat(i) === 'hygiene'); }, bid) && (await p.locator('#bsbody [data-act=bs-catmenu][data-cat=hygiene]').count()) === 0);
+  ok('Planung schlägt dafür nichts mehr vor', await p.evaluate(b => { const H = HH(); applyPlan(H, DB.settings); trimAllBags(H, DB.settings); return !bagItems(H, byId(H.bags, b)).some(i => itemCat(i) === 'hygiene' && i.status === 'planned'); }, bid));
+  await p.evaluate(() => refreshView()); await p.click('#bsbody [data-act=bs-menu]'); await p.waitForSelector('[data-act=bs-unhide]'); await p.click('[data-act=bs-unhide]'); await p.waitForTimeout(150);
+  ok('Entfernte Kategorien wieder zeigen', await p.evaluate(b => !(byId(HH().bags, b).hiddenCats || []).length, bid));
+  await p.evaluate(() => closeAllModals());
   await p.goto('http://localhost:8123/#/home'); await p.waitForSelector('a.nextstep');
   const href = await p.locator('a.nextstep').getAttribute('href'); await p.click('a.nextstep'); await p.waitForSelector('#bsbody').catch(() => {});
   ok('„Als Nächstes“ öffnet direkt das Taschen-Fenster', /#\/bags\?open=/.test(href) && (await p.locator('#bsbody').count()) === 1, href);

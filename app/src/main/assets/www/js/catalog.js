@@ -295,6 +295,11 @@ const PICK_CATS = [
 ];
 const PICK_CAT = Object.fromEntries(PICK_CATS.map(c => [c.id, c]));
 function pickCatOf(category) { return (PICK_CATS.find(c => c.cats.includes(category)) || PICK_CATS[0]).id; }
+/* Kategorie einer Sache: eigene Kategorie (pcat) vor der Katalog-Kategorie */
+function itemCat(i) { return i.pcat || pickCatOf(i.category); }
+/* Eigene Kategorien des Haushalts */
+function customCats(H) { return ((H && H.customCats) || []).map(c => ({ id: c.id, label: c.label, short: c.label, icon: 'list', cats: [], custom: true })); }
+function catDef(id, H) { return PICK_CAT[id] || customCats(H || (typeof HH === 'function' ? HH() : null)).find(c => c.id === id) || null; }
 
 const TAG_RULES = [
   [/stirnlampe|kopflampe|headlamp/i, ['light', 'needs_battery', 'headlamp']], [/taschenlampe|fenix|maglite|lampe|leuchte|laterne/i, ['light', 'needs_battery']],

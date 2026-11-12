@@ -1,4 +1,4 @@
-# Testergebnisse (Version 3.4.0)
+# Testergebnisse (Version 3.5.0)
 
 Stand: 2026-11-10 08:21 UTC. Echte Ausgaben aus der Build-Umgebung (Node 22, Chromium/Playwright, Android SDK 35, Gradle 8.14.3). Wiederholbar mit `tests/run-all.sh`. Gesamt: **37 Unit-Prüfungen, 115 End-to-End-Prüfungen, 19 Schnittstellen-Prüfungen – 0 fehlgeschlagen.**
 
@@ -18,7 +18,7 @@ Stand: 2026-11-10 08:21 UTC. Echte Ausgaben aus der Build-Umgebung (Node 22, Chr
 | „Was fehlt?“ (3.0) | 9 Prüfungen (`tests/needs.js`) | alle bestanden |
 | Einkaufsliste nach Geschäften, Teilen, Haltbarkeit beim Abhaken, immer dunkel (3.1) | 14 Prüfungen (`tests/shopshare.js`, inkl. Ablauf-Erkennung und zusammengefasste Zeilen) | alle bestanden |
 | Notfallpass auf dem Sperrbildschirm (3.3) | 12 Prüfungen (`tests/lockpass.js`) gegen Attrappe: nur Freigegebenes, drei Wege, automatische Aktualisierung | alle bestanden |
-| Taschen-Fenster, Löschen, „Passt dazu“, Herausnehmen (3.4) | 14 Prüfungen (`tests/bagsheet.js`) | alle bestanden |
+| Taschen-Fenster, Löschen, „Passt dazu“, Herausnehmen, eigene Kategorien (3.5) | 22 Prüfungen (`tests/bagsheet.js`) | alle bestanden |
 | Zufallstest inkl. neuer Seiten | 3 Läufe × ca. 335 Aktionen | keine JS-Fehler |
 | Java-Teil (Keystore, Biometrie, Benachrichtigungen, **Probealarm, Kartendownload, MBTiles-Import**, Kamera, Drucken) | **nur kompiliert**, APK signiert, Berechtigungen mit `aapt2` geprüft | **nicht auf einem Gerät ausgeführt** |
 

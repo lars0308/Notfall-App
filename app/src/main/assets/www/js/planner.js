@@ -541,6 +541,8 @@ function bagStats(H, S, bag) {
 function trimmable(H, bag) { return bagItems(H, bag).filter(i => i.source === 'plan' && i.status === 'planned' && i.prio !== 'must').sort((a, b) => ({ opt: 0, rec: 1 }[a.prio] - { opt: 0, rec: 1 }[b.prio]) || ((b.weightG || 0) * b.qty + (b.volL || 0) * 100) - ((a.weightG || 0) * a.qty + (a.volL || 0) * 100)); }
 function trimBagToFit(H, S, bag) {
   let removed = 0;
+  const hidden = new Set(bag.hiddenCats || []);
+  if (hidden.size) for (const i of bagItems(H, bag).filter(x => x.source === 'plan' && x.status === 'planned' && hidden.has(itemCat(x)))) { H.items.splice(H.items.indexOf(i), 1); removed++; }
   for (let guard = 0; guard < 300; guard++) {
     const st = bagStats(H, S, bag); if (!st.overweight && !st.overfull) break;
     const c = trimmable(H, bag)[0]; if (!c) break;

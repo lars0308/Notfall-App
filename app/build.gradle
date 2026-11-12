@@ -7,8 +7,8 @@ android {
         applicationId 'de.notfall.familie'
         minSdk 29
         targetSdk 34
-        versionCode 18
-        versionName '3.4.0'
+        versionCode 19
+        versionName '3.5.0'
     }
     // Fester Schlüssel: alle Versionen haben dieselbe Signatur, Updates behalten die Daten.
     // Liegt app/signing/notfall-debug.keystore vor, wird damit signiert (nicht im Repository, siehe docs/INSTALLATION.md).

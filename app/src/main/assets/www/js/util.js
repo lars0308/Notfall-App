@@ -81,6 +81,7 @@ const ICONS = {
   box: 'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10',
   cart: 'M3 4h3l2 11h10l2-8H7M9 20a1 1 0 100-2 1 1 0 000 2M17 20a1 1 0 100-2 1 1 0 000 2',
   more: 'M4 6h16M4 12h16M4 18h16',
+  dots: 'M5 12h.01M12 12h.01M19 12h.01',
   grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
   alert: 'M12 3l10 18H2zM12 10v5M12 18v.5',

@@ -90,7 +90,7 @@ function saveCam() { if (UI.bag3d) BAGUI.cam = { yaw: UI.bag3d.yaw, pitch: UI.ba
 function bagItemRow(H, bag, it, showComp) {
   const c = byId(bag.comps, it.compId); const own = it.status === 'owned';
   return h`<div class="li tick ${own ? 'done' : ''}"><label class="tickl grow"><input type="checkbox" data-change="rv-tick" data-id="${it.id}" ${own ? raw('checked') : ''} aria-label="${it.name} da"><span class="grow"><span class="t">${it.name}</span><br><span class="s">${[itemQtyLabel(it), it.weightG ? fmtKg(it.weightG * it.qty) : '', showComp ? (c ? c.name : 'ohne Fach') : '', it.lastMinute ? 'erst bei Abreise' : ''].filter(Boolean).join(' · ')}</span></span></label>
-    ${!own && it.prio === 'must' ? h`<span class="sdot must"></span>` : ''}<button class="btn icon ghost sm" data-act="bag-item-move" data-id="${it.id}" aria-label="${it.name} in anderes Fach">${icon('move')}</button><button class="btn icon ghost sm" data-act="it-sheet" data-ids="${it.id}" aria-label="Mehr zu ${it.name}">${icon('more')}</button></div>`;
+    ${!own && it.prio === 'must' ? h`<span class="sdot must"></span>` : ''}<button class="btn icon ghost sm" data-act="bag-item-move" data-id="${it.id}" aria-label="${it.name} in anderes Fach">${icon('move')}</button><button class="catmore" data-act="it-sheet" data-ids="${it.id}" aria-label="Mehr zu ${it.name}">${icon('dots')}</button></div>`;
 }
 ACT['bg-mode'] = d => { BAGUI.view = d.v; rerender(true); };
 

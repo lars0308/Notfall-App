@@ -470,3 +470,13 @@ h2.sec{font-size:1.0625rem;margin:4px 0 8px}
 .menulist .menurow:first-child{border-top:0}.menulist .menurow svg{width:1.2rem;height:1.2rem;color:var(--muted)}
 .menulist .menurow.danger,.menulist .menurow.danger svg{color:var(--must)}
 .passt{border-color:var(--primary)}
+.bscathead{display:flex;align-items:center}
+.bscathead .foldhead{flex:1;min-width:0}
+.bscathead .btn.icon{margin-right:6px}
+.bscat .addin{margin:6px 10px 10px;align-self:flex-start}
+.bscat{display:flex;flex-direction:column}
+.catmore{flex:none;width:2.75rem;height:3.25rem;display:flex;align-items:center;justify-content:center;background:none;border:0;color:var(--muted);cursor:pointer}
+.catmore svg,.btn.icon svg.ic{stroke-width:2}
+.catmore svg{width:1.5rem;height:1.5rem;stroke-width:3.2}
+.btnrow .btn.icon svg{stroke-width:3.2}
+.trimbar{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:12px;border:1px solid var(--rec);background:rgba(245,165,36,.1)}

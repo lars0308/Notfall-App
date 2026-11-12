@@ -1,4 +1,4 @@
-# Umgesetzte Funktionen (Version 3.4.0)
+# Umgesetzte Funktionen (Version 3.5.0)
 
 Legende: ✅ umgesetzt und im Browser getestet · 📱 braucht Android-Code, nicht auf Gerät geprüft · 🟡 mit Einschränkung · ⬜ offen. Was gestrichen oder verschoben wurde, steht in der [Feature-Matrix](FEATURE-MATRIX.md).
 
@@ -106,3 +106,8 @@ Seite „Für Rettungskräfte“ (Notfallpass → oberste Karte). Vorschau, was 
 - Jede Sache hat denselben Haken („da“), überall. Einzelne Sachen über „⋯“: Menge, Foto, anderer Rucksack, Alle Angaben, „Aus der Tasche entfernen“.
 - Nicht mehr vorschlagen als reinpasst: Ist ein Rucksack zu schwer oder zu voll, nimmt die App Vorschläge (optional, dann empfohlen, Schwerstes zuerst) heraus; Notwendiges und Vorhandenes bleiben. Im Fenster zusätzlich „Herausnehmen“.
 - Hinzufügen: beim Blättern nur Standard-Sachen; Extras über die Suche. „Passt dazu“: z. B. Taschenlampe → Batterien, Kocher → Brennstoff, Feuerzeug, Kochgeschirr.
+
+## Eigene Kategorien (3.5) ✅
+- Im Taschen-Fenster unten „+ Eigene Kategorie“ (gilt für den ganzen Haushalt, erscheint in jeder Tasche, auch leer).
+- Jede Kategorie hat „⋯“: Sache hinzufügen; bei eigenen: Umbenennen, Kategorie löschen (samt Inhalt, in allen Taschen); bei vorhandenen: „Aus dieser Tasche entfernen“ (Inhalt dieser Tasche wird gelöscht, die App schlägt dafür nichts mehr vor). Rückgängig über das ⋯ der Tasche: „Entfernte Kategorien wieder zeigen“.
+- Drei Punkte bedeuten überall „mehr“; Löschen steht immer ganz unten.

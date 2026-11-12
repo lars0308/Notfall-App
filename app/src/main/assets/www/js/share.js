@@ -46,8 +46,8 @@ function bagShareText(H, bag) {
   const its = bagItems(H, bag); const have = its.filter(i => i.status === 'owned');
   const owner = bag.owner && byId(H.people, bag.owner);
   const lines = [`Packliste: ${bag.name}${owner ? ' (' + owner.name + ')' : ''}`, `${have.length} von ${its.length} vorhanden · Stand ${fmtDate(todayISO())}`, '✅ = da   ⬜ = fehlt', ''];
-  for (const c of PICK_CATS) {
-    const ci = its.filter(i => pickCatOf(i.category) === c.id); if (!ci.length) continue;
+  for (const c of PICK_CATS.concat(customCats(H))) {
+    const ci = its.filter(i => itemCat(i) === c.id); if (!ci.length) continue;
     lines.push(c.label.toUpperCase());
     for (const i of ci.sort((a, b) => (a.status === 'owned') - (b.status === 'owned') || a.name.localeCompare(b.name, 'de'))) lines.push(`${i.status === 'owned' ? '✅' : '⬜'} ${privateName(i)} – ${itemQtyLabel(i)}`);
     lines.push('');

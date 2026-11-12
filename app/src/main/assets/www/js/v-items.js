@@ -18,16 +18,17 @@ const bagItemsOf = (H, bid) => packItems(H).filter(i => bid === NOBAG ? !i.bagId
 function packBags(H) { const out = H.bags.slice(); if (bagItemsOf(H, NOBAG).length) out.push({ id: NOBAG, name: 'Ohne Tasche', comps: [], noBag: true }); return out; }
 function bagHref(bid, cat) { return '#/review/b/' + bid + (cat ? '/c/' + cat : ''); }
 function pickVisible(H, bag) {
-  const mine = bagItemsOf(H, bag.id); const owner = bag.owner ? byId(H.people, bag.owner) : null;
+  const mine = bagItemsOf(H, bag.id); const owner = bag.owner ? byId(H.people, bag.owner) : null; const hidden = new Set(bag.hiddenCats || []);
   const kids = owner ? +owner.age < 13 : H.people.some(p => +p.age < 13);
-  const cats = PICK_CATS.filter(c => mine.some(i => pickCatOf(i.category) === c.id) || (c.id === 'kids' ? kids : c.id === 'pets' ? H.pets.length > 0 && (!owner || +owner.age >= 13) : c.id === 'car' ? bag.role === 'car' : true));
-  return bag.role === 'car' ? cats.sort((x, y) => (y.id === 'car') - (x.id === 'car')) : cats;
+  const cats = PICK_CATS.filter(c => !hidden.has(c.id) && (mine.some(i => itemCat(i) === c.id) || (c.id === 'kids' ? kids : c.id === 'pets' ? H.pets.length > 0 && (!owner || +owner.age >= 13) : c.id === 'car' ? bag.role === 'car' : true)));
+  const sorted = bag.role === 'car' ? cats.sort((x, y) => (y.id === 'car') - (x.id === 'car')) : cats;
+  return sorted.concat(customCats(H).filter(c => !hidden.has(c.id)));
 }
 function pickable(t, cat) { return !t.nopack && t.z !== 'home' && (t.z !== 'car' || cat === 'car') && !/^stock_/.test(t.k) && t.k !== 'meds'; }
 function pickTemplates(H, bid, catId, q, keep) {
   const have = new Set(bagItemsOf(H, bid).map(i => String(i.key || '').split(':')[0]));
   const nq = q ? norm(q) : ''; const car = (byId(H.bags, bid) || {}).role === 'car';
-  return Object.values(T).filter(t => (!have.has(t.k) || (keep && keep.has(t.k))) && (catId ? PICK_CAT[catId].cats.includes(t.c) && pickable(t, catId) : pickable(t, car ? 'car' : '')) && (!nq || norm(t.n + ' ' + t.c).includes(nq))).sort((x, y) => x.n.localeCompare(y.n, 'de'));
+  return Object.values(T).filter(t => (!have.has(t.k) || (keep && keep.has(t.k))) && (catId ? !!PICK_CAT[catId] && PICK_CAT[catId].cats.includes(t.c) && pickable(t, catId) : pickable(t, car ? 'car' : '')) && (!nq || norm(t.n + ' ' + t.c).includes(nq))).sort((x, y) => x.n.localeCompare(y.n, 'de'));
 }
 const sortPrio = (a, b) => (a.source === 'pick') - (b.source === 'pick') || PRIO_ORDER[a.prio] - PRIO_ORDER[b.prio] || a.name.localeCompare(b.name, 'de');
 function addRow(t) {
@@ -49,7 +50,7 @@ function addSheetBody(H) {
   return h`${bags.length > 1 ? h`<div class="chips">${bags.map(b => h`<button class="chip" aria-pressed="${b.id === bag.id ? 'true' : 'false'}" data-act="add-bag" data-id="${b.id}">${b.name}</button>`)}</div>` : ''}
     <div class="chips">${pickVisible(H, bag).map(c => h`<button class="chip" aria-pressed="${!q && ADD.cat === c.id ? 'true' : 'false'}" data-act="add-cat" data-id="${c.id}">${c.short || c.label}</button>`)}</div>
     ${comp.length ? h`<div class="card flush passt"><div class="card-head" style="padding:10px 14px 0"><h3>Passt dazu</h3></div><div class="list">${comp.map(row)}</div></div>` : ''}
-    <div id="addres">${res.length ? h`<div class="list">${res.map(row)}</div>` : !q && !ADD.cat ? h`<p class="muted">Tippe oben, was du suchst – oder wähle eine Kategorie.</p>` : h`<p class="muted">Keine Vorschläge${q ? ' für „' + q + '“' : ''}.</p>`}
+    <div id="addres">${res.length ? h`<div class="list">${res.map(row)}</div>` : !q && !ADD.cat ? h`<p class="muted">Tippe oben, was du suchst – oder wähle eine Kategorie.</p>` : !q && !PICK_CAT[ADD.cat] ? h`<p class="muted">Eigene Kategorie: oben eintippen, was hinein soll, dann „… hinzufügen“.</p>` : h`<p class="muted">Keine Vorschläge${q ? ' für „' + q + '“' : ''}.</p>`}
     ${q ? h`<button class="btn block" style="margin-top:8px" data-act="add-custom">${icon('plus')} „${q}“ hinzufügen</button>` : ''}</div>`;
 }
 function openAddSheet(bid, cat) {
@@ -63,7 +64,7 @@ function openAddSheet(bid, cat) {
     if (d.act === 'add-bag') { ADD.bag = d.id; ADD.added = new Set(); refresh(); }
     else if (d.act === 'add-cat') { ADD.cat = d.id; ADD.q = ''; $('#addq', m.el).value = ''; refresh(); }
     else if (d.act === 'add-one' && T[d.key]) { PICK.bag = ADD.bag; pickPut(H2, makeItem({ key: d.key, qty: 1 }, { status: 'owned', source: 'pick', prio: 'opt' })); ADD.added.add(d.key); ADD.last = d.key; refresh(); }
-    else if (d.act === 'add-custom') { const name = ADD.q.trim().slice(0, 80); if (!name) return; PICK.bag = ADD.bag; PICK.cat = ADD.cat; pickPut(H2, makeItem({ key: '', name, category: ADD.cat && PICK_CAT[ADD.cat] ? PICK_CAT[ADD.cat].cats[0] : 'Sonstiges', tags: inferTags(name) }, { status: 'owned', source: 'pick', prio: 'opt', key: '' })); ADD.q = ''; $('#addq', m.el).value = ''; refresh(); }
+    else if (d.act === 'add-custom') { const name = ADD.q.trim().slice(0, 80); if (!name) return; PICK.bag = ADD.bag; PICK.cat = ADD.cat; pickPut(H2, makeItem({ key: '', name, category: ADD.cat && PICK_CAT[ADD.cat] ? PICK_CAT[ADD.cat].cats[0] : 'Sonstiges', tags: inferTags(name) }, { status: 'owned', source: 'pick', prio: 'opt', key: '', pcat: ADD.cat && !PICK_CAT[ADD.cat] ? ADD.cat : undefined })); ADD.q = ''; $('#addq', m.el).value = ''; refresh(); }
     else return;
     e.stopPropagation();
   }, true);
@@ -102,7 +103,7 @@ function miniLoad(H, bag) {
   return h`<div class="miniload"><span class="small ${st.overweight ? 't' + cls : 'muted'}">${fmt(st.totalG / 1000)}${cap ? ' / ' + fmt(st.capKg) : ''} kg${st.overweight ? ' – zu schwer' : ''}</span>${cap ? bar(Math.round(st.totalG / cap * 100), cls) : ''}</div>`;
 }
 /* Erste Kategorie, in der noch etwas offen ist (für „Weiter packen“) */
-function nextOpenCat(H, bag) { const its = bagItemsOf(H, bag.id); const c = pickVisible(H, bag).find(c => its.some(i => pickCatOf(i.category) === c.id && i.status !== 'owned')); return c || null; }
+function nextOpenCat(H, bag) { const its = bagItemsOf(H, bag.id); const c = pickVisible(H, bag).find(c => its.some(i => itemCat(i) === c.id && i.status !== 'owned')); return c || null; }
 
 /* 2) Kategorien eines Rucksacks */
 route('/review/b/:bid', (bid, H) => {
@@ -113,7 +114,7 @@ route('/review/b/:bid', (bid, H) => {
   return {
     title: bag.name, back: bags.length > 1 ? '#/review' : null, actions: searchBtn(bid),
     html: h`<div class="card tight"><div class="row spread"><b>${its.length ? `${have} von ${its.length} da` : 'Noch leer'}</b>${open ? h`<button class="btn sm ghost" data-act="ask-start" data-bag="${bid}">Einzeln abfragen</button>` : ''}</div>${its.length ? bar(Math.round(have / its.length * 100), 'ok') : ''}${miniLoad(H, bag)}</div>
-    <div class="catlist">${pickVisible(H, bag).map(c => { const ci = its.filter(i => pickCatOf(i.category) === c.id); const n = ci.filter(i => i.status === 'owned').length; const mustOpen = ci.some(i => i.status !== 'owned' && i.prio === 'must'); const done = ci.length && n === ci.length;
+    <div class="catlist">${pickVisible(H, bag).map(c => { const ci = its.filter(i => itemCat(i) === c.id); const n = ci.filter(i => i.status === 'owned').length; const mustOpen = ci.some(i => i.status !== 'owned' && i.prio === 'must'); const done = ci.length && n === ci.length;
       return h`<a class="cat ${done ? 'done' : ''}" href="${bagHref(bid, c.id)}">${icon(done ? 'check' : c.icon)}<span class="cl">${c.short || c.label}</span><span class="cs">${ci.length ? `${n}/${ci.length}` : '+'}</span>${mustOpen ? h`<span class="sdot must" aria-label="Wichtiges offen"></span>` : ''}</a>`; })}</div>
     <div class="actionbar">${nc ? h`<a class="btn primary lg" href="${bagHref(bid, nc.id)}">${have ? 'Weiter packen' : 'Los geht’s'}: ${nc.label} ${icon('chev')}</a>` : nxt ? h`<a class="btn primary lg" href="${bagHref(nxt.id)}">Nächster: ${nxt.name} ${icon('chev')}</a>` : h`<button class="btn primary lg" data-act="rv-done">${icon('check')} Fertig</button>`}</div>`,
   };
@@ -128,10 +129,10 @@ function groupRows(items) {
 /* 3) Eine Kategorie in einem Rucksack */
 const MORE = new Set();
 route('/review/b/:bid/c/:cat', (bid, cat, H) => {
-  const C = PICK_CAT[cat]; const bag = bid === NOBAG ? packBags(H).find(b => b.id === NOBAG) : byId(H.bags, bid);
+  const C = catDef(cat, H); const bag = bid === NOBAG ? packBags(H).find(b => b.id === NOBAG) : byId(H.bags, bid);
   if (!C || !bag) return { title: 'Packliste', back: '#/review', html: empty('Nicht gefunden.') };
   PICK.bag = bid; PICK.cat = cat;
-  const rows = groupRows(bagItemsOf(H, bid).filter(i => pickCatOf(i.category) === cat).sort(sortPrio));
+  const rows = groupRows(bagItemsOf(H, bid).filter(i => itemCat(i) === cat).sort(sortPrio));
   const more = pickTemplates(H, bid, cat, ''); const showMore = !rows.length || MORE.has(bid + cat);
   const vis = pickVisible(H, bag); const k = vis.findIndex(c => c.id === cat); const nxt = vis[k + 1];
   const bags = packBags(H); const nb = bags[bags.findIndex(b => b.id === bid) + 1];
@@ -183,7 +184,7 @@ ACT['pick-add'] = d => { const H = HH(); if (!T[d.key]) return; const it = makeI
 ACT['pick-custom'] = d => {
   const H = HH(); const name = String(d.name || '').trim().slice(0, 80); if (!name) return;
   const cat = PICK.cat && PICK_CAT[PICK.cat] ? PICK_CAT[PICK.cat].cats[0] : 'Sonstiges';
-  pickPut(H, makeItem({ key: '', name, category: cat, tags: inferTags(name) }, { status: 'owned', source: 'pick', prio: 'opt', key: '' })); PICK.q = ''; rerender(true);
+  pickPut(H, makeItem({ key: '', name, category: cat, tags: inferTags(name) }, { status: 'owned', source: 'pick', prio: 'opt', key: '', pcat: PICK.cat && !PICK_CAT[PICK.cat] ? PICK.cat : undefined })); PICK.q = ''; rerender(true);
 };
 ACT['pick-custom-open'] = () => {
   formDlg({ title: 'Eigener Gegenstand', ok: 'Hinzufügen', body: h`${F.text('name', 'Name', '', { req: true, max: 80, ph: 'z. B. Ersatzakku Kamera' })}`,
@@ -198,7 +199,7 @@ function tickRow(r, H) {
   const ids = rows.map(i => i.id).join(',');
   return h`<div class="li tick ${own ? 'done' : ''}"><label class="tickl grow"><input type="checkbox" data-change="rv-tick" data-id="${it.id}" data-ids="${ids}" ${own ? raw('checked') : ''} aria-label="${it.name} vorhanden"><span class="grow"><span class="t">${it.name}</span><br><span class="s">${fmt(qty)} ${it.unit || ''}${g ? ' · ' + fmtKg(g) : ''}${rows.some(i => i.status === 'missing') ? ' · auf der Einkaufsliste' : ''}</span></span></label>
     ${it.photos && it.photos[0] ? h`<span class="thumb"><img data-ph="${it.photos[0]}" data-act="ph-view" data-id="${it.photos[0]}" alt="Foto"></span>` : ''}
-    ${!own && it.prio === 'must' && it.source !== 'pick' ? h`<span class="sdot must" title="wichtig" aria-label="wichtig"></span>` : ''}<button class="btn icon ghost sm" data-act="it-sheet" data-ids="${ids}" aria-label="Mehr zu ${it.name}">${icon('chev')}</button></div>`;
+    ${!own && it.prio === 'must' && it.source !== 'pick' ? h`<span class="sdot must" title="wichtig" aria-label="wichtig"></span>` : ''}<button class="catmore" data-act="it-sheet" data-ids="${ids}" aria-label="Mehr zu ${it.name}">${icon('dots')}</button></div>`;
 }
 /* Unterseite eines Gegenstands: Menge, anderer Rucksack, Foto, Details */
 ACT['it-sheet'] = d => {
