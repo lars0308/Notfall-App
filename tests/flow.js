@@ -48,12 +48,16 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
   const annaId = await p.evaluate(() => HH().setup.draft.people[0].id), miaId = await p.evaluate(() => HH().setup.draft.people[1].id);
   ok('Zum Schluss: Rucksack je Person – Anna vorausgewählt, Mia (4) keinen', /Wer trägt/.test(await p.locator('.q').innerText()) && await p.locator(`[data-act=wz-carry][data-id="${annaId}"][data-v="type:trekking"][aria-pressed=true]`).count() === 1 && await p.locator(`[data-act=wz-carry][data-id="${miaId}"][data-v=none][aria-pressed=true]`).count() === 1);
   await click(`[data-act=wz-carry][data-id="${annaId}"][data-v="type:tactical"]`); await shot('03-taschen');
-  await click('[data-act=wz-finish]'); await p.waitForFunction(() => location.hash.startsWith('#/review'));
+  await click('[data-act=wz-finish]'); await p.waitForFunction(() => (location.hash.startsWith('#/review') || location.hash.startsWith('#/bags')));
   ok('Haushalt, Person und Tier gespeichert', await p.evaluate(() => { const H = HH(); const a = H.people[0]; return H.name === 'Familie Test' && H.cfg.housing.place === 'Köln' && H.cfg.housing.type === 'flat' && a.needs.blood === 'A+' && a.weightKg === 65 && a.fitness === 'mid' && H.pets[0].name === 'Bello' && H.bags.length === 1 && H.bags[0].type === 'tactical' && H.bags[0].owner === a.id; }));
   await p.evaluate(() => { const b = HH().bags[0]; b.name = 'Mein Tactical'; b.location = 'Flur'; persist(); });
   const s1 = await p.evaluate(() => { const H = HH(); return { items: H.items.length, bags: H.bags.length, home: H.items.filter(i => i.container === 'home' && i.source === 'plan').length, med: H.items.some(i => /Ramipril/.test(i.name) && i.lastMinute), pet: H.items.some(i => i.petId), bagOwner: H.bags[0].owner === H.people[0].id }; });
-  ok('Packliste erzeugt (ohne Hausvorrat), Medikament „erst bei Abreise“, Tier berücksichtigt, eigene Tasche zugeordnet', s1.items > 40 && s1.home === 0 && s1.med && s1.pet && s1.bagOwner && s1.bags === 1, JSON.stringify(s1)); await shot('04-packliste'); await noMarkup('Packliste');
-  ok('Nach dem Anlegen direkt in die erste Kategorie (geführt, ein „Weiter“)', /\/c\//.test(await hash()) && (await p.locator('.actionbar .btn').count()) === 1 && /Hake ab/.test(await body()));
+  ok('Packliste erzeugt (ohne Hausvorrat), Medikament „erst bei Abreise“, Tier berücksichtigt, eigene Tasche zugeordnet', s1.items > 20 && s1.home === 0 && s1.med && s1.pet && s1.bagOwner && s1.bags === 1, JSON.stringify(s1)); await shot('04-packliste'); await noMarkup('Packliste');
+  await p.waitForSelector('#bsbody');
+  ok('Nach dem Anlegen: Taschen-Fenster offen (Kategorien, Hinzufügen, ⋯)', (await p.locator('#bsbody [data-act=bs-cat]').count()) >= 5 && (await p.locator('#bsbody [data-act=add-open]').count()) === 1 && (await p.locator('#bsbody [data-act=bs-menu]').count()) === 1);
+  ok('Nicht mehr vorgeschlagen als reinpasst (oder nur Notwendiges übrig)', await p.evaluate(() => HH().bags.every(b => { const st = bagStats(HH(), DB.settings, b); return (!st.overweight && !st.overfull) || !trimmable(HH(), b).length; })));
+  ok('Navigation: Taschen und Packliste zusammengelegt (4 Reiter)', (await p.locator('.bottomnav a').count()) === 4);
+  await p.evaluate(() => closeAllModals());
   await p.goto('http://localhost:8123/#/review'); await p.waitForSelector('.catlist');
   { const t0 = await body(); ok('Packliste: ein Rucksack → Kategorien kompakt', /^#\/review\/b\//.test(await hash()) && ['Allgemein', 'Medizin', 'Kleidung', 'Werkzeug', 'Feuer', 'Wasser', 'Nahrung', 'Technik'].every(w => t0.includes(w)) && !/Empfohlen|Notwendig/.test(t0)); }
   const cats = await p.locator('a.cat').evaluateAll(as => as.map(a => a.getAttribute('href')));
@@ -73,7 +77,8 @@ const results = []; const ok = (n, c, x) => { results.push([c ? 'OK  ' : 'FAIL',
   await p.click('.modal [data-act=add-cat][data-id=tools]'); await p.waitForSelector('.modal [data-act=add-one]'); const k0 = await p.locator('.modal [data-act=add-one]').first().getAttribute('data-key');
   await p.locator('.modal [data-act=add-one]').first().click(); await p.waitForTimeout(100);
   ok('Plus fügt sofort hinzu, Fenster bleibt offen mit ✓', (await p.locator('.modal').count()) === 1 && (await p.locator('.modal .addok').count()) === 1 && await p.evaluate(k => { const i = HH().items.find(x => x.key === k && x.source === 'pick'); return !!i && i.status === 'owned' && !!i.bagId && !!i.compId; }, k0));
-  await p.fill('.modal #addq', 'Feuerstahl'); await p.waitForSelector('.modal [data-act=add-one]'); await p.locator('.modal [data-act=add-one]').first().click(); await p.waitForTimeout(80);
+  await p.fill('.modal #addq', 'Feuerstahl'); await p.waitForSelector('.modal [data-act=add-one][data-key=ferro_rod]'); await p.click('.modal [data-act=add-one][data-key=ferro_rod]');
+  ok('„Passt dazu“: Feuerstahl schlägt Zunder vor', (await p.locator('.modal .passt [data-key=tinder], .modal .passt .addok').count()) >= 1); await p.waitForTimeout(80);
   await p.fill('.modal #addq', 'Ersatzakku Kamera'); await p.waitForSelector('.modal [data-act=add-custom]'); await p.click('.modal [data-act=add-custom]'); await p.waitForTimeout(100); await shot('04a-suche');
   await p.locator('.modal [data-act=modal-close]').click(); await p.waitForTimeout(100);
   ok('Lupe: suchen und direkt hinzufügen, auch eigene Sachen', await p.evaluate(() => HH().items.some(i => i.key === 'ferro_rod' && i.status === 'owned') && HH().items.some(i => i.name === 'Ersatzakku Kamera' && i.status === 'owned' && i.bagId)));

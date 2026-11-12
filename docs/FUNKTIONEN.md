@@ -1,4 +1,4 @@
-# Umgesetzte Funktionen (Version 3.3.0)
+# Umgesetzte Funktionen (Version 3.4.0)
 
 Legende: ✅ umgesetzt und im Browser getestet · 📱 braucht Android-Code, nicht auf Gerät geprüft · 🟡 mit Einschränkung · ⬜ offen. Was gestrichen oder verschoben wurde, steht in der [Feature-Matrix](FEATURE-MATRIX.md).
 
@@ -99,3 +99,10 @@ Seite „Für Rettungskräfte“ (Notfallpass → oberste Karte). Vorschau, was 
 - „Was fehlt?“ (gesamt und je Tasche): eine Zeile je Sache, ✓ und 🛒 rechts; Hinweise zur Ausrüstung als eigene Seite.
 - Alle Gegenstände: nur Suche, Filter auf Knopfdruck. Mehr: gruppiert (Haushalt & Planung, Einkaufen & Vorrat, Üben & Erinnern, App).
 - Karte ohne gespeichertes Gebiet: kurzer Hinweis statt leerer Fläche. Doppelte Quelle entfernt.
+
+## Taschen und Packliste zusammengelegt (3.4) ✅
+- Navigation mit 4 Reitern: Start, Taschen, Notfallpass, Mehr.
+- Taschen: schmale Zeilen (Name, „x/y da“, Gewicht; roter Punkt rechts = Wichtiges fehlt). Antippen öffnet ein Fenster mit dem Inhalt nach Kategorien (aufklappbar): abhaken, „+ Hinzufügen“, „⋯“ (Fächer & 3D, Einzeln abfragen, Packanleitung, Teilen, Drucken, QR-Etikett, Ändern, Kopieren, Tasche löschen – Löschen immer ganz unten). Das Fenster bleibt beim Abhaken offen.
+- Jede Sache hat denselben Haken („da“), überall. Einzelne Sachen über „⋯“: Menge, Foto, anderer Rucksack, Alle Angaben, „Aus der Tasche entfernen“.
+- Nicht mehr vorschlagen als reinpasst: Ist ein Rucksack zu schwer oder zu voll, nimmt die App Vorschläge (optional, dann empfohlen, Schwerstes zuerst) heraus; Notwendiges und Vorhandenes bleiben. Im Fenster zusätzlich „Herausnehmen“.
+- Hinzufügen: beim Blättern nur Standard-Sachen; Extras über die Suche. „Passt dazu“: z. B. Taschenlampe → Batterien, Kocher → Brennstoff, Feuerzeug, Kochgeschirr.

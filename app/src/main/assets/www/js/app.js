@@ -7,6 +7,7 @@ async function boot() {
     if (DB.users.length) UI.locked = true;
     if (DB.settings.secure && NATIVE && NATIVE.setSecure) NATIVE.setSecure(true);
     if (r.corrupt && KV.native) toast('Die Datenbank war beschädigt – die letzte Sicherung wurde geladen oder neu begonnen.', 6000);
+    for (const H of DB.households) if (H.setup && H.setup.done && !H.fit33) { trimAllBags(H, DB.settings); H.fit33 = true; persist(); }   // 3.4: Vorschläge, die nicht reinpassen, einmal herausnehmen
     render();
     if (r.fresh && !location.hash) location.hash = '#/home';
     const legacy = r.fresh ? readLegacy() : null;

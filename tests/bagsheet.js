@@ -1,0 +1,54 @@
+// Taschen-Fenster: Inhalt, abhaken, löschen, hinzufügen mit „Passt dazu“, nur passende Vorschläge
+const { chromium } = require('playwright');
+const { start } = require('./serve');
+(async () => {
+  const srv = await start(8123); const b = await chromium.launch();
+  const p = await (await b.newContext({ viewport: { width: 360, height: 740 }, isMobile: true, hasTouch: true })).newPage();
+  const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+  let fails = 0; const ok = (n, c, d = '') => { console.log((c ? 'OK   ' : 'FAIL ') + n + (c ? '' : ' ' + d)); if (!c) fails++; };
+  await p.goto('http://localhost:8123/'); await p.waitForSelector('.q');
+  await p.evaluate(() => { loadSampleHousehold(); persist(); });
+  const bid = await p.evaluate(() => HH().bags[0].id);
+  await p.goto('http://localhost:8123/#/bags'); await p.waitForSelector('.bagrow');
+  ok('Taschen: schmale Zeilen (unter 80 px)', (await p.locator('.bagrow').first().boundingBox()).height < 80);
+  await p.click(`.bagrow[data-id="${bid}"]`); await p.waitForSelector('#bsbody');
+  ok('Antippen öffnet das Fenster mit Inhalt nach Kategorien', (await p.locator('#bsbody [data-act=bs-cat]').count()) >= 3);
+  await p.locator('#bsbody [data-act=bs-cat]').first().click(); await p.waitForSelector('#bsbody .li.tick');
+  const tid = await p.locator('#bsbody [data-change=rv-tick]:not(:checked)').first().getAttribute('data-id');
+  await p.click(`#bsbody [data-change=rv-tick][data-id="${tid}"]`); await p.waitForTimeout(150); if (await p.locator('[data-act=exp-skip]').count()) await p.click('[data-act=exp-skip]');
+  ok('Abhaken im Fenster: Fenster bleibt offen, Sache ist „da“', (await p.locator('#bsbody').count()) === 1 && await p.evaluate(id => byId(HH().items, id).status === 'owned', tid));
+  ok('Jede Sache hat denselben Haken', await p.evaluate(() => [...document.querySelectorAll('#bsbody .li.tick')].every(r => r.querySelector('[data-change=rv-tick]'))));
+  const did = await p.locator('#bsbody [data-act=it-sheet]').first().getAttribute('data-ids');
+  await p.click(`#bsbody [data-act=it-sheet][data-ids="${did}"]`); await p.waitForSelector('.modal [data-act=it-del]');
+  await p.click('.modal [data-act=it-del]'); await p.waitForSelector('.modal [data-act=dlg-yes]'); await p.click('.modal [data-act=dlg-yes]'); await p.waitForTimeout(200);
+  ok('Einzelne Sache löschen (über ⋯), Fenster bleibt offen', await p.evaluate(ids => ids.split(',').every(id => !byId(HH().items, id)), did) && (await p.locator('#bsbody').count()) === 1);
+  await p.click('#bsbody [data-act=bs-menu]'); await p.waitForSelector('.menulist');
+  const last = await p.locator('.menulist .menurow').last().innerText();
+  ok('⋯-Menü: Tasche löschen steht ganz unten', /Tasche löschen/.test(last));
+  await p.evaluate(() => closeModal());
+  // Hinzufügen: nur Standard beim Blättern, „Passt dazu“
+  await p.evaluate(b => { const H = HH(); H.items = H.items.filter(i => !(i.bagId === b && ['flashlight', 'batteries', 'headlamp'].includes(String(i.key).split(':')[0]))); persist(); }, bid);
+  await p.click('#bsbody [data-act=add-open]'); await p.waitForSelector('#addq');
+  await p.click('.modal [data-act=add-cat][data-id=tech]'); await p.waitForTimeout(100);
+  const keys = await p.locator('.modal [data-act=add-one]').evaluateAll(es => es.map(e => e.dataset.key));
+  ok('Kategorie zeigt nur Standard-Sachen (keine Extras wie Akku-Ladegerät)', keys.length > 0 && !keys.includes('akku_charger') && !keys.includes('pmr_radio'), keys.join());
+  await p.fill('#addq', 'Akku'); await p.waitForTimeout(100);
+  ok('Suche findet auch Extras', (await p.locator('.modal [data-act=add-one][data-key=akku_charger]').count()) === 1);
+  await p.fill('#addq', ''); await p.click('.modal [data-act=add-cat][data-id=tech]'); await p.click('.modal [data-act=add-one][data-key=flashlight]'); await p.waitForTimeout(100);
+  ok('Taschenlampe hinzugefügt → „Passt dazu: Batterien“', (await p.locator('.modal .passt [data-act=add-one][data-key=batteries]').count()) === 1);
+  await p.click('.modal .passt [data-act=add-one][data-key=batteries]'); await p.waitForTimeout(100);
+  ok('Batterien mit einem Tipp dazu', await p.evaluate(b => HH().items.some(i => i.bagId === b && i.key === 'batteries'), bid));
+  await p.evaluate(() => closeModal());
+  // Zu voll: Vorschläge herausnehmen
+  const tr = await p.evaluate(b => { const H = HH(); const bag = byId(H.bags, b); for (let k = 0; k < 8; k++) H.items.push(makeItem({ key: 'tent', qty: 1 }, { bagId: b, container: 'bag', status: 'planned', prio: 'opt', source: 'plan' })); persist(); return trimmable(H, bag).length; }, bid);
+  await p.evaluate(() => refreshView()); await p.waitForSelector('#bsbody [data-act=bs-trim]');
+  await p.click('#bsbody [data-act=bs-trim]'); await p.waitForTimeout(150);
+  ok('Zu voll: „Herausnehmen“ entfernt Vorschläge, bis es passt (Notwendiges bleibt)', tr >= 8 && await p.evaluate(b => { const H = HH(); const bag = byId(H.bags, b); const st = bagStats(H, DB.settings, bag); return ((!st.overweight && !st.overfull) || !trimmable(H, bag).length) && bagItems(H, bag).filter(i => i.key === 'tent').length < 8; }, bid));
+  await p.evaluate(() => closeAllModals());
+  await p.goto('http://localhost:8123/#/home'); await p.waitForSelector('a.nextstep');
+  const href = await p.locator('a.nextstep').getAttribute('href'); await p.click('a.nextstep'); await p.waitForSelector('#bsbody').catch(() => {});
+  ok('„Als Nächstes“ öffnet direkt das Taschen-Fenster', /#\/bags\?open=/.test(href) && (await p.locator('#bsbody').count()) === 1, href);
+  const wide = await p.evaluate(() => document.scrollingElement.scrollWidth - innerWidth); ok('Passt auf 360 px', wide <= 1);
+  ok('Keine JS-Fehler', !errs.length, errs.join(' | '));
+  await b.close(); srv.close(); process.exitCode = fails ? 1 : 0;
+})();

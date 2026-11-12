@@ -52,7 +52,7 @@ ACT['wz-finish'] = () => {
   finishWizard(H, d);
   H.setup.step = 0; H.setup.draft = null; persist(); flushDB();
   REV.tab = 'check'; REV.prio = 'all';
-  PICK.cat = null; const b = packBags(H)[0]; const c = b && nextOpenCat(H, b); go(b && c ? bagHref(b.id, c.id) : '#/review'); toast('Jetzt Kategorie für Kategorie abhaken, was du hast');
+  PICK.cat = null; const b = packBags(H)[0]; const c = b && nextOpenCat(H, b); go(b ? '#/bags?open=' + b.id : '#/bags'); toast('Kategorie antippen und abhaken, was du hast');
 };
 function finishWizard(H, d) {
   const S = DB.settings;
@@ -63,7 +63,7 @@ function finishWizard(H, d) {
   const strategies = d.purpose === 'travel' ? ['travel'] : d.where === 'both' ? ['shelter', 'mobile'] : [d.where || 'shelter'];
   H.cfg = Object.assign({}, H.cfg || {}, { purpose: d.purpose || 'evac', customScenario: d.custom || '', goals, strategies, durationHours: hours, boxOnly: !goals.some(g => /^bag/.test(g)), country: (H.cfg && H.cfg.country) || 'DE', housing: Object.assign({}, (H.cfg && H.cfg.housing) || {}, H.home || {}) });
   wzApplyBags(H, d);
-  const report = applyPlan(H, S);
+  const report = applyPlan(H, S); trimAllBags(H, S);
   H.setup.done = true; H.setup.skipped = false;
   return report;
 }

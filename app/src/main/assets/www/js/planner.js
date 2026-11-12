@@ -536,6 +536,19 @@ function bagStats(H, S, bag) {
     total, packed, missing, have: total - missing, havePct: pct(total - missing, total), noWeight, comps, packedPct: pct(packed, total),
   };
 }
+/* Mehr vorschlagen als reinpasst, ist sinnlos: Vorschläge (nicht vorhanden, nicht gekauft) wieder herausnehmen –
+   erst „optional“, dann „empfohlen“, jeweils das Schwerste zuerst. Notwendiges bleibt. */
+function trimmable(H, bag) { return bagItems(H, bag).filter(i => i.source === 'plan' && i.status === 'planned' && i.prio !== 'must').sort((a, b) => ({ opt: 0, rec: 1 }[a.prio] - { opt: 0, rec: 1 }[b.prio]) || ((b.weightG || 0) * b.qty + (b.volL || 0) * 100) - ((a.weightG || 0) * a.qty + (a.volL || 0) * 100)); }
+function trimBagToFit(H, S, bag) {
+  let removed = 0;
+  for (let guard = 0; guard < 300; guard++) {
+    const st = bagStats(H, S, bag); if (!st.overweight && !st.overfull) break;
+    const c = trimmable(H, bag)[0]; if (!c) break;
+    H.items.splice(H.items.indexOf(c), 1); removed++;
+  }
+  return removed;
+}
+function trimAllBags(H, S) { return H.bags.reduce((n, b) => n + trimBagToFit(H, S, b), 0); }
 function suggestBalance(H, S) {
   const bags = H.bags.filter(b => b.owner);
   if (bags.length < 2) return [];

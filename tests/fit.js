@@ -31,7 +31,7 @@ const { start } = require('./serve');
     if (await p.locator('.actionbar [data-act=wz-finish]').count()) { await p.click('.actionbar [data-act=wz-finish]'); break; }
     const pick = p.locator('[data-act=wz-pick]').first(); if (await pick.count()) await pick.click(); else await p.click('.actionbar [data-act=wz-next]');
   }
-  await p.waitForFunction(() => location.hash.startsWith('#/review'));
+  await p.waitForFunction(() => (location.hash.startsWith('#/review') || location.hash.startsWith('#/bags')));
   await p.evaluate(() => { loadSampleHousehold(); persist(); });
   const H = await p.evaluate(() => ({ bag: HH().bags[0].id, pid: HH().people[0].id, item: HH().items[0].id }));
   for (const r of ['home', 'bags', 'bags/' + H.bag, 'bags/' + H.bag + '/pack', 'bags/' + H.bag + '/missing', 'review', 'review/b/' + H.bag, 'review/b/' + H.bag + '/c/tech', 'review/search', 'review/ask', 'needs', 'lockpass', 'pass', 'pass/' + H.pid, 'card/' + H.pid, 'ice/' + H.pid, 'more', 'items', 'item/' + H.item, 'shop', 'remind', 'map', 'alarm', 'sos', 'settings', 'stock', 'recs', 'setup', 'wizard']) {

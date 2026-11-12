@@ -21,10 +21,10 @@ function parseRoute() {
 window.addEventListener('hashchange', () => { closeAllModals(); render(); });
 
 const NAV_MAIN = [
-  ['#/home', 'Start', 'home'], ['#/bags', 'Taschen', 'bag'], ['#/review', 'Packliste', 'check'], ['#/pass', 'Notfallpass', 'shield'], ['#/more', 'Mehr', 'grid'],
+  ['#/home', 'Start', 'home'], ['#/bags', 'Taschen', 'bag'], ['#/pass', 'Notfallpass', 'shield'], ['#/more', 'Mehr', 'grid'],
 ];
 const NAV_ALL = [
-  ['#/home', 'Start', 'home'], ['#/bags', 'Meine Taschen', 'bag'], ['#/review', 'Packliste', 'check'], ['#/pass', 'Notfallpass & Kontakte', 'shield'],
+  ['#/home', 'Start', 'home'], ['#/bags', 'Taschen', 'bag'], ['#/pass', 'Notfallpass & Kontakte', 'shield'],
   ['#/shop', 'Einkaufsliste', 'cart'], ['#/remind', 'Erinnerungen', 'bell'], ['#/more', 'Mehr', 'grid'],
 ];
 function navCounts() {
@@ -35,7 +35,7 @@ function navCounts() {
   } catch (e) { console.error(e); }
   return c;
 }
-const NAV_GROUP = { '#/pass': ['#/pass', '#/ice', '#/contacts', '#/lockpass', '#/card'], '#/more': ['#/more', '#/items', '#/item', '#/recs', '#/safe', '#/settings', '#/stock', '#/places', '#/map', '#/alarm', '#/sources', '#/households', '#/docs'] };
+const NAV_GROUP = { '#/bags': ['#/bags', '#/review', '#/item'], '#/pass': ['#/pass', '#/ice', '#/contacts', '#/lockpass', '#/card'], '#/more': ['#/more', '#/items', '#/item', '#/recs', '#/safe', '#/settings', '#/stock', '#/places', '#/map', '#/alarm', '#/sources', '#/households', '#/docs'] };
 function navLink(href, label, ic, counts, cur) {
   const n = counts[href]; const active = cur === href || (href !== '#/home' && cur.startsWith(href + '/')) || (NAV_GROUP[href] || []).some(r => cur === r || cur.startsWith(r + '/'));
   return h`<a href="${href}" ${active ? raw('aria-current="page"') : ''}>${icon(ic)}<span>${label}</span>${n ? h`<span class="count">${n}</span>` : ''}</a>`;
@@ -49,7 +49,7 @@ const scroller = () => document.scrollingElement || document.documentElement;
 function render(keepScroll) {
   if (!DB) return;
   const root = $('#app'); $('#boot') && $('#boot').remove(); root.hidden = false;
-  closeAllModals();
+  UI.rendering = true; closeAllModals(); UI.rendering = false;
   if (UI.bag3d) { UI.bag3d.destroy(); UI.bag3d = null; }
   if (UI.mapView) { UI.mapView.destroy(); UI.mapView = null; }
   if (UI.locked) { renderLock(root); return; }
@@ -124,6 +124,8 @@ function closeModal(m) {
   return true;
 }
 function closeAllModals() { while (UI.modals.length) closeModal(); }
+/* Nach einer Änderung: das oberste offene Fenster neu zeichnen (falls es das kann), sonst die Seite */
+function refreshView() { if (UI.rendering) return; const top = UI.modals[UI.modals.length - 1]; if (top && top.refresh) top.refresh(); else rerender(true); }
 window.__handleBack = () => { if (UI.modals.length) { closeModal(); return true; } return false; };
 function dlgButtons(buttons) { return h`${buttons.map(b => h`<button type="${b.submit ? 'submit' : 'button'}" class="btn ${b.cls || ''}" ${b.form ? raw('form="' + esc(b.form) + '"') : ''} ${b.act ? raw('data-act="' + esc(b.act) + '"') : ''} ${b.data ? raw(Object.entries(b.data).map(([k, v]) => 'data-' + k + '="' + esc(v) + '"').join(' ')) : ''}>${b.icon ? icon(b.icon) : ''}${b.label}</button>`)}`; }
 function confirmDlg(title, text, { ok = 'Bestätigen', danger = false, cancel = 'Abbrechen' } = {}) {

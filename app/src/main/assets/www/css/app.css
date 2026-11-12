@@ -452,3 +452,21 @@ h2.sec{font-size:1.0625rem;margin:4px 0 8px}
 .morerow .mi svg{width:1.2rem;height:1.2rem}
 .topbar .btn.sos.icon{background:var(--must);border-color:var(--must);color:#fff}
 .sos-screen .topbar .btn.sos.icon{background:#c62828}
+/* ===== 3.4: Taschen-Fenster ===== */
+.bagrow{width:100%;min-height:3.75rem;background:none;border:0;border-top:1px solid var(--line);color:inherit;font:inherit;text-align:left;cursor:pointer}
+.list>.bagrow:first-child{border-top:0}
+.bagrow .mi{flex:none;width:2.5rem;height:2.5rem;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--surface2);border:1px solid var(--line)}
+.bagrow .mi svg{width:1.3rem;height:1.3rem}
+.modal-bg .modal.sheet-tall,.sheet-tall .modal{min-height:85dvh}
+.bshead{display:flex;flex-direction:column;gap:6px}
+.btnrow{display:flex;gap:8px}.btnrow .btn.primary{flex:1}
+.bscats{display:flex;flex-direction:column;gap:8px}
+.bscat{border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden}
+.bscat .foldhead{display:flex;align-items:center;gap:10px;width:100%;min-height:3.25rem;padding:8px 14px;background:none;border:0;color:var(--text);font:inherit;text-align:left;cursor:pointer}
+.bscat .foldhead svg{width:1.2rem;height:1.2rem;flex:none;color:var(--muted)}
+.bscat .foldhead .chev{transition:transform .15s}.bscat .foldhead[aria-expanded="true"] .chev{transform:rotate(90deg)}
+.bscat .list{border-top:1px solid var(--line)}
+.menulist .menurow{width:100%;min-height:3.25rem;background:none;border:0;border-top:1px solid var(--line);color:var(--text);font:inherit;text-align:left;cursor:pointer;gap:12px}
+.menulist .menurow:first-child{border-top:0}.menulist .menurow svg{width:1.2rem;height:1.2rem;color:var(--muted)}
+.menulist .menurow.danger,.menulist .menurow.danger svg{color:var(--must)}
+.passt{border-color:var(--primary)}

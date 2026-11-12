@@ -18,7 +18,7 @@ const stat = (val, label, cls = '') => h`<div class="stat ${cls}"><span class="s
 /* Genau ein nächster Schritt – damit klar ist, was zu tun ist */
 function nextStep(H) {
   for (const b of packBags(H)) { const c = nextOpenCat(H, b); if (c) { const its = bagItemsOf(H, b.id); const n = its.filter(i => i.status === 'owned').length;
-    return h`<a class="nextstep" href="${bagHref(b.id, c.id)}"><span class="ns-k">Als Nächstes</span><span class="ns-t">${n ? 'Weiter packen' : 'Packen'}: ${b.name}</span><span class="ns-s">${c.label} · ${n} von ${its.length} da</span>${icon('chev', 'chev')}</a>`; } }
+    return h`<a class="nextstep" href="#/bags?open=${b.id}"><span class="ns-k">Als Nächstes</span><span class="ns-t">${n ? 'Weiter packen' : 'Packen'}: ${b.name}</span><span class="ns-s">${n} von ${its.length} da · noch offen: ${c.short || c.label}</span>${icon('chev', 'chev')}</a>`; } }
   const miss = needList(H).filter(g => g.prio === 'must');
   if (miss.length) return h`<a class="nextstep" href="#/needs"><span class="ns-k">Als Nächstes</span><span class="ns-t">Einkaufen: ${miss.length} wichtige Sachen</span><span class="ns-s">Liste nach Geschäften sortiert</span>${icon('chev', 'chev')}</a>`;
   if (IS_NATIVE && !lockPassOn(H) && H.people.length) return h`<a class="nextstep" href="#/lockpass"><span class="ns-k">Als Nächstes</span><span class="ns-t">Notfallpass auf den Sperrbildschirm</span><span class="ns-s">Damit Rettungskräfte ihn ohne PIN finden</span>${icon('chev', 'chev')}</a>`;

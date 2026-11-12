@@ -27,13 +27,15 @@ function innerChips(comps, sel, act = 'bg-sel') { const inner = comps.filter(c =
 
 function bagMeta(H, b) { const o = byId(H.people, b.owner); const t = (BAG_TYPE[b.type] || {}).label; return [t && !b.name.startsWith(t) ? t : '', fmt0(b.liters) + ' l', o ? 'trägt ' + o.name : 'gemeinsam', b.location].filter(Boolean).join(' · '); }
 route('/bags', H => {
-  const S = DB.settings;
+  const S = DB.settings; const openId = UI.q && UI.q.get('open');
   return {
-    title: 'Meine Taschen',
-    html: h`${H.bags.map(b => { const st = bagStats(H, S, b); return h`<a class="tile" href="#/bags/${b.id}">${b.photos[0] ? thumb(b.photos[0]) : h`<span class="ti">${icon(b.role === 'car' ? 'car' : 'bag')}</span>`}<span class="grow"><span class="tt">${b.name}</span><br><span class="ts">${bagMeta(H, b)}</span><br><span class="ts">${bagLine(st)}</span><br><span class="ts ${st.overweight ? 'tmust' : ''}">${fmt(st.totalG / 1000)}${st.capKg ? ' von ' + fmt(st.capKg) : ''} kg${st.overweight ? ' – zu schwer' : ''}${st.overfull ? ' · zu voll' : ''}</span><span style="display:block;margin-top:6px">${bar(st.havePct, 'ok')}</span></span>${icon('chev', 'chev')}</a>`; })}
-    ${H.bags.length ? '' : empty('Noch keine Tasche.')}
-    ${H.bags.filter(b => b.owner).length > 1 && H.bags.some(b => bagStats(H, S, b).overweight) ? h`<button class="btn" data-act="bags-balance">${icon('repeat')} Gewicht ausgleichen</button>` : ''}
+    title: 'Taschen',
+    html: h`${H.bags.length ? h`<div class="card flush"><div class="list">${H.bags.map(b => { const st = bagStats(H, S, b); const warn = st.overweight || st.overfull; const imp = bagItems(H, b).some(i => i.prio === 'must' && i.status !== 'owned');
+        return h`<button class="li bagrow" data-act="bag-open" data-id="${b.id}">${b.photos[0] ? thumb(b.photos[0]) : h`<span class="mi">${icon(b.role === 'car' ? 'car' : 'bag')}</span>`}<span class="grow"><span class="t">${b.name}</span><br><span class="s">${st.have}/${st.total} da · <span class="${warn ? 'trec' : ''}">${fmt(st.totalG / 1000)}${st.capKg ? '/' + fmt(st.capKg) : ''} kg</span></span></span>${imp ? h`<span class="sdot must" aria-label="Wichtiges fehlt"></span>` : st.total && st.have === st.total ? h`<span class="sdot ok"></span>` : ''}${icon('chev', 'chev')}</button>`; })}</div></div>
+      <p class="hint">Tasche antippen: Inhalt ansehen, abhaken, hinzufügen.</p>` : empty('Noch keine Tasche.')}
+    ${H.bags.filter(b => b.owner).length > 1 && H.bags.some(b => bagStats(H, S, b).overweight) ? h`<button class="btn block" data-act="bags-balance">${icon('repeat')} Gewicht zwischen Rucksäcken ausgleichen</button>` : ''}
     <div class="actionbar"><button class="btn primary lg" data-act="bag-new">${icon('plus')} Neue Tasche</button></div>`,
+    after: () => { if (openId && byId(HH().bags, openId)) { history.replaceState(null, '', '#/bags'); openBagSheet(openId); } },
   };
 });
 
@@ -86,12 +88,9 @@ route('/bags/:id', (id, H) => {
 });
 function saveCam() { if (UI.bag3d) BAGUI.cam = { yaw: UI.bag3d.yaw, pitch: UI.bag3d.pitch, zoom: UI.bag3d.zoom }; }
 function bagItemRow(H, bag, it, showComp) {
-  const c = byId(bag.comps, it.compId);
-  return h`<div class="li">
-    ${it.status === 'owned' ? h`<input type="checkbox" style="width:1.75rem;height:1.75rem;accent-color:var(--ok);flex:none" ${it.packed ? raw('checked') : ''} data-change="bag-pack-toggle" data-id="${it.id}" aria-label="${it.name} gepackt">` : h`<span style="width:1.75rem;flex:none"></span>`}
-    ${it.photos[0] ? thumb(it.photos[0]) : ''}
-    <a class="grow" href="#/item/${it.id}" style="color:inherit;text-decoration:none"><span class="t" ${it.packed ? raw('style="text-decoration:line-through;color:var(--muted)"') : ''}>${it.name}</span><br><span class="s">${[itemQtyLabel(it), it.weightG ? fmtKg(it.weightG * it.qty) : '', showComp ? (c ? c.name : 'ohne Fach') : '', it.lastMinute ? 'erst bei Abreise' : '', it.status === 'missing' ? 'fehlt' : it.status === 'planned' ? 'ungeprüft' : ''].filter(Boolean).join(' · ')}</span></a>
-    ${it.status !== 'owned' ? h`<span class="sdot ${it.status === 'missing' ? 'must' : 'rec'}"></span>` : ''}<button class="btn icon ghost sm" data-act="bag-item-move" data-id="${it.id}" aria-label="${it.name} in anderes Fach">${icon('move')}</button></div>`;
+  const c = byId(bag.comps, it.compId); const own = it.status === 'owned';
+  return h`<div class="li tick ${own ? 'done' : ''}"><label class="tickl grow"><input type="checkbox" data-change="rv-tick" data-id="${it.id}" ${own ? raw('checked') : ''} aria-label="${it.name} da"><span class="grow"><span class="t">${it.name}</span><br><span class="s">${[itemQtyLabel(it), it.weightG ? fmtKg(it.weightG * it.qty) : '', showComp ? (c ? c.name : 'ohne Fach') : '', it.lastMinute ? 'erst bei Abreise' : ''].filter(Boolean).join(' · ')}</span></span></label>
+    ${!own && it.prio === 'must' ? h`<span class="sdot must"></span>` : ''}<button class="btn icon ghost sm" data-act="bag-item-move" data-id="${it.id}" aria-label="${it.name} in anderes Fach">${icon('move')}</button><button class="btn icon ghost sm" data-act="it-sheet" data-ids="${it.id}" aria-label="Mehr zu ${it.name}">${icon('more')}</button></div>`;
 }
 ACT['bg-mode'] = d => { BAGUI.view = d.v; rerender(true); };
 

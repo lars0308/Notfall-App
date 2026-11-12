@@ -226,7 +226,7 @@ ACT['wz-del-meet'] = d => { wzDraft(HH()).meet.splice(+d.i, 1); persist(); reren
 ACT['setup-done'] = d => {
   const H = HH(); const w = wzDraft(H); const wasDone = H.setup.done;
   finishProfile(H, w); H.profileDone = true; H.setup.pstep = 0;
-  if (wasDone && H.cfg) applyPlan(H, DB.settings);
+  if (wasDone && H.cfg) { applyPlan(H, DB.settings); trimAllBags(H, DB.settings); }
   H.setup.draft = null; H.setup.step = 0; persist(); flushDB();
   if (d.then === 'bags') go('#/wizard'); else { if (!wasDone) H.setup.skipped = true; persist(); go('#/home'); toast('Haushalt gespeichert'); }
 };

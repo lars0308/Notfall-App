@@ -35,29 +35,34 @@ function addRow(t) {
 }
 const searchBtn = bid => h`<button class="btn icon sm" data-act="add-open" data-bag="${bid}" aria-label="Suchen und hinzufügen">${icon('search')}</button>`;
 /* Ein Fenster zum Hinzufügen: suchen oder Kategorie antippen, Plus drücken – bleibt offen für mehr */
-const ADD = { bag: null, cat: null, q: '', added: new Set() };
+const ADD = { bag: null, cat: null, q: '', added: new Set(), last: null };
 function addSheetBody(H) {
   const bags = H.bags; const bag = byId(H.bags, ADD.bag) || bags[0]; if (!bag) return h`<p class="muted">Erst einen Rucksack anlegen.</p>`;
   ADD.bag = bag.id; PICK.bag = bag.id; PICK.cat = ADD.cat;
   const q = ADD.q.trim();
-  const res = q ? pickTemplates(H, bag.id, null, q, ADD.added).slice(0, 25) : ADD.cat ? pickTemplates(H, bag.id, ADD.cat, '', ADD.added) : [];
+  let res = q ? pickTemplates(H, bag.id, null, q, ADD.added).slice(0, 25) : ADD.cat ? pickTemplates(H, bag.id, ADD.cat, '', ADD.added).filter(t => BASE_KEYS.has(t.k)) : [];
+  /* „Passt dazu“: zur zuletzt hinzugefügten Sache und zu den ersten Suchtreffern */
+  const haveK = new Set(bagItemsOf(H, bag.id).map(i => String(i.key || '').split(':')[0]));
+  const compK = [...new Set([...(ADD.last ? COMPANIONS[ADD.last] || [] : []), ...res.slice(0, 2).flatMap(t => COMPANIONS[t.k] || [])])].filter(k => T[k] && (!haveK.has(k) || ADD.added.has(k)));
+  const comp = compK.map(k => T[k]).slice(0, 4); res = res.filter(t => !comp.includes(t));
   const row = t => h`<div class="li addrow"><span class="grow"><span class="t">${t.n}</span>${t.w ? h`<br><span class="s">${t.w}</span>` : ''}</span>${ADD.added.has(t.k) ? h`<span class="addok">${icon('check')}</span>` : h`<button class="btn icon primary" data-act="add-one" data-key="${t.k}" aria-label="${t.n} hinzufügen">${icon('plus')}</button>`}</div>`;
   return h`${bags.length > 1 ? h`<div class="chips">${bags.map(b => h`<button class="chip" aria-pressed="${b.id === bag.id ? 'true' : 'false'}" data-act="add-bag" data-id="${b.id}">${b.name}</button>`)}</div>` : ''}
     <div class="chips">${pickVisible(H, bag).map(c => h`<button class="chip" aria-pressed="${!q && ADD.cat === c.id ? 'true' : 'false'}" data-act="add-cat" data-id="${c.id}">${c.short || c.label}</button>`)}</div>
+    ${comp.length ? h`<div class="card flush passt"><div class="card-head" style="padding:10px 14px 0"><h3>Passt dazu</h3></div><div class="list">${comp.map(row)}</div></div>` : ''}
     <div id="addres">${res.length ? h`<div class="list">${res.map(row)}</div>` : !q && !ADD.cat ? h`<p class="muted">Tippe oben, was du suchst – oder wähle eine Kategorie.</p>` : h`<p class="muted">Keine Vorschläge${q ? ' für „' + q + '“' : ''}.</p>`}
     ${q ? h`<button class="btn block" style="margin-top:8px" data-act="add-custom">${icon('plus')} „${q}“ hinzufügen</button>` : ''}</div>`;
 }
 function openAddSheet(bid, cat) {
-  const H = HH(); ADD.bag = bid && bid !== NOBAG ? bid : (H.bags[0] || {}).id; ADD.cat = cat || null; ADD.q = ''; ADD.added = new Set();
+  const H = HH(); ADD.bag = bid && bid !== NOBAG ? bid : (H.bags[0] || {}).id; ADD.cat = cat || null; ADD.q = ''; ADD.added = new Set(); ADD.last = null;
   const bag = byId(H.bags, ADD.bag);
-  const m = openModal({ title: 'Hinzufügen', body: h`<input id="addq" type="search" placeholder="Suchen, z. B. Batterien" autocomplete="off" enterkeyhint="search" maxlength="60"><div id="addbody" class="stack-s" style="margin-top:10px">${addSheetBody(H)}</div>`, onClose: () => rerender(true) });
+  const m = openModal({ title: 'Hinzufügen', body: h`<input id="addq" type="search" placeholder="Suchen, z. B. Batterien" autocomplete="off" enterkeyhint="search" maxlength="60"><div id="addbody" class="stack-s" style="margin-top:10px">${addSheetBody(H)}</div>`, onClose: () => refreshView() });
   const refresh = () => { const b = $('#addbody', m.el); if (b) { b.innerHTML = addSheetBody(HH()).s; } const t = $('h2', m.el); const bg = byId(HH().bags, ADD.bag); if (t && bg) t.textContent = 'Zu „' + bg.name + '“ hinzufügen'; };
   $('#addq', m.el).addEventListener('input', e => { ADD.q = e.target.value; refresh(); });
   m.el.addEventListener('click', e => {
     const a = e.target.closest('[data-act]'); if (!a) return; const d = a.dataset; const H2 = HH();
     if (d.act === 'add-bag') { ADD.bag = d.id; ADD.added = new Set(); refresh(); }
     else if (d.act === 'add-cat') { ADD.cat = d.id; ADD.q = ''; $('#addq', m.el).value = ''; refresh(); }
-    else if (d.act === 'add-one' && T[d.key]) { PICK.bag = ADD.bag; pickPut(H2, makeItem({ key: d.key, qty: 1 }, { status: 'owned', source: 'pick', prio: 'opt' })); ADD.added.add(d.key); refresh(); }
+    else if (d.act === 'add-one' && T[d.key]) { PICK.bag = ADD.bag; pickPut(H2, makeItem({ key: d.key, qty: 1 }, { status: 'owned', source: 'pick', prio: 'opt' })); ADD.added.add(d.key); ADD.last = d.key; refresh(); }
     else if (d.act === 'add-custom') { const name = ADD.q.trim().slice(0, 80); if (!name) return; PICK.bag = ADD.bag; PICK.cat = ADD.cat; pickPut(H2, makeItem({ key: '', name, category: ADD.cat && PICK_CAT[ADD.cat] ? PICK_CAT[ADD.cat].cats[0] : 'Sonstiges', tags: inferTags(name) }, { status: 'owned', source: 'pick', prio: 'opt', key: '' })); ADD.q = ''; $('#addq', m.el).value = ''; refresh(); }
     else return;
     e.stopPropagation();
@@ -184,7 +189,7 @@ ACT['pick-custom-open'] = () => {
   formDlg({ title: 'Eigener Gegenstand', ok: 'Hinzufügen', body: h`${F.text('name', 'Name', '', { req: true, max: 80, ph: 'z. B. Ersatzakku Kamera' })}`,
     onSubmit: fd => { ACT['pick-custom']({ name: fd.get('name') }); } });
 };
-ACT['pick-photo'] = async d => { const H = HH(); const it = byId(H.items, d.id); if (!it) return; const pid = await addPhotoTo(null); if (!pid) return; it.photos = it.photos || []; it.photos.push(pid); persist(); rerender(true); };
+ACT['pick-photo'] = async d => { const H = HH(); const it = byId(H.items, d.id); if (!it) return; const pid = await addPhotoTo(null); if (!pid) return; it.photos = it.photos || []; it.photos.push(pid); persist(); refreshView(); };
 const QTY_STEP = { Euro: 10, g: 50, kg: .5, Liter: .5 };
 /* Eine Zeile: Haken, Name, Menge – mehr gibt es hinter dem Pfeil */
 function tickRow(r, H) {
@@ -204,8 +209,15 @@ ACT['it-sheet'] = d => {
       ${it.why ? h`<p class="muted small">${it.why}</p>` : ''}
       <div class="btns"><button class="btn" data-act="pick-photo" data-id="${it.id}">${icon('camera')} Foto</button><a class="btn" href="#/item/${it.id}">${icon('edit')} Alle Angaben</a></div>
       ${others.length ? h`<div><div class="label">In anderen Rucksack</div><div class="stack-s" style="margin-top:6px">${others.map(b => { const st = bagStats(H, S, b); return h`<button class="tile slim" data-act="mv-to" data-ids="${String(d.ids)}" data-bag="${b.id}"><span class="grow"><span class="tt">${b.name}</span><br><span class="ts ${st.overweight ? 'tmust' : ''}">${fmt(st.totalG / 1000)}${st.capKg ? ' / ' + fmt(st.capKg) : ''} kg</span></span>${icon('chev', 'chev')}</button>`; })}</div></div>` : ''}</div>`,
-    onClose: () => rerender(true) });
-  m.el.addEventListener('click', e => { if (e.target.closest('[data-act=mv-to],[data-act=pick-photo],a[href]')) { m.onClose = null; closeModal(m); } });
+    onClose: () => refreshView() });
+  const del = document.createElement('div'); del.innerHTML = h`<button class="btn block ghost danger" style="margin-top:12px" data-act="it-del" data-ids="${String(d.ids)}">${icon('trash')} Aus der Tasche entfernen</button>`.s; $('.modal-body', m.el).appendChild(del.firstElementChild);
+  m.el.addEventListener('click', e => { if (e.target.closest('a[href]')) { m.onClose = null; closeModal(m); } else if (e.target.closest('[data-act=mv-to],[data-act=pick-photo]')) { closeModal(m); } });
+};
+ACT['it-del'] = async d => {
+  const H = HH(); const ids = String(d.ids).split(','); const it = byId(H.items, ids[0]); if (!it) return;
+  const ok = await confirmDlg(`„${it.name}“ entfernen?`, 'Die Sache wird aus der Tasche gelöscht.', { ok: 'Entfernen', danger: true }); if (!ok) return;
+  H.items = H.items.filter(i => !ids.includes(i.id)); H.shop = H.shop.filter(s => !ids.includes(s.itemId) || s.bought);
+  persist(); const top = UI.modals[UI.modals.length - 1]; if (top && !top.refresh) closeModal(top); else refreshView(); toast('Entfernt');
 };
 ACT['qty'] = d => {
   const H = HH(); const it = byId(H.items, d.id); if (!it) return; const st = QTY_STEP[it.unit] || 1;
@@ -216,7 +228,7 @@ ACT['mv-bag'] = d => ACT['it-sheet']({ ids: d.id });
 ACT['mv-to'] = d => {
   const H = HH(); const b = byId(H.bags, d.bag); const its = String(d.ids || d.id).split(',').map(id => byId(H.items, id)).filter(Boolean); if (!its.length || !b) return;
   for (const it of its) { it.bagId = b.id; it.compId = null; it.packed = false; it.container = b.role === 'car' ? 'car' : 'bag'; it.personId = b.owner || null; }
-  autoPack(H, b, { onlyUnassigned: true }); persist(); rerender(true); toast(`${its[0].name} → ${b.name}`);
+  autoPack(H, b, { onlyUnassigned: true }); persist(); refreshView(); toast(`${its[0].name} → ${b.name}`);
 };
 /* Gewicht und Volumen des Rucksacks, damit man beim Auswählen sieht, wie schwer er wird */
 function bagLoad(H, bag) {
@@ -241,13 +253,13 @@ function askExpiry(it) {
   const med = it.category === 'Medizin' || /^meds/.test(String(it.key || ''));
   formDlg({ title: 'Haltbar bis?', ok: 'Speichern', extraFoot: [{ label: 'Kein Datum', act: 'exp-skip', data: { id: it.id } }],
     body: h`<p><b>${privateName(it)}</b></p>${F.date('expiry', med ? 'Verfallsdatum' : 'Datum auf der Packung', '', { req: true })}<p class="muted small">Die App erinnert dich rechtzeitig, bevor es abläuft.</p>`,
-    onSubmit: fd => { const H = HH(); const x = byId(H.items, it.id); if (!x) return; x.expiry = fd.get('expiry'); x.expiryType = med ? 'use' : x.expiryType || 'mhd'; persist(); syncNotifications(); rerender(true); toast('Datum gespeichert'); } });
+    onSubmit: fd => { const H = HH(); const x = byId(H.items, it.id); if (!x) return; x.expiry = fd.get('expiry'); x.expiryType = med ? 'use' : x.expiryType || 'mhd'; persist(); syncNotifications(); setTimeout(refreshView, 0); toast('Datum gespeichert'); } });
 }
 ACT['exp-skip'] = d => { const H = HH(); const x = byId(H.items, d.id); if (x) { x.noExpiry = true; persist(); } closeAllModals(); };
 INPUT['rv-tick'] = el => {
   const H = HH(); const its = String(el.dataset.ids || el.dataset.id).split(',').map(id => byId(H.items, id)).filter(Boolean); if (!its.length) return;
   for (const it of its) { if (el.checked) setItemStatus(H, it, 'owned'); else { setItemStatus(H, it, 'planned'); H.shop = H.shop.filter(s => s.itemId !== it.id || s.bought); } }
-  persist(); rerender(true); if (el.checked) askExpiry(its[0]);
+  persist(); refreshView(); if (el.checked) askExpiry(its[0]);
 };
 ACT['rv-done'] = async () => {
   const H = HH(); const open = packItems(H).filter(i => i.status === 'planned');

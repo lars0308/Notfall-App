@@ -222,6 +222,8 @@ def('car_towrope', 'Abschleppseil', 'Auto', 'Stück', 600, 0, 'car', ['car_towro
 def('car_map', 'Straßenkarte (Papier)', 'Auto', 'Stück', 150, 0, 'car', ['car_map'], 'Navigation ohne Netz.');
 
 /* Schluesselwoerter -> Tags, damit auch selbst angelegte Gegenstaende in Regeln erkannt werden */
+/* Standard-Sachen: alles bis hier. Die Extras darunter erscheinen nur bei der Suche. */
+const BASE_KEYS = new Set(Object.keys(T));
 // Weitere Auswahl fuer die Kategorien (werden nicht automatisch geplant, nur angeboten)
 def('akku_aa', 'Wiederaufladbare Akkus (AA/AAA)', 'Licht & Strom', 'Set', 100, .1, 'front', ['battery'], 'Lassen sich mit Powerbank oder Solarpanel wieder laden.');
 def('akku_charger', 'Akku-Ladegerät (USB)', 'Licht & Strom', 'Stück', 120, .2, 'main', ['charger'], 'Lädt AA/AAA-Akkus über USB, auch an der Powerbank.');
@@ -261,6 +263,18 @@ def('zip_bags', 'Gefrierbeutel (wasserdicht verpacken)', 'Hygiene', 'Packung', 5
 def('compass', 'Kompass', 'Outdoor', 'Stück', 50, .05, 'belt', [], 'Orientierung ohne Handy.');
 def('map_paper', 'Landkarte der Region (Papier)', 'Outdoor', 'Stück', 100, .1, 'top', [], 'Wege und Treffpunkte finden, auch ohne Handy.');
 def('spare_keys', 'Ersatzschlüssel (Wohnung, Auto)', 'Dokumente & Geld', 'Set', 50, .02, 'front', [], 'Falls die Schlüssel in der Eile liegen bleiben.');
+
+/* „Passt dazu“: was man zu einer Sache meistens auch braucht */
+const COMPANIONS = {
+  flashlight: ['batteries'], headlamp: ['batteries'], radio: ['batteries'], crank_light: [], lantern: ['batteries'], car_flash: ['batteries'],
+  powerbank: ['cable_set'], usb_charger: ['cable_set'], solar_charger: ['cable_set', 'powerbank'], akku_aa: ['akku_charger'], akku_charger: ['akku_aa'], spare_phone: ['cable_set'],
+  stove: ['fuel', 'lighter', 'cookware'], cookware: ['cutlery'], lighter: ['tinder'], ferro_rod: ['tinder'], fuel: ['stove'],
+  water_filter: ['water_collapsible', 'water_treat'], water_bottle: ['water_treat'], water_collapsible: ['water_filter'],
+  sleeping_bag: ['sleeping_mat'], sleeping_mat: ['sleeping_bag'], tent: ['sleeping_mat'], tarp: ['cordage'],
+  firstaid: ['disinfect', 'plasters'], painkiller: ['firstaid'], meds: ['firstaid'],
+  hygiene_kit: ['towel', 'wet_wipes'], cash: ['doc_pouch'], docs_copies: ['doc_pouch', 'zip_bags'],
+  multitool: ['duct_tape'], cordage: ['carabiner'], rain: ['dry_bag'], diapers: ['baby_wipes'], pet_food: ['pet_bowl', 'pet_water'],
+};
 
 /* Kategorien beim Packen – in dieser Reihenfolge */
 const PICK_CATS = [

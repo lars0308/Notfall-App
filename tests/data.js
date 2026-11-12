@@ -81,11 +81,11 @@ const URL = 'http://localhost:8123/';
   ok('Am Ende: Rucksack je Person vorausgewählt', (await p.locator('[data-act=wz-carry][aria-pressed=true]').count()) === 1);
   await p.click('[data-act=wz-carry][data-v=none]');
   await p.click('[data-act=wz-finish]');
-  await p.waitForFunction(() => location.hash.startsWith('#/review'));
+  await p.waitForFunction(() => (location.hash.startsWith('#/review') || location.hash.startsWith('#/bags')));
   const a = await p.evaluate(() => { const H = HH(); return { bags: H.bags.length, tarp: H.items.some(i => i.key === 'tarp'), days: H.items.find(i => i.key === 'food_ration').qty, home: H.items.filter(i => i.container === 'home').length }; });
   ok('„Keinen Rucksack“ wird respektiert; „draußen unterwegs“ plant Tarp; 48 h → 2 Tagesrationen', a.bags === 0 && a.tarp && a.days === 2 && a.home === 0, JSON.stringify(a));
   await p.goto(URL + '#/wizard'); await p.waitForSelector('.q'); await p.click('[data-act=wz-pick][data-v=car]'); await p.click('[data-act=wz-carry][data-v="type:trekking"]'); await p.click('[data-act=wz-finish]');
-  await p.waitForFunction(() => location.hash.startsWith('#/review'));
+  await p.waitForFunction(() => (location.hash.startsWith('#/review') || location.hash.startsWith('#/bags')));
   const c = await p.evaluate(() => { const H = HH(); const cb = H.bags.find(x => x.role === 'car'); return { bags: H.bags.length, car: !!cb, tri: cb && H.items.some(i => i.bagId === cb.id && i.key === 'car_triangle'), keep: H.items.some(i => i.key === 'tarp') }; });
   ok('Zweiter Durchlauf „Auto“ ergänzt eine Auto-Notfalltasche, die erste Packliste bleibt', c.bags === 2 && c.car && c.tri && c.keep, JSON.stringify(c));
 

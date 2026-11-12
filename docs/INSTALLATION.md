@@ -1,7 +1,7 @@
 # Installationsanleitung
 
 ## A) Test-APK direkt am Handy installieren
-1. `dist/Notfall-3.3.0-debug.apk` aufs Handy laden: über die Dateikarte im Claude-Chat oder im Browser bei GitHub (Branch wählen → Datei öffnen → „Download raw file“).
+1. `dist/Notfall-3.4.0-debug.apk` aufs Handy laden: über die Dateikarte im Claude-Chat oder im Browser bei GitHub (Branch wählen → Datei öffnen → „Download raw file“).
 2. Datei in der Download-Benachrichtigung oder in der App „Dateien“ antippen.
 3. Android fragt, ob diese App installieren darf → „Einstellungen“ → „Dieser Quelle vertrauen“ → zurück → „Installieren“.
 4. Meldet Play Protect eine unbekannte App: „Trotzdem installieren“.
