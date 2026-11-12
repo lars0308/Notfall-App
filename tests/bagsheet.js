@@ -37,6 +37,7 @@ const { start } = require('./serve');
   await p.fill('#addq', ''); await p.click('.modal [data-act=add-cat][data-id=tech]'); await p.click('.modal [data-act=add-one][data-key=flashlight]'); await p.waitForTimeout(100);
   ok('Taschenlampe hinzugefügt → „Passt dazu: Batterien“', (await p.locator('.modal .passt [data-act=add-one][data-key=batteries]').count()) === 1);
   await p.click('.modal .passt [data-act=add-one][data-key=batteries]'); await p.waitForTimeout(100);
+  ok('Batterien: gleich „Haltbar bis?“', (await p.locator('.modal [data-act=exp-skip]').count()) === 1); await p.click('.modal [data-act=exp-skip]'); await p.waitForTimeout(80);
   ok('Batterien mit einem Tipp dazu', await p.evaluate(b => HH().items.some(i => i.bagId === b && i.key === 'batteries'), bid));
   await p.evaluate(() => closeModal());
   // Zu voll: Vorschläge herausnehmen
@@ -64,6 +65,27 @@ const { start } = require('./serve');
   await p.evaluate(() => refreshView()); await p.click('#bsbody [data-act=bs-menu]'); await p.waitForSelector('[data-act=bs-unhide]'); await p.click('[data-act=bs-unhide]'); await p.waitForTimeout(150);
   ok('Entfernte Kategorien wieder zeigen', await p.evaluate(b => !(byId(HH().bags, b).hiddenCats || []).length, bid));
   await p.evaluate(() => closeAllModals());
+  // Zahlen untereinander, Ablaufdatum, Datumsfrage beim Hinzufügen
+  await p.goto('http://localhost:8123/#/bags'); await p.waitForSelector('.bagrow'); await p.click(`.bagrow[data-id="${bid}"]`); await p.waitForSelector('#bsbody .cnt');
+  const xs = await p.locator('#bsbody .bscathead .cnt').evaluateAll(es => es.map(e => Math.round(e.getBoundingClientRect().right)));
+  ok('Zahlen stehen untereinander – egal ob Punkt oder nicht', xs.length > 3 && new Set(xs).size === 1, JSON.stringify(xs));
+  await p.evaluate(b => { const H = HH(); const i = H.items.find(x => x.bagId === b && x.status !== 'archived'); i.expiry = '2028-05-01'; BS.open.add(b + ':' + itemCat(i)); persist(); }, bid); await p.evaluate(() => refreshView());
+  ok('Ablaufdatum steht in der Zeile („bis 05/2028“)', /bis 05\/2028/.test(await p.locator('#bsbody').innerText()));
+  await p.click('#bsbody [data-act=add-open]'); await p.waitForSelector('#addq'); await p.fill('#addq', 'Wasseraufbereitung'); await p.waitForSelector('.modal [data-act=add-one][data-key=water_treat]'); await p.click('.modal [data-act=add-one][data-key=water_treat]');
+  await p.waitForSelector('.modal [name=expiry]'); ok('Beim Hinzufügen: „Haltbar bis?“ für Sachen, die ablaufen', true);
+  await p.click('.modal [data-act=exp-skip]'); await p.waitForTimeout(100);
+  ok('„Kein Datum“ schließt nur die Frage – Hinzufügen und Tasche bleiben offen', (await p.locator('#addq').count()) === 1 && (await p.locator('#bsbody').count()) === 1);
+  await p.evaluate(() => closeAllModals());
+  // Packen: Fach antippen statt „Ändern“, Haken hinter „Eingepackt“
+  await p.evaluate(b => { HH().items.filter(i => i.bagId === b).forEach(i => { i.status = 'owned'; i.packed = false; i.lastMinute = false; }); persist(); }, bid);
+  await p.goto('http://localhost:8123/#/bags/' + bid + '/pack'); await p.waitForSelector('[data-act=pack-done]');
+  ok('Packen: kein „Ändern“ mehr', !(await p.locator('.stepcard [data-act=bag-item-move]').count()));
+  const cur = await p.evaluate(() => BAGUI.packItem); const target = await p.evaluate(([b, id]) => { const bag = byId(HH().bags, b); const it = byId(HH().items, id); return (bag.comps.find(c => c.slot && c.slot !== 'main' && c.id !== it.compId) || bag.comps.find(c => c.slot && c.id !== it.compId)).id; }, [bid, cur]);
+  await p.click(`.bag2d g.c[data-id="${target}"] rect`); await p.waitForTimeout(150);
+  ok('Fach in der Tasche antippen setzt das Fach – gleiche Sache bleibt dran', await p.evaluate(([id, t]) => byId(HH().items, id).compId === t && BAGUI.packItem === id, [cur, target]));
+  const btn = await p.locator('[data-act=pack-done]').innerHTML();
+  ok('Haken hinter „Eingepackt“', btn.indexOf('Eingepackt') < btn.indexOf('<svg'));
+  await p.click('[data-act=pack-done]'); await p.waitForTimeout(100); ok('Eingepackt mit einem Tipp', await p.evaluate(id => byId(HH().items, id).packed, cur));
   await p.goto('http://localhost:8123/#/home'); await p.waitForSelector('a.nextstep');
   const href = await p.locator('a.nextstep').getAttribute('href'); await p.click('a.nextstep'); await p.waitForSelector('#bsbody').catch(() => {});
   ok('„Als Nächstes“ öffnet direkt das Taschen-Fenster', /#\/bags\?open=/.test(href) && (await p.locator('#bsbody').count()) === 1, href);

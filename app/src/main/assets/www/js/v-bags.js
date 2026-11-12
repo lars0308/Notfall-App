@@ -31,7 +31,7 @@ route('/bags', H => {
   return {
     title: 'Taschen',
     html: h`${H.bags.length ? h`<div class="card flush"><div class="list">${H.bags.map(b => { const st = bagStats(H, S, b); const warn = st.overweight || st.overfull; const imp = bagItems(H, b).some(i => i.prio === 'must' && i.status !== 'owned');
-        return h`<button class="li bagrow" data-act="bag-open" data-id="${b.id}">${b.photos[0] ? thumb(b.photos[0]) : h`<span class="mi">${icon(b.role === 'car' ? 'car' : 'bag')}</span>`}<span class="grow"><span class="t">${b.name}</span><br><span class="s">${st.have}/${st.total} da · <span class="${warn ? 'trec' : ''}">${fmt(st.totalG / 1000)}${st.capKg ? '/' + fmt(st.capKg) : ''} kg</span></span></span>${imp ? h`<span class="sdot must" aria-label="Wichtiges fehlt"></span>` : st.total && st.have === st.total ? h`<span class="sdot ok"></span>` : ''}${icon('chev', 'chev')}</button>`; })}</div></div>
+        return h`<button class="li bagrow" data-act="bag-open" data-id="${b.id}">${b.photos[0] ? thumb(b.photos[0]) : h`<span class="mi">${icon(b.role === 'car' ? 'car' : 'bag')}</span>`}<span class="grow"><span class="t">${b.name}</span><br><span class="s">${st.have}/${st.total} da · <span class="${warn ? 'trec' : ''}">${fmt(st.totalG / 1000)}${st.capKg ? '/' + fmt(st.capKg) : ''} kg</span></span></span>${dotSlot(imp ? 'must' : st.total && st.have === st.total ? 'ok' : '', imp ? 'Wichtiges fehlt' : '')}${icon('chev', 'chev')}</button>`; })}</div></div>
       <p class="hint">Tasche antippen: Inhalt ansehen, abhaken, hinzufügen.</p>` : empty('Noch keine Tasche.')}
     ${H.bags.filter(b => b.owner).length > 1 && H.bags.some(b => bagStats(H, S, b).overweight) ? h`<button class="btn block" data-act="bags-balance">${icon('repeat')} Gewicht zwischen Rucksäcken ausgleichen</button>` : ''}
     <div class="actionbar"><button class="btn primary lg" data-act="bag-new">${icon('plus')} Neue Tasche</button></div>`,
@@ -90,7 +90,7 @@ function saveCam() { if (UI.bag3d) BAGUI.cam = { yaw: UI.bag3d.yaw, pitch: UI.ba
 function bagItemRow(H, bag, it, showComp) {
   const c = byId(bag.comps, it.compId); const own = it.status === 'owned';
   return h`<div class="li tick ${own ? 'done' : ''}"><label class="tickl grow"><input type="checkbox" data-change="rv-tick" data-id="${it.id}" ${own ? raw('checked') : ''} aria-label="${it.name} da"><span class="grow"><span class="t">${it.name}</span><br><span class="s">${[itemQtyLabel(it), it.weightG ? fmtKg(it.weightG * it.qty) : '', showComp ? (c ? c.name : 'ohne Fach') : '', it.lastMinute ? 'erst bei Abreise' : ''].filter(Boolean).join(' · ')}</span></span></label>
-    ${!own && it.prio === 'must' ? h`<span class="sdot must"></span>` : ''}<button class="btn icon ghost sm" data-act="bag-item-move" data-id="${it.id}" aria-label="${it.name} in anderes Fach">${icon('move')}</button><button class="catmore" data-act="it-sheet" data-ids="${it.id}" aria-label="Mehr zu ${it.name}">${icon('dots')}</button></div>`;
+    ${dotSlot(!own && it.prio === 'must' ? 'must' : '', 'wichtig')}<button class="btn icon ghost sm" data-act="bag-item-move" data-id="${it.id}" aria-label="${it.name} in anderes Fach">${icon('move')}</button><button class="catmore" data-act="it-sheet" data-ids="${it.id}" aria-label="Mehr zu ${it.name}">${icon('dots')}</button></div>`;
 }
 ACT['bg-mode'] = d => { BAGUI.view = d.v; rerender(true); };
 
@@ -109,7 +109,7 @@ route('/bags/:id/pack', (id, H) => {
   const S = DB.settings; const bag = byId(H.bags, id); if (!bag) return { title: 'Packen', back: '#/bags', html: empty('Nicht gefunden.') };
   if (BAGUI.bagId !== id) { BAGUI.bagId = id; BAGUI.skip = new Set(); }
   const ps = packSteps(H, bag); const all = ps.steps; const done = all.filter(x => x.item.packed).length;
-  let cur = all.find(x => !x.item.packed && !BAGUI.skip.has(x.item.id)); if (!cur && BAGUI.skip.size) { BAGUI.skip.clear(); cur = all.find(x => !x.item.packed); }
+  let cur = (BAGUI.packItem && all.find(x => x.item.id === BAGUI.packItem && !x.item.packed && !BAGUI.skip.has(x.item.id))) || all.find(x => !x.item.packed && !BAGUI.skip.has(x.item.id)); if (!cur && BAGUI.skip.size) { BAGUI.skip.clear(); cur = all.find(x => !x.item.packed); }
   const st = bagStats(H, S, bag); const bal = sideBalance(H, S, bag);
   const head = h`<div class="row spread"><span class="bold">${done} von ${all.length}</span><button class="btn sm ghost" data-act="pack-reset" data-id="${bag.id}">${icon('repeat')} Neu packen</button></div>${bar(pct(done, all.length), 'ok')}`;
   if (!all.length) return { title: 'Packen', back: '#/bags/' + bag.id, html: h`${empty('Noch nichts Vorhandenes in dieser Tasche.')}${ps.missing.length ? h`<a class="btn block" href="#/bags/${bag.id}/missing">Was fehlt? (${ps.missing.length})</a>` : ''}` };
@@ -117,12 +117,14 @@ route('/bags/:id/pack', (id, H) => {
     const it = cur.item;
     return {
       title: 'Packen', back: '#/bags/' + bag.id,
+      after: () => { BAGUI.packItem = it.id; },
       html: h`${head}
       <div class="stepcard"><span class="badge info">${cur.reason}</span><div class="big">${it.name}</div><div class="muted">${itemQtyLabel(it)}${it.weightG ? ' · ' + fmtKg(it.weightG * it.qty) : ''}</div>
-        <div class="row" style="margin-top:4px">${icon('chev')}<span class="bold" style="font-size:1.125rem">${cur.comp ? cur.comp.name : 'Fach wählen'}</span><button class="btn sm" data-act="bag-item-move" data-id="${it.id}">Ändern</button></div>
+        <div class="row" style="margin-top:4px">${icon('chev')}<span class="bold" style="font-size:1.125rem">${cur.comp ? cur.comp.name : 'Fach antippen'}</span></div>
+        <p class="muted small">Anderes Fach? Einfach unten in der Tasche antippen.</p>
         ${it.notes ? h`<div class="small">${it.notes}</div>` : ''}${it.photos[0] ? h`<span class="thumb lg"><img data-ph="${it.photos[0]}" alt=""></span>` : ''}</div>
-      ${bag2d(bag, st.comps, cur.comp ? cur.comp.id : null, { act: 'noop' })}
-      <div class="actionbar"><button class="btn lg" data-act="pack-skip" data-id="${it.id}">Später</button><button class="btn primary lg" style="flex:2" data-act="pack-done" data-id="${it.id}">${icon('check')} Eingepackt</button></div>`,
+      ${bag2d(bag, st.comps, cur.comp ? cur.comp.id : null, { act: 'pack-comp' })}${innerChips(st.comps, cur.comp ? cur.comp.id : null, 'pack-comp')}
+      <div class="actionbar"><button class="btn lg" data-act="pack-skip" data-id="${it.id}">Später</button><button class="btn primary lg" style="flex:2" data-act="pack-done" data-id="${it.id}">Eingepackt ${icon('check')}</button></div>`,
     };
   }
   return {
@@ -139,6 +141,8 @@ ACT['pack-done'] = d => {
   const bag = byId(H.bags, it.bagId); if (bag && !packSteps(H, bag).steps.some(x => !x.item.packed)) { bag.checkedAt = todayISO(); const r = H.reminders.find(x => x.key === 'bagcheck'); if (r) { r.lastDone = todayISO(); r.next = addDays(todayISO(), r.interval || 90); } }
   persist(); rerender();
 };
+/* Packen: Fach direkt in der Tasche antippen – kein „Ändern“ nötig */
+ACT['pack-comp'] = d => { const H = HH(); const it = byId(H.items, BAGUI.packItem); if (!it || !d.id) return; const bag = byId(H.bags, it.bagId); if (!bag || !byId(bag.comps, d.id)) return; it.compId = d.id; persist(); rerender(true); };
 ACT['pack-skip'] = d => { BAGUI.skip.add(d.id); rerender(); };
 ACT['pack-reset'] = async d => {
   const H = HH(); const bag = byId(H.bags, d.id); const ok = await confirmDlg('Neu packen?', 'Alle Häkchen dieser Tasche werden entfernt.', { ok: 'Neu packen' }); if (!ok) return;

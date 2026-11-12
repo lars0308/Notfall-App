@@ -58,12 +58,13 @@ function openAddSheet(bid, cat) {
   const bag = byId(H.bags, ADD.bag);
   const m = openModal({ title: 'Hinzufügen', body: h`<input id="addq" type="search" placeholder="Suchen, z. B. Batterien" autocomplete="off" enterkeyhint="search" maxlength="60"><div id="addbody" class="stack-s" style="margin-top:10px">${addSheetBody(H)}</div>`, onClose: () => refreshView() });
   const refresh = () => { const b = $('#addbody', m.el); if (b) { b.innerHTML = addSheetBody(HH()).s; } const t = $('h2', m.el); const bg = byId(HH().bags, ADD.bag); if (t && bg) t.textContent = 'Zu „' + bg.name + '“ hinzufügen'; };
+  m.refresh = refresh;
   $('#addq', m.el).addEventListener('input', e => { ADD.q = e.target.value; refresh(); });
   m.el.addEventListener('click', e => {
     const a = e.target.closest('[data-act]'); if (!a) return; const d = a.dataset; const H2 = HH();
     if (d.act === 'add-bag') { ADD.bag = d.id; ADD.added = new Set(); refresh(); }
     else if (d.act === 'add-cat') { ADD.cat = d.id; ADD.q = ''; $('#addq', m.el).value = ''; refresh(); }
-    else if (d.act === 'add-one' && T[d.key]) { PICK.bag = ADD.bag; pickPut(H2, makeItem({ key: d.key, qty: 1 }, { status: 'owned', source: 'pick', prio: 'opt' })); ADD.added.add(d.key); ADD.last = d.key; refresh(); }
+    else if (d.act === 'add-one' && T[d.key]) { PICK.bag = ADD.bag; const it = makeItem({ key: d.key, qty: 1 }, { status: 'owned', source: 'pick', prio: 'opt' }); pickPut(H2, it); ADD.added.add(d.key); ADD.last = d.key; refresh(); askExpiry(it); }
     else if (d.act === 'add-custom') { const name = ADD.q.trim().slice(0, 80); if (!name) return; PICK.bag = ADD.bag; PICK.cat = ADD.cat; pickPut(H2, makeItem({ key: '', name, category: ADD.cat && PICK_CAT[ADD.cat] ? PICK_CAT[ADD.cat].cats[0] : 'Sonstiges', tags: inferTags(name) }, { status: 'owned', source: 'pick', prio: 'opt', key: '', pcat: ADD.cat && !PICK_CAT[ADD.cat] ? ADD.cat : undefined })); ADD.q = ''; $('#addq', m.el).value = ''; refresh(); }
     else return;
     e.stopPropagation();
@@ -115,7 +116,7 @@ route('/review/b/:bid', (bid, H) => {
     title: bag.name, back: bags.length > 1 ? '#/review' : null, actions: searchBtn(bid),
     html: h`<div class="card tight"><div class="row spread"><b>${its.length ? `${have} von ${its.length} da` : 'Noch leer'}</b>${open ? h`<button class="btn sm ghost" data-act="ask-start" data-bag="${bid}">Einzeln abfragen</button>` : ''}</div>${its.length ? bar(Math.round(have / its.length * 100), 'ok') : ''}${miniLoad(H, bag)}</div>
     <div class="catlist">${pickVisible(H, bag).map(c => { const ci = its.filter(i => itemCat(i) === c.id); const n = ci.filter(i => i.status === 'owned').length; const mustOpen = ci.some(i => i.status !== 'owned' && i.prio === 'must'); const done = ci.length && n === ci.length;
-      return h`<a class="cat ${done ? 'done' : ''}" href="${bagHref(bid, c.id)}">${icon(done ? 'check' : c.icon)}<span class="cl">${c.short || c.label}</span><span class="cs">${ci.length ? `${n}/${ci.length}` : '+'}</span>${mustOpen ? h`<span class="sdot must" aria-label="Wichtiges offen"></span>` : ''}</a>`; })}</div>
+      return h`<a class="cat ${done ? 'done' : ''}" href="${bagHref(bid, c.id)}">${icon(done ? 'check' : c.icon)}<span class="cl">${c.short || c.label}</span><span class="cs cnt">${ci.length ? `${n}/${ci.length}` : '+'}</span>${dotSlot(mustOpen ? 'must' : '', 'Wichtiges offen')}</a>`; })}</div>
     <div class="actionbar">${nc ? h`<a class="btn primary lg" href="${bagHref(bid, nc.id)}">${have ? 'Weiter packen' : 'Los geht’s'}: ${nc.label} ${icon('chev')}</a>` : nxt ? h`<a class="btn primary lg" href="${bagHref(nxt.id)}">Nächster: ${nxt.name} ${icon('chev')}</a>` : h`<button class="btn primary lg" data-act="rv-done">${icon('check')} Fertig</button>`}</div>`,
   };
 });
@@ -192,14 +193,20 @@ ACT['pick-custom-open'] = () => {
 };
 ACT['pick-photo'] = async d => { const H = HH(); const it = byId(H.items, d.id); if (!it) return; const pid = await addPhotoTo(null); if (!pid) return; it.photos = it.photos || []; it.photos.push(pid); persist(); refreshView(); };
 const QTY_STEP = { Euro: 10, g: 50, kg: .5, Liter: .5 };
+/* Ablaufdatum in der Zeile: früheste Charge, orange = bald, rot = abgelaufen */
+function expLabel(rows) {
+  const e = rows.filter(i => i.expiry).sort((a, b) => a.expiry.localeCompare(b.expiry))[0]; if (!e) return '';
+  const st = expiryState(e); const d = parseISO(e.expiry); const txt = d ? `bis ${pad2(d.getMonth() + 1)}/${d.getFullYear()}` : '';
+  return h` · <span class="${st ? 't' + st.cls : ''}">${txt}</span>`;
+}
 /* Eine Zeile: Haken, Name, Menge – mehr gibt es hinter dem Pfeil */
 function tickRow(r, H) {
   const rows = Array.isArray(r) ? r : [r]; const it = rows[0]; const own = rows.every(i => i.status === 'owned');
   const qty = rows.reduce((a, i) => a + (+i.qty || 0), 0); const g = rows.reduce((a, i) => a + (+i.weightG || 0) * (+i.qty || 0), 0);
   const ids = rows.map(i => i.id).join(',');
-  return h`<div class="li tick ${own ? 'done' : ''}"><label class="tickl grow"><input type="checkbox" data-change="rv-tick" data-id="${it.id}" data-ids="${ids}" ${own ? raw('checked') : ''} aria-label="${it.name} vorhanden"><span class="grow"><span class="t">${it.name}</span><br><span class="s">${fmt(qty)} ${it.unit || ''}${g ? ' · ' + fmtKg(g) : ''}${rows.some(i => i.status === 'missing') ? ' · auf der Einkaufsliste' : ''}</span></span></label>
+  return h`<div class="li tick ${own ? 'done' : ''}"><label class="tickl grow"><input type="checkbox" data-change="rv-tick" data-id="${it.id}" data-ids="${ids}" ${own ? raw('checked') : ''} aria-label="${it.name} vorhanden"><span class="grow"><span class="t">${it.name}</span><br><span class="s">${fmt(qty)} ${it.unit || ''}${g ? ' · ' + fmtKg(g) : ''}${expLabel(rows)}${rows.some(i => i.status === 'missing') ? ' · auf der Einkaufsliste' : ''}</span></span></label>
     ${it.photos && it.photos[0] ? h`<span class="thumb"><img data-ph="${it.photos[0]}" data-act="ph-view" data-id="${it.photos[0]}" alt="Foto"></span>` : ''}
-    ${!own && it.prio === 'must' && it.source !== 'pick' ? h`<span class="sdot must" title="wichtig" aria-label="wichtig"></span>` : ''}<button class="catmore" data-act="it-sheet" data-ids="${ids}" aria-label="Mehr zu ${it.name}">${icon('dots')}</button></div>`;
+    ${dotSlot(!own && it.prio === 'must' && it.source !== 'pick' ? 'must' : '', 'wichtig')}<button class="catmore" data-act="it-sheet" data-ids="${ids}" aria-label="Mehr zu ${it.name}">${icon('dots')}</button></div>`;
 }
 /* Unterseite eines Gegenstands: Menge, anderer Rucksack, Foto, Details */
 ACT['it-sheet'] = d => {
@@ -207,6 +214,7 @@ ACT['it-sheet'] = d => {
   const others = H.bags.filter(b => b.id !== it.bagId);
   const m = openModal({ title: it.name, body: h`<div class="stack">
       <div class="row spread"><b>Menge</b><span class="qty"><button class="btn icon" data-act="qty" data-id="${it.id}" data-d="-1" aria-label="weniger">${icon('minus')}</button><span class="qv" id="sheetqv">${itemQtyLabel(it)}</span><button class="btn icon" data-act="qty" data-id="${it.id}" data-d="1" aria-label="mehr">${icon('plus')}</button></span></div>
+      ${it.expiry || EXPIRY_KEYS.includes(String(it.key || '').split(':')[0]) ? h`<div class="row spread nowrap"><label for="sheetexp" class="bold">Haltbar bis</label><input id="sheetexp" type="date" value="${it.expiry || ''}" data-change="it-exp" data-ids="${String(d.ids)}" style="max-width:11rem"></div>` : ''}
       ${it.why ? h`<p class="muted small">${it.why}</p>` : ''}
       <div class="btns"><button class="btn" data-act="pick-photo" data-id="${it.id}">${icon('camera')} Foto</button><a class="btn" href="#/item/${it.id}">${icon('edit')} Alle Angaben</a></div>
       ${others.length ? h`<div><div class="label">In anderen Rucksack</div><div class="stack-s" style="margin-top:6px">${others.map(b => { const st = bagStats(H, S, b); return h`<button class="tile slim" data-act="mv-to" data-ids="${String(d.ids)}" data-bag="${b.id}"><span class="grow"><span class="tt">${b.name}</span><br><span class="ts ${st.overweight ? 'tmust' : ''}">${fmt(st.totalG / 1000)}${st.capKg ? ' / ' + fmt(st.capKg) : ''} kg</span></span>${icon('chev', 'chev')}</button>`; })}</div></div>` : ''}</div>`,
@@ -214,6 +222,7 @@ ACT['it-sheet'] = d => {
   const del = document.createElement('div'); del.innerHTML = h`<button class="btn block ghost danger" style="margin-top:12px" data-act="it-del" data-ids="${String(d.ids)}">${icon('trash')} Aus der Tasche entfernen</button>`.s; $('.modal-body', m.el).appendChild(del.firstElementChild);
   m.el.addEventListener('click', e => { if (e.target.closest('a[href]')) { m.onClose = null; closeModal(m); } else if (e.target.closest('[data-act=mv-to],[data-act=pick-photo]')) { closeModal(m); } });
 };
+INPUT['it-exp'] = el => { const H = HH(); for (const id of String(el.dataset.ids).split(',')) { const i = byId(H.items, id); if (i) { i.expiry = el.value || ''; if (!i.expiryType) i.expiryType = i.category === 'Medizin' ? 'use' : 'mhd'; } } persist(); syncNotifications(); toast(el.value ? 'Datum gespeichert' : 'Datum entfernt'); };
 ACT['it-del'] = async d => {
   const H = HH(); const ids = String(d.ids).split(','); const it = byId(H.items, ids[0]); if (!it) return;
   const ok = await confirmDlg(`„${it.name}“ entfernen?`, 'Die Sache wird aus der Tasche gelöscht.', { ok: 'Entfernen', danger: true }); if (!ok) return;
@@ -256,7 +265,7 @@ function askExpiry(it) {
     body: h`<p><b>${privateName(it)}</b></p>${F.date('expiry', med ? 'Verfallsdatum' : 'Datum auf der Packung', '', { req: true })}<p class="muted small">Die App erinnert dich rechtzeitig, bevor es abläuft.</p>`,
     onSubmit: fd => { const H = HH(); const x = byId(H.items, it.id); if (!x) return; x.expiry = fd.get('expiry'); x.expiryType = med ? 'use' : x.expiryType || 'mhd'; persist(); syncNotifications(); setTimeout(refreshView, 0); toast('Datum gespeichert'); } });
 }
-ACT['exp-skip'] = d => { const H = HH(); const x = byId(H.items, d.id); if (x) { x.noExpiry = true; persist(); } closeAllModals(); };
+ACT['exp-skip'] = d => { const H = HH(); const x = byId(H.items, d.id); if (x) { x.noExpiry = true; persist(); } closeModal(); };
 INPUT['rv-tick'] = el => {
   const H = HH(); const its = String(el.dataset.ids || el.dataset.id).split(',').map(id => byId(H.items, id)).filter(Boolean); if (!its.length) return;
   for (const it of its) { if (el.checked) setItemStatus(H, it, 'owned'); else { setItemStatus(H, it, 'planned'); H.shop = H.shop.filter(s => s.itemId !== it.id || s.bought); } }

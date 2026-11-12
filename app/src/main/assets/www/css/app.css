@@ -480,3 +480,6 @@ h2.sec{font-size:1.0625rem;margin:4px 0 8px}
 .catmore svg{width:1.5rem;height:1.5rem;stroke-width:3.2}
 .btnrow .btn.icon svg{stroke-width:3.2}
 .trimbar{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:12px;border:1px solid var(--rec);background:rgba(245,165,36,.1)}
+.dslot{flex:none;width:.6rem;display:inline-flex;align-items:center;justify-content:center}
+.cnt{min-width:2.6rem;text-align:right;font-variant-numeric:tabular-nums}
+.catlist .cat .cs.cnt{min-width:2.2rem}

@@ -1,4 +1,4 @@
-# Umgesetzte Funktionen (Version 3.5.0)
+# Umgesetzte Funktionen (Version 3.6.0)
 
 Legende: ✅ umgesetzt und im Browser getestet · 📱 braucht Android-Code, nicht auf Gerät geprüft · 🟡 mit Einschränkung · ⬜ offen. Was gestrichen oder verschoben wurde, steht in der [Feature-Matrix](FEATURE-MATRIX.md).
 
@@ -111,3 +111,9 @@ Seite „Für Rettungskräfte“ (Notfallpass → oberste Karte). Vorschau, was 
 - Im Taschen-Fenster unten „+ Eigene Kategorie“ (gilt für den ganzen Haushalt, erscheint in jeder Tasche, auch leer).
 - Jede Kategorie hat „⋯“: Sache hinzufügen; bei eigenen: Umbenennen, Kategorie löschen (samt Inhalt, in allen Taschen); bei vorhandenen: „Aus dieser Tasche entfernen“ (Inhalt dieser Tasche wird gelöscht, die App schlägt dafür nichts mehr vor). Rückgängig über das ⋯ der Tasche: „Entfernte Kategorien wieder zeigen“.
 - Drei Punkte bedeuten überall „mehr“; Löschen steht immer ganz unten.
+
+## Haltbarkeit, ruhige Punkte, schneller packen (3.6) ✅
+- Beim Hinzufügen von Sachen, die ablaufen können (Wasser, Essen, Batterien, Medikamente …), fragt die App direkt nach „Haltbar bis“; überspringen geht mit einem Tipp, die geöffneten Fenster bleiben offen.
+- Das Ablaufdatum steht in der Zeile („bis 05/2028“, bald ablaufend farbig) und lässt sich unter „⋯“ ändern.
+- Punkte haben einen festen Platz: Zahlen und Pfeile stehen immer untereinander, egal ob ein Punkt da ist.
+- Packanleitung: kein „Ändern“ mehr – Fach direkt in der Taschen-Zeichnung antippen, dann „Eingepackt ✓“ (Haken hinter dem Wort).

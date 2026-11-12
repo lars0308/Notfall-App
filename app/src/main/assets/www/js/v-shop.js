@@ -16,7 +16,7 @@ function shopGroups(list) {
 }
 function shopLine(g) {
   return h`<div class="li shopline"><button class="buybox" data-act="shop-quick" data-ids="${g.list.map(s => s.id).join(',')}" aria-label="${g.name} gekauft"></button>
-    <button class="grow linkish" data-act="shop-edit" data-id="${g.list[0].id}"><span class="t">${g.name}</span><br><span class="s">${fmt(g.qty)} ${g.unit}</span></button>${g.prio === 'must' ? h`<span class="sdot must" aria-label="wichtig"></span>` : ''}</div>`;
+    <button class="grow linkish" data-act="shop-edit" data-id="${g.list[0].id}"><span class="t">${g.name}</span><br><span class="s">${fmt(g.qty)} ${g.unit}</span></button>${dotSlot(g.prio === 'must' ? 'must' : '', 'wichtig')}</div>`;
 }
 SHOP.open = new Set();
 route('/shop', H => {

@@ -257,6 +257,8 @@ function whereOf(H, it) {
   if (it.container === 'car') return 'Auto'; return it.place || 'Zuhause';
 }
 function itemQtyLabel(it) { return `${fmt(it.qty)} ${it.unit || ''}`.trim(); }
+/* Fester Platz für einen Punkt – damit Zahlen und Pfeile immer untereinander stehen */
+const dotSlot = (cls, label = '') => h`<span class="dslot">${cls ? h`<span class="sdot ${cls}" ${label ? raw(`aria-label="${esc(label)}" title="${esc(label)}"`) : ''}></span>` : ''}</span>`;
 /* Status als kleiner Punkt rechts am Pfeil */
 function statusBadge(it) {
   if (it.status === 'owned') return h`<span class="sdot ok" title="Vorhanden" aria-label="Vorhanden"></span>`;

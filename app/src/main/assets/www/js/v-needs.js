@@ -20,7 +20,7 @@ const NEEDUI = { opt: false };
 function needRow(g) {
   const onList = g.items.every(i => i.status === 'missing');
   return h`<div class="li need"><div class="grow"><span class="t">${g.name}</span><br><span class="s">${fmt(g.qty)} ${g.unit} · ${[...g.who].join(', ')}${onList ? ' · auf der Einkaufsliste' : ''}</span></div>
-    ${g.prio === 'must' ? h`<span class="sdot must" aria-label="wichtig"></span>` : ''}
+    ${dotSlot(g.prio === 'must' ? 'must' : '', 'wichtig')}
     <button class="btn icon ok sm" data-act="need-have" data-k="${g.k}" aria-label="${g.name}: habe ich" title="Habe ich">${icon('check')}</button>
     ${onList ? h`<a class="btn icon sm ghost" href="#/shop" aria-label="Zur Einkaufsliste" title="Auf der Einkaufsliste">${icon('cart')}</a>` : h`<button class="btn icon sm" data-act="need-buy" data-k="${g.k}" aria-label="${g.name}: kaufen" title="Kaufen">${icon('cart')}</button>`}</div>`;
 }
